@@ -4,7 +4,7 @@ title: Ontology of Work — Structure
 description: >-
   How a stereorepo is divided, and along which two axes.
 
-  A **Portfolio** is everything one solo builds inside one Bounded Context:
+  A **Portfolio** is everything one human builds inside one Bounded Context:
   exactly one Ubiquitous Language, one set of stakeholders, one per repo. It is
   what a clone becomes under Specialization. A stereorepo is a monorepo by design,
   and this is the reason — the language is what holds it together, so the repo
@@ -163,7 +163,7 @@ classes:
   Portfolio:
     is_a: WorkEntity
     description: >-
-      Everything one solo builds inside one Bounded Context. One per repo, and
+      Everything one human builds inside one Bounded Context. One per repo, and
       the unit that Specialization produces.
     slots:
       - bounded_context

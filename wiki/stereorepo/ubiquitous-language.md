@@ -37,7 +37,7 @@ preventing cross-domain collisions.
 ## The Minting Ceremony
 
 Agents do not casually invent new terminology in freeform text. When a new
-concept is required, it must undergo the minting ceremony with the solo:
+concept is required, it must undergo the minting ceremony with the human:
 establishing its preferred label, scope note, and avoid-list in the assertions.
 Writing explains; deciding decides.
 

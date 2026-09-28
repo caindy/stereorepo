@@ -90,7 +90,7 @@ disciplines:
       good prose, which is why nobody objects.
 
       So the rule is not to prefer the agreed word. It is that **minting is a
-      decision taken with the solo**, and a word that arrived any other way has
+      decision taken with the human**, and a word that arrived any other way has
       not been minted however well it is being used.
     judgement: >-
       Whether an idea needs a word at all. Most do not — a phrase, or an existing
@@ -108,8 +108,8 @@ disciplines:
         name: Borrow rather than invent
         statement: >-
           A term with a literature behind it arrives with its distinctions already argued.
-      - id: work:discipline-step/ubiquitous-language/mint-only-with-the-solo
-        name: Mint only with the solo
+      - id: work:discipline-step/ubiquitous-language/mint-only-with-the-human
+        name: Mint only with the human
         statement: >-
           Record the decision when a term is minted. A word in the Charter or a Discipline without
           one is a word nobody agreed to.
@@ -160,14 +160,14 @@ disciplines:
         statement: When use finds a gap, change the thing, and record what use found.
     produces:
       - Findings that reasoning about the artifact does not reach.
-  - id: work:discipline/modelling-the-solo
-    name: Modelling the Solo
+  - id: work:discipline/modelling-the-human
+    name: Modelling the Human
     description: >-
       Keep a Persona of the person the agent works with, in the repo, current as
       the work reveals things.
 
       External memory rather than private memory, and the distinction is the
-      whole point: the solo can see how he is being read, and another agent can
+      whole point: the human can see how they are being read, and another agent can
       pick the model up. An agent's model of the person it works with exists
       whether or not it is written down. Writing it down is what makes it
       correctable and transferable instead of a private guess that steers the
@@ -179,26 +179,26 @@ disciplines:
       than defended by its author, which it cannot be unless it says which is
       which.
     steps:
-      - id: work:discipline-step/modelling-the-solo/ground-entries-in-observables
+      - id: work:discipline-step/modelling-the-human/ground-entries-in-observables
         name: Ground entries in observables
         statement: >-
           Ground each entry in something observable — a correction made, a decision taken, a preference
           stated in so many words.
-      - id: work:discipline-step/modelling-the-solo/record-what-changes-work
+      - id: work:discipline-step/modelling-the-human/record-what-changes-work
         name: Record what changes work
         statement: >-
           Record what would change how the work proceeds. Not character assessment, and not flattery.
-      - id: work:discipline-step/modelling-the-solo/mark-inference-as-inference
+      - id: work:discipline-step/modelling-the-human/mark-inference-as-inference
         name: Mark inference as inference
         statement: Ensure its subject knows what to push back on.
-      - id: work:discipline-step/modelling-the-solo/update-as-work-reveals-things
+      - id: work:discipline-step/modelling-the-human/update-as-work-reveals-things
         name: Update as work reveals things
         statement: Update it as the work reveals things, not in a pass at the end.
-      - id: work:discipline-step/modelling-the-solo/surface-for-correction
+      - id: work:discipline-step/modelling-the-human/surface-for-correction
         name: Surface for correction
         statement: Surface it for correction rather than defending it.
     produces:
-      - A Persona of the solo that another agent can pick up cold.
+      - A Persona of the human that another agent can pick up cold.
       - A visible account of how the agent is framing the work.
   # ---------------------------------------------------------------------------
   # Distilled in `python_bootstrap` and pulled up here. Its own README is clear

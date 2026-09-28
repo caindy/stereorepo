@@ -11,13 +11,13 @@
 /.claude/skills/wikisplain/SKILL.md merge=union
 /.gitattributes merge=union
 /.meta/.apm/agents/technical-writer.agent.md merge=union
-/.meta/.apm/agents/the-solo.agent.md merge=union
+/.meta/.apm/agents/the-human.agent.md merge=union
 /.meta/.apm/hooks/gate.json merge=union
 /.meta/.apm/instructions/dogfooding.instructions.md merge=union
 /.meta/.apm/instructions/journaling.instructions.md merge=union
 /.meta/.apm/instructions/knowledge-management.instructions.md merge=union
 /.meta/.apm/instructions/literate-programming.instructions.md merge=union
-/.meta/.apm/instructions/modelling-the-solo.instructions.md merge=union
+/.meta/.apm/instructions/modelling-the-human.instructions.md merge=union
 /.meta/.apm/instructions/nothing-unconsumed.instructions.md merge=union
 /.meta/.apm/instructions/observed-failure.instructions.md merge=union
 /.meta/.apm/instructions/progressive-disclosure.instructions.md merge=union

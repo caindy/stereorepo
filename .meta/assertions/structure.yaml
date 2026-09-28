@@ -1,8 +1,8 @@
 # stereorepo asserting its own structure.
 #
-# The scaffold is a Product because it has a primary Persona: the solo who uses
+# The scaffold is a Product because it has a primary Persona: the human who uses
 # it. Dogfooding is what makes that true rather than a stretch — the scaffold's
-# first user is the person building it, and he is present to be asked.
+# first user is the person building it, and they are present to be asked.
 
 portfolio:
   id: work:portfolio/stereorepo
@@ -55,9 +55,9 @@ products:
   - id: work:product/scaffold
     name: The scaffold
     description: >-
-      stereorepo itself, used by the solo who builds it. Its interface is the load
+      stereorepo itself, used by the human who builds it. Its interface is the load
       map, the vocabulary, the gate and the Specialization procedure.
-    primary_persona: work:persona/the-solo
+    primary_persona: work:persona/the-human
     built_from:
       - work:project/meta
 
@@ -69,7 +69,7 @@ products:
     description: >-
       What a Rust project in a portfolio inherits — the gates, the documentation
       layout, and stereorepo's Disciplines made executable for one language.
-    primary_persona: work:persona/the-solo
+    primary_persona: work:persona/the-human
     built_from:
       - work:project/rust-seed
 
@@ -82,7 +82,7 @@ products:
       What a Python project in a portfolio inherits — the gates, the rule
       set, the pins and the documentation layout, and stereorepo's Disciplines
       made executable for one language.
-    primary_persona: work:persona/the-solo
+    primary_persona: work:persona/the-human
     built_from:
       - work:project/python-seed
 

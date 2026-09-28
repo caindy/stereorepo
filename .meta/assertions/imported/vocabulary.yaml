@@ -411,8 +411,8 @@ concept_set:
     scope_note: >-
       A Discipline here, not a slogan: each adopted Discipline is applied to this
       repo first, and a schema is instantiated before it is trusted.
-  - id: work:concept/modelling-the-solo
-    pref_label: Modelling the Solo
+  - id: work:concept/modelling-the-human
+    pref_label: Modelling the Human
     definition: >-
       Keeping a Persona of the person the agent works with, in the repo and
       current, as external memory rather than private.

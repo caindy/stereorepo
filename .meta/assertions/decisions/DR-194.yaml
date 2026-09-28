@@ -24,7 +24,7 @@ decisions:
       and maintaining literate exposition. Furthermore, while stereorepo's DR-192
       assigned corpus-wide citation maintenance to the Technical Writer backed by
       offline retrieval (stereorepo's DR-103), DR-103 remained RECOMMENDED with no
-      implementation built, forcing agents and the solo to rely on exact substring
+      implementation built, forcing agents and the human to rely on exact substring
       grep.
     alternatives:
       - name: Rely solely on PR reviewer checks without an authored skill or retrieval engine

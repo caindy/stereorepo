@@ -11,7 +11,7 @@ applyTo: "**/*"
 
 One set of words, meaning the same thing in the code, the schemas, the prose and the conversation — and a word enters it by decision, never by use.
 Evans' practice, with one thing his setting did not have to handle. The language is now shared with agents that write fluently, tire of nothing, and reach for a fresh word the moment an existing one is slightly awkward. A team drifts slowly because writing is expensive and someone eventually objects. A fleet drifts quickly and *consistently*, and the drift reads as good prose, which is why nobody objects.
-So the rule is not to prefer the agreed word. It is that **minting is a decision taken with the solo**, and a word that arrived any other way has not been minted however well it is being used.
+So the rule is not to prefer the agreed word. It is that **minting is a decision taken with the human**, and a word that arrived any other way has not been minted however well it is being used.
 
 ## Judgement
 
@@ -22,7 +22,7 @@ And whether a word is a term or is ordinary English, which is not decidable mech
 
 - **Prefer the vocabulary and canon.** Reach for the vocabulary before reaching for a word, and for a canon before minting one.
 - **Borrow rather than invent.** A term with a literature behind it arrives with its distinctions already argued.
-- **Mint only with the solo.** Record the decision when a term is minted. A word in the Charter or a Discipline without one is a word nobody agreed to.
+- **Mint only with the human.** Record the decision when a term is minted. A word in the Charter or a Discipline without one is a word nobody agreed to.
 - **Check candidate against existing meaning.** Check a candidate against what the repository already means by it, including in the schemas. A collision found afterwards is a rename.
 - **Mark confusables in both directions.** Mark a confusable in both directions, at the moment the collision is noticed.
 - **Bias every output toward the vocabulary.** Align code, prose and conversation alike with the shared vocabulary.

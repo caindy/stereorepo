@@ -56,7 +56,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-039](assertions/decisions/DR-039.yaml) | The dead-end check moves from the gate into the schema | Adopted |
 | [DR-040](assertions/decisions/DR-040.yaml) | Primitives are authored in `.meta/.apm/`, not `.meta/.agents/` | Adopted |
 | [DR-041](assertions/decisions/DR-041.yaml) | The `stakeholders/` taxonomy, and why it needs no term of its own | Adopted |
-| [DR-042](assertions/decisions/DR-042.yaml) | Modelling the Solo is a Discipline | Adopted |
+| [DR-042](assertions/decisions/DR-042.yaml) | Modelling the Human is a Discipline | Adopted |
 | [DR-043](assertions/decisions/DR-043.yaml) | Literate Programming generalises; six Disciplines pull up from `python_bootstrap` | Adopted |
 | [DR-044](assertions/decisions/DR-044.yaml) | Literate Programming stops prescribing where prose sits | Adopted |
 | [DR-046](assertions/decisions/DR-046.yaml) | Bootstraps live in the monorepo, and Specialization picks a language | Adopted |
@@ -138,7 +138,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-217](assertions/decisions/DR-217.yaml) | A script under .meta/ keeps its path as the entry point and its body lives in .meta/lib/<script>/, whose modules import each other as modules | Adopted |
 | [DR-218](assertions/decisions/DR-218.yaml) | A module under .meta/ that is imported rather than run becomes a package of its own name in place, whose __init__ registers what its modules define | Adopted |
 | [DR-220](assertions/decisions/DR-220.yaml) | .meta/ holds the seed's complexity ceiling and pylint's size rules, with no suppression | Adopted |
-| [DR-222](assertions/decisions/DR-222.yaml) | Only the solo puts a decision in force, and a change carrying one waits for it | Adopted |
+| [DR-222](assertions/decisions/DR-222.yaml) | Only the human puts a decision in force, and a change carrying one waits for it | Adopted |
 | [DR-223](assertions/decisions/DR-223.yaml) | An identical suppression reason at three sites is one defect, ratcheted per rule and reason | Adopted |
 | [DR-225](assertions/decisions/DR-225.yaml) | A suppression's reason names a cause outside this repository, and an internal Issue is not an escape | Adopted |
 | [DR-227](assertions/decisions/DR-227.yaml) | An option closed by being built stays in the record, marked `tried` | Proposed |

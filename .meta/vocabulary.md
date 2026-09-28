@@ -107,7 +107,7 @@ _The named ways of working, each adhered to because it is not a program._
 | **Journaling** | Routing narrative to the artifact that owns it, and the residue to the issue file — never to a commit message. | — |
 | **Knowledge Management** | Organizing maintainer-facing exposition into an encyclopedic wiki partitioned by Bounded Context. | — |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
-| **Modelling the Solo** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
+| **Modelling the Human** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
 | **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
 | **Observed Failure** | A guardrail never observed to fail is not evidence of anything. | test coverage |
 | **Nothing Unconsumed** | An artifact prevents drift only if something consumes it and checks it against something. | — |
@@ -155,7 +155,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 
-**Modelling the Solo.** Not Cooper's persona research, which models absent users from evidence. This models a present person who can read and correct it.
+**Modelling the Human.** Not Cooper's persona research, which models absent users from evidence. This models a present person who can read and correct it.
 
 **Ratchet.** A suppression at the site with a rule and a reason is an exception. One in configuration is a rule deleted quietly.
 

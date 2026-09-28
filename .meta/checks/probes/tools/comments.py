@@ -69,7 +69,7 @@ def _code_detectors(comments: Any) -> list[str]:
         expect(True, comments.python_code(text), text)
     for text in ("the gate checks this", "TODO", "noqa: F401", "fmt: skip",
                  "type: ignore[attr-defined]", "reason: registration order is deliberate",
-                 "Copyright 2026 the solo", "Registered last, and a reader wants it under them",
+                 "Copyright 2026 the human", "Registered last, and a reader wants it under them",
                  "one step, one line, in the shape A21 names", ""):
         expect(False, comments.python_code(text), text)
 
@@ -87,7 +87,7 @@ def _keep_exceptions(comments: Any) -> list[str]:
     """`keep_exception` naming each permissible kind, and None for narration."""
     expect, problems = _expecting("keep_exception")
     expect("directive", comments.keep_exception("noqa: F401"), "noqa")
-    expect("notice", comments.keep_exception("Copyright 2026 the solo"), "copyright")
+    expect("notice", comments.keep_exception("Copyright 2026 the human"), "copyright")
     expect("notice", comments.keep_exception("SPDX-License-Identifier: MIT"), "spdx")
     expect("citation", comments.keep_exception("GitHub collapses this, see stereorepo's DR-171"), "DR")
     expect("citation", comments.keep_exception("the API caps a page at 100, see https://docs.github.com/x"), "url")
@@ -382,7 +382,7 @@ def _seed_gate_sync(comments: Any) -> list[str]:
         "x = compute(1)",
         "return None",
         "noqa: F401",
-        "Copyright 2026 the solo",
+        "Copyright 2026 the human",
         "see stereorepo's DR-171",
         "narration inside body",
         "value = 1  # noqa",
