@@ -343,3 +343,47 @@ living inside that repository for now. It has to answer:
 4. Publish an APM package that carries the disciplines without any delivery
    machinery.
 5. Move booktutor onto that package and remove the spike's tooling from it.
+
+## 10. Ubiquitous Language: the board
+
+The fork's delivery discipline needs a small, agreed vocabulary. The term it
+rests on is **board**, defined here so the fork can adopt it as written.
+
+**Board.** A board is a repository's set of issue files, kept in the
+`issues/` directory at its root, in which the subdirectory holding an issue
+file is that issue's stage.
+
+- **One board per repository.** A repository is the unit of parallelism, so
+  it has exactly one board. The cockpit (section 7) reads many boards; it is
+  not a board itself.
+- **A stage is a directory, never a field.** The stages are `roadmap`,
+  `backlog`, `todo`, `in-progress`, `desk-check` and `done`, in that order.
+  Nothing records an issue's stage except where its file sits.
+- **Who moves issues.** The solo, or an ordinary session working with the
+  solo, adds issue files to `roadmap/` and `backlog/`, and promotes an issue
+  from `roadmap/` to `backlog/` once it is elaborated. Every other move is
+  the supervisor's, and always a `git mv`. Seats never move issue files; the
+  supervisor puts back any that a seat moves.
+- **Which board is authoritative.** The board on `main`. While an issue is in
+  flight, its file on `main` stays in `backlog/`, and its current stage
+  exists only on its branch. The commit that lands it moves it to `done/` on
+  `main`; a send-back moves it to `roadmap/`. So "where is this issue?" has
+  two answers during a run: its place in the queue (on `main`) and its
+  progress (on its branch).
+- **What the board is not.** It is not GitHub Issues or Projects, not a
+  status field, and not a kanban view. Views such as `make pair-status`, or
+  any cockpit, are projections of the board and hold no state of their own.
+
+**Words to avoid:**
+
+- *column*: say **stage**;
+- *status* or *state field*: the directory is the stage;
+- *ticket* or *story*: say **issue**;
+- *queue* for the whole board: the queue is `backlog/`;
+- *`work/`*: the directory's name during the first spike runs.
+
+**A decision the fork still has to make.** Here, a *Challenge* was a GitHub
+Issue with a difficulty label. On the board, the unit is an *issue*: a file,
+not a GitHub object. The fork must decide whether **issue** replaces
+**Challenge** in its vocabulary, or whether Challenge survives as a synonym.
+Nothing here settles that.
