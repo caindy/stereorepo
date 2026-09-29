@@ -11,7 +11,7 @@ decisions:
         reason: "The standard for exactly this, and it makes provenance structural: the stratum is read off `in_scheme` rather than kept in a field that can drift."
     consequences:
       - "The TermProvenance enum is deleted; the stratum is read off `in_scheme`."
-      - "Vocabularies solorepo does not own can be named as schemes and pointed at."
+      - "Vocabularies stereorepo does not own can be named as schemes and pointed at."
     enacted_in:
       - work:artifact/meta-ddd-skos
     rationale: |-
@@ -26,5 +26,5 @@ decisions:
 
       SKOS is the standard for this, and its central move is decoupling
       the concept from the label. Because schemes are first class,
-      vocabularies solorepo does not own can be named and pointed at,
+      vocabularies stereorepo does not own can be named and pointed at,
       which a three-valued provenance enum could not express.

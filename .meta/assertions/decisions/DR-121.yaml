@@ -1,6 +1,6 @@
 decisions:
   - id: work:decision/121
-    name: "DR-121 · What a portfolio inherits cites solorepo's record as solorepo's, and a portfolio's gate passes over a citation of a record it does not carry"
+    name: "DR-121 · What a portfolio inherits cites stereorepo's record as stereorepo's, and a portfolio's gate passes over a citation of a record it does not carry"
     status: ADOPTED
     applies:
       - work:article/10
@@ -35,10 +35,10 @@ decisions:
           The smallest change as #114 put it, and it resolves against nothing:
           no imported record is carried. It would also make "cited and does not
           exist" mean two things depending on which file the citation is in.
-      - name: A citation of solorepo's record says so, and the gate resolves it only where that record is
+      - name: A citation of stereorepo's record says so, and the gate resolves it only where that record is
         chosen: true
         reason: >-
-          `stereorepo's DR-104`, never a bare `DR-104`, in every file a portfolio
+          `DR-104`, never a bare `DR-104`, in every file a portfolio
           copies and every line `render.py` writes into a copied page. The
           Charter's own line decided it — a citation that silently comes to
           mean something else is worse than a dangling one — and a bare number
@@ -58,8 +58,8 @@ decisions:
         not copied, but `render.py` writes it into every portfolio from its
         own literals, and one of them cited DR-106 bare until review. A bare number in a copied file fails in
         the scaffold, where the copy is made from, so the form holds under
-        sync rather than being tidied once. A citation of solorepo's record
-        resolves against this one when the Portfolio asserted is solorepo, and
+        sync rather than being tidied once. A citation of stereorepo's record
+        resolves against this one when the Portfolio asserted is stereorepo, and
         is passed over otherwise. Under `template/` a bare number is the
         seed's record, which is the portfolio's.
       - >-
@@ -83,7 +83,7 @@ decisions:
         have doubled the diff.
     falsifier: >-
       A portfolio that has to resolve one of these — a step that must read
-      stereorepo's DR-085 to check something — and finds that a name in prose is
+      DR-085 to check something — and finds that a name in prose is
       not a reference. Then either the record travels or the id names its home,
       and the possessive was the interim it is.
     rationale: |-

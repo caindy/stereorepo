@@ -17,7 +17,7 @@ decisions:
           built, its parity test compares a root and a template that are one
           tree here, and its golden-tree test checks for leaks that cannot
           occur. As a Project it would be a gated package whose product is
-          nothing solorepo renders — the dogfood that proves the wrong thing,
+          nothing stereorepo renders — the dogfood that proves the wrong thing,
           in its own first record's words. The monorepo claim it was to
           carry is carried by the seed, whose gate runs.
       - name: Bring only its design in, as adopted Decisions

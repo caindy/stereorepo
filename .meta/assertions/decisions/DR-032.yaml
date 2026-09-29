@@ -17,5 +17,5 @@ decisions:
       container. The Ubiquitous Language belongs to the Bounded Context
       anyway, so they travel together.
 
-      solorepo is the degenerate case: its domain *is* building software
+      stereorepo is the degenerate case: its domain *is* building software
       as a team of one, so its domain terms are the ones it publishes.

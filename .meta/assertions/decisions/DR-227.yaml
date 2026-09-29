@@ -17,7 +17,7 @@ decisions:
       unmarked it reads as deliberation, which is the reading Written Decisions'
       first step warns about: an option nobody weighed is not an option. Dropped,
       the entry is honest about what was weighed and silent about the thing that
-      was tried, so the next reader reaches for it again. Solorepo's DR-221 is
+      was tried, so the next reader reaches for it again. DR-221 is
       the case. Its fourth alternative, keying `promote` on the gate's own
       `PROMOTED` pattern, is what #545 shipped; the reviewer's thread there
       argued that the broad pattern's false positive costs the Challenge rather
@@ -80,7 +80,7 @@ decisions:
         happened on a branch that has since merged. It is a step followed rather
         than checked, like the one it sits beside.
       - >-
-        Solorepo's DR-221's fourth alternative is marked, and the entries already on the
+        DR-221's fourth alternative is marked, and the entries already on the
         trunk are not re-read for others. An unmarked option means what it always
         meant; the slot buys the distinction going forward.
     falsifier: >-

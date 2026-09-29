@@ -25,12 +25,12 @@ disciplines:
         name: Copy what is inherited
         statement: >-
           Copy what is inherited — `.meta/work/`, `.meta/ddd/`, `.meta/work_ontology.yaml`, `.meta/ddd_ontology.yaml`,
-          `.meta/render.py`, `.meta/check.py`, `.meta/lib/` (stereorepo's DR-217), `.meta/apm_compile.py`,
-          `.meta/dereference.py`, `.meta/gate`, `.meta/search.py` (stereorepo's DR-194), `.meta/wikisplain.py`
-          (stereorepo's DR-187), `.meta/terms.py` (stereorepo's DR-234), `.meta/bootstrap.py` (stereorepo's DR-206),
+          `.meta/render.py`, `.meta/check.py`, `.meta/lib/` (DR-217), `.meta/apm_compile.py`,
+          `.meta/dereference.py`, `.meta/gate`, `.meta/search.py` (DR-194), `.meta/wikisplain.py`
+          (DR-187), `.meta/terms.py` (DR-234), `.meta/bootstrap.py` (DR-206),
           `.meta/bundle.py`, `.meta/bundle.yaml`, `.meta/adapt.py`, `.meta/ruff.toml`, `.meta/mypy.ini`,
           `.meta/hooks/`, `.meta/checks/`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`,
-          `.meta/schemas.md`, `.meta/templates/`, `wiki/stereorepo/` (stereorepo's DR-184), `stakeholders/` and
+          `.meta/schemas.md`, `.meta/templates/`, `wiki/stereorepo/` (DR-184), `stakeholders/` and
           `.gitignore`. `.meta/bundle.yaml` is the same list, read by a program. Not the generated pages:
           Specialization's *Render and check* step writes those from the assertions. Not the pair loop
           either: it runs a portfolio's issues from outside the portfolio's tree, so the seats working
@@ -52,7 +52,7 @@ disciplines:
         statement: >-
           Choose the languages the portfolio will use, from those stereorepo's `bootstraps/` supports, and
           bring them to hand: running `just bootstrap <lang> <path>` instantiates a seed project and registers
-          it in `assertions/structure.yaml` (stereorepo's DR-206). Language adoption can happen now or be
+          it in `assertions/structure.yaml` (DR-206). Language adoption can happen now or be
           deferred to any point in the portfolio lifecycle.
       - id: work:discipline-step/specialization/render-and-check
         name: Render and check

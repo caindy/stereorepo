@@ -63,7 +63,7 @@ goes to the Issue file.
 generated.** They derive from `assertions/`, which is the source. So does the
 Decision form at `templates/decision.md`, which derives from the `Decision`
 class itself. The script is what a shell runs; its body is the package
-`lib/render/`, seven modules (stereorepo's DR-217). Edit the source and re-render:
+`lib/render/`, seven modules (DR-217). Edit the source and re-render:
 
 ```bash
 uvx --python 3.13 --with pyyaml python .meta/render.py

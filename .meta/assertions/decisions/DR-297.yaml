@@ -1,57 +1,54 @@
 decisions:
   - id: work:decision/297
-    name: "DR-297 · The record keeps solorepo's numbers, and a number it does not hold was solorepo's"
+    name: "DR-297 · A decision number below 297 that the record does not hold is outmoded"
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-checks-graph-record
+      - work:artifact/meta-checks-citations-loaders
       - work:artifact/meta-assertions-imported-charter
       - work:artifact/agents
     context: >-
-      This repository was seeded from solorepo with its history, and the
-      seeding removed the delivery discipline solorepo ran on, its GitHub
-      choreography, and the taxonomy of work that served them. The Decisions
-      and Articles that existed only for those went with them. What stayed
-      keeps its number, because the entries that stayed cite each other by
-      number and a citation that silently came to mean something else would be
-      worse than one that dangles.
-
-      That leaves holes. The record's numbering rule said a hole is a deletion
-      unless a tag on GitHub reserved the number, and the reservation was the
-      part of the removed machinery that let several branches write Decisions at
-      once. Work in a repository is now serial, one issue at a time, so no two
-      branches race for a number.
+      The record was pruned when the delivery discipline it once served, its
+      GitHub choreography and the taxonomy of work were removed. The entries
+      that existed only for those went with them. What stayed keeps its number,
+      because the entries that stayed cite each other by number and a citation
+      that silently came to mean something else would be worse than one that
+      dangles. That leaves holes, and some prose still cites a number that is
+      now a hole.
     alternatives:
       - name: Keep every removed entry, marked WITHDRAWN
         chosen: false
         reason: >-
           The removed entries are the history of a way of working this
           repository no longer has. Kept, every reader of the record pays for
-          them, and the history is already kept where it belongs: in git, and in
-          solorepo.
+          them, and git already keeps the history.
       - name: Renumber the surviving entries contiguously
         chosen: false
         reason: >-
           Every citation in the surviving prose, and every citation a portfolio
           holds of this record, would come to mean something else.
-      - name: Keep the numbers, and read every number below this one that the record does not hold as solorepo's
+      - name: Keep the numbers, and read a missing number below this one as outmoded
         chosen: true
         reason: >-
           The surviving citations keep their meaning, and the rule is one
-          number. A number above this one is issued as the highest the record
-          holds plus one, on `main`, and a hole above it is a deletion.
+          number. A citation of a missing number below this one names an
+          outmoded entry, which git holds; a hole at or above it is a deletion.
     consequences:
       - >-
         `decision numbering` accepts a hole below this entry's number and
-        refuses one above it, and reads no tags.
+        refuses one above it.
+      - >-
+        `cited decisions` accepts a citation of a missing number below this
+        entry's number.
       - >-
         Articles 15, 16, 18 and 19 are retired by this entry.
       - >-
-        The next Decision is the highest number the record holds plus one.
+        The next Decision is the highest number the record holds plus one, on
+        `main`. Work in a repository is serial, so no two branches race for
+        one.
     falsifier: >-
       Two Decisions written on two branches at once, both taking the same next
       number, which would mean work in a repository is no longer serial.
     rationale: |-
-      The numbers are identifiers, so the surviving ones stay as they are. The
-      holes are the account of the seeding and need no other: the removed
-      entries are in git and in solorepo. Reservation existed for parallel
-      branches, and there are none.
+      The numbers are identifiers, so the surviving ones stay as they are, and
+      a missing one needs no more account than this entry gives it.

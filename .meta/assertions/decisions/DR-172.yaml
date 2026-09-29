@@ -11,25 +11,25 @@ decisions:
       - work:artifact/meta-lib-apm-compile-harness
       - work:artifact/meta-lib-apm-compile-instructions
     context: >-
-      Microsoft APM is solorepo's target for packaging agent primitives (DR-007,
-      solorepo's #28). While `.meta/.apm/` was designated as the producer staging
+      Microsoft APM is stereorepo's target for packaging agent primitives (DR-007,
+      #28). While `.meta/.apm/` was designated as the producer staging
       ground for authored primitives, `.meta/.apm/README.md` recorded an open question
       from 2026-09-06: where `apm.yml` must reside. APM canon mandates that `apm.yml`
       sits at the package root beside `.apm/`. Placing `apm.yml` and `.apm/` at the
       repository root would clutter product portfolios with scaffolding, violating
-      solorepo's core architectural boundary separating `.meta/` from product material.
+      stereorepo's core architectural boundary separating `.meta/` from product material.
     alternatives:
       - name: Root-level APM package (`apm.yml` and `.apm/` at the repository root)
         chosen: false
         reason: >-
           It places agent package management manifest files at the top-level
-          root of the repository. Solorepo requires that everything outside
+          root of the repository. Stereorepo requires that everything outside
           `.meta/` is product material; leaking scaffold dependency manifests into
           the repository root violates this boundary and crowds the portfolio's landing.
       - name: Nested package root under `.meta/` compiled to repository root via `--root ..`
         chosen: true
         reason: >-
-          Research on solorepo's #339 verified APM's canon: nested package roots are
+          Research on #339 verified APM's canon: nested package roots are
           fully supported wherever `apm.yml` sits, and both `apm compile` and `apm install`
           natively provide the `--root <DIR>` flag. Executing `cd .meta && apm compile --root .. --all`
           resolves primitives from `.meta/.apm/` while deploying generated harness
@@ -43,12 +43,12 @@ decisions:
         rules, agents, skills, commands, and root context files into the repository root.
       - >-
         `.meta/.apm/README.md` is updated to record this settled layout, resolving
-        the open layout question from solorepo's #339.
+        the open layout question from #339.
     falsifier: >-
       An APM release that drops `--root` support or fails to compile across target
       harnesses when `apm.yml` is located in a nested subdirectory.
     rationale: |-
-      Solorepo's rule is that `.meta/` holds the staging ground and never ships as
+      Stereorepo's rule is that `.meta/` holds the staging ground and never ships as
       product material.
 
       APM's native `--root` redirection flag resolves the layout tension cleanly:

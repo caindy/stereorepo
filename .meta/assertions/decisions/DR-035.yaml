@@ -15,7 +15,7 @@ decisions:
       *alive*, scanning everything outside `template/` instead.
 
       One fix closed two defects, and that is the lesson worth keeping.
-      Specialization is solorepo's own Discipline rather than one it
+      Specialization is stereorepo's own Discipline rather than one it
       publishes, so moving it out of `assertions/imported/` stopped a
       portfolio inheriting a Discipline it can never perform *and* stopped
       `SPECIALIZE.md` being recreated by the re-render after its own

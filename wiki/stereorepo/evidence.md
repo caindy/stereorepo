@@ -22,7 +22,7 @@ depends on the argument it stands in, not on what it is made of.
 `Grounds` and `Backing` are that schema's words for those positions and are
 quoted here rather than adopted. Neither is minted in this repository, which has
 no consumer for the distinction yet; whether they are taken is
-caindy/solorepo#576 (stereorepo's DR-228).
+#576 (stereorepo's DR-228).
 
 ## Evidence that can fail
 

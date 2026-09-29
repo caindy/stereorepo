@@ -71,7 +71,7 @@ and that entry is wrong here: A19 says a commit that does not name its Actor is
 unattributable, and `git commit` names none. Commits go through
 `.meta/say/commit`, which appends the Actor Trailer. The same applies to `gh`'s
 writing verbs, which `.claude/settings.json` already denies in favour of
-`.meta/say/post` and `.meta/say/move` (solorepo's DR-069); do not add them back
+`.meta/say/post` and `.meta/say/move`; do not add them back
 in `.claude/settings.local.json`.
 
 ### Verifying, by target
@@ -324,7 +324,7 @@ A.When using `pyrightconfig.json` for multi-package projects, REMOVE the `tool.b
    names none; `.meta/say/commit` appends the Actor Trailer. Do not add `gh`'s
    writing verbs either: `.claude/settings.json` denies them so that
    everything reaching GitHub passes through `.meta/say/post` and `.meta/say/move`
-   and is signed (solorepo's DR-069), and a `local` file that allowed them back
+   and is signed, and a `local` file that allowed them back
    would be reopening a boundary rather than granting a convenience.
 
    **Merge logic**: Read existing file, parse JSON, take union of `allow` lists, write back. Create `.claude/` directory if needed.

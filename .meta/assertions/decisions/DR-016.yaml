@@ -1,6 +1,6 @@
 decisions:
   - id: work:decision/016
-    name: "DR-016 · solorepo republishes DDD; portfolios conform transitively"
+    name: "DR-016 · stereorepo republishes DDD; portfolios conform transitively"
     status: ADOPTED
     enacted_in:
       - work:artifact/meta-ddd-ontology
@@ -11,7 +11,7 @@ decisions:
       because the divergence is invisible.
 
       Minting has a search order. Does DDD already name it? Use it. Does
-      solorepo's vocabulary? Use it. Only when neither does is a term
+      stereorepo's vocabulary? Use it. Only when neither does is a term
       minted, and that is the explicit decision with the human.
 
       Departures must be marked, or transitive conformity breaks silently.

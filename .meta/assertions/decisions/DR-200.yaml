@@ -11,8 +11,8 @@ decisions:
       - work:artifact/meta-lib-apm-compile-agents
     context: >-
       In a team of one, product and feature design requires rigorous critique and
-      friction before code is committed. While solorepo adopted Alan Cooper's
-      Goal-Directed Personas (stereorepo's DR-019, stereorepo's DR-041) to model who
+      friction before code is committed. While stereorepo adopted Alan Cooper's
+      Goal-Directed Personas (DR-019, DR-041) to model who
       the work is for, and noted that interrogating a Persona involves an Actor
       adopting its character (.meta/work/personas.yaml), the operational mechanics
       of interactive collaborative design with an agent remained unformalized.

@@ -13,8 +13,7 @@ def comment_probes() -> list[str]:
     A heuristic over comment text is a boundary like any other, and the cost of
     a false positive here is a gate that refuses a licence header or a sentence
     of Reference prose. Every keep-exception has a case, and every detector has
-    the innocent neighbour it must not catch (solorepo's DR-110,
-    stereorepo's DR-207).
+    the innocent neighbour it must not catch (stereorepo's DR-207).
 
     The ratchet the `inline commentary` step reads through is asked the same
     way: a count at its baseline, over it, under it, and an entry naming a file
@@ -146,7 +145,7 @@ def _causes(comments: Any) -> list[str]:
 
     expect, cause_problems = _expecting("internal_cause")
     for text in ("flat `collect` import makes this Any; see collect.check",
-                 "the root cause is filed as solorepo's #557",
+                 "the root cause is filed as #557",
                  "`render.rendered()` carries no annotations — .meta/render.py re-exports it",
                  "the ordering stereorepo's DR-207 settles",
                  "see files.tree"):
@@ -320,7 +319,7 @@ def _repeats(comments: Any) -> list[str]:
         if outside:
             problems.append(f"comment probes: {cited!r} cites outside this repository and is not "
                             f"counted, got {outside!r}")
-    inside = _repeated(comments, ["the flat import, see caindy/solorepo#557"] * 3)
+    inside = _repeated(comments, ["the flat import, see #557"] * 3)
     if not comments.against_repeats(inside, {}):
         problems.append("comment probes: an Issue is inside this repository and does not lift the count")
     return problems

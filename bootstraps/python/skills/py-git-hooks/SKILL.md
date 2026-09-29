@@ -38,11 +38,9 @@ $ git config core.hooksPath
 ```
 
 `.git/hooks/` is therefore dead here, and nothing reads what is written into it.
-`.meta/hooks/` holds the hooks that are live: `post-checkout`, which materializes
+`.meta/hooks/` holds the hook that is live: `post-checkout`, which materializes
 the single-source APM assets into each harness on branch switch and new worktree
-(solorepo's #430), alongside the Claude Code `PreToolUse` hooks
-`signed_channel.py` (solorepo's DR-069) and `worktree_only.py`
-(solorepo's DR-110). It is a tracked directory, so anything installed there is committed and
+(#430). It is a tracked directory, so anything installed there is committed and
 propagates into every portfolio.
 
 pre-commit knows about the setting and refuses:

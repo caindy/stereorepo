@@ -1,4 +1,4 @@
-"""What the citation steps read from: the patterns a Decision and an Issue citation take, and the files a portfolio inherits.
+"""What the citation steps read from: the patterns a Decision citation takes, and the files a portfolio inherits.
 """
 import pathlib
 import re
@@ -16,31 +16,10 @@ DR = re.compile(r"\bDR-(\d{3})\b")
 FOREIGN = re.compile(r"[Ss]tereorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
 SCAFFOLD = "work:portfolio/stereorepo"
 
-# A citation of solorepo's record, the repository stereorepo was seeded from.
-# It names history this record does not hold, so nothing resolves it; it is
-# taken out of the text before the bare scan, like a foreign citation
-# (stereorepo's DR-297).
-LEGACY = re.compile(r"[Ss]olorepo's DR-\d{3}\b(?:(?:,| and|, and) DR-\d{3}\b)*")
-
-
-# An Issue number cited bare, as GitHub linked one. Not `#abc123`, which is a
-# fragment or a colour, and not the tail of a longer number. Not a number in
-# quotes either: `"#7"` in a probe is the string it greps its own output for.
-ISSUE = re.compile(r"(?<![\w#&\"'])#(\d{1,4})(?!\d)")
-
-# A citation of one of solorepo's GitHub Issues, which is how inherited prose
-# cites the legacy repository's history: the possessive, then a run, so
-# `solorepo's #11, #21` names two.
-ISSUE_FOREIGN = re.compile(r"[Ss]olorepo's #\d{1,4}\b(?:(?:,| and|, and) #\d{1,4}\b)*")
-
-
-def issue_citation() -> tuple[re.Pattern[str], re.Pattern[str]]:
-    """The patterns for an Issue citation: a bare `#n`, and `solorepo's #n` (stereorepo's DR-132).
-
-    Returns:
-        tuple[re.Pattern, re.Pattern]: `(ISSUE, ISSUE_FOREIGN)`.
-    """
-    return ISSUE, ISSUE_FOREIGN
+OUTMODED_BELOW = 297
+"""The first number the scaffold's record issued after it was pruned
+(stereorepo's DR-297). In the scaffold, a missing number below it is an
+outmoded entry."""
 
 
 def copied_files() -> set[pathlib.Path]:

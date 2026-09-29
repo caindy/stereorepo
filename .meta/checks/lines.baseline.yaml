@@ -10,12 +10,12 @@
 # the debt grew; under, because a baseline nobody lowers has stopped being one.
 #
 # Written by `python.py`, which names the file and the number in the failure.
-# Recorded as the limit was adopted, in caindy/solorepo#751, and it falls as
+# Recorded as the limit was adopted, in #751, and it falls as
 # files are touched.
 
 .meta/bootstrap.py: 17
 .meta/check.py: 1
-.meta/checks/citations/__init__.py: 2
+.meta/checks/citations/__init__.py: 1
 .meta/checks/citations/claims.py: 4
 .meta/checks/citations/loaders.py: 1
 .meta/checks/citations/prose.py: 1
@@ -24,14 +24,14 @@
 .meta/checks/comments.py: 6
 .meta/checks/files/__init__.py: 6
 .meta/checks/files/history.py: 9
-.meta/checks/files/inline_python.py: 2
+.meta/checks/files/inline_python.py: 1
 .meta/checks/files/justfile.py: 0
 .meta/checks/files/markdown.py: 1
 .meta/checks/files/prose.py: 1
 .meta/checks/files/python.py: 9
 .meta/checks/files/rendered.py: 5
 .meta/checks/files/sources.py: 2
-.meta/checks/files/templates.py: 11
+.meta/checks/files/templates.py: 10
 .meta/checks/files/wiki.py: 22
 .meta/checks/graph/__init__.py: 1
 .meta/checks/graph/artifacts.py: 1
@@ -48,7 +48,6 @@
 .meta/checks/probes/tools/dereference.py: 0
 .meta/checks/probes/tools/gate.py: 3
 .meta/checks/probes/tools/search.py: 3
-.meta/checks/probes/tools/terms.py: 1
 .meta/checks/probes/tools/test_specialization.py: 0
 .meta/dereference.py: 0
 .meta/gate: 1

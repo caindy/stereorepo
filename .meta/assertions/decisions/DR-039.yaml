@@ -12,7 +12,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-work-purpose
     rationale: |-
-      solorepo's DR-038 put "a USER Goal's Job to be Done must serve an END goal" in
+      DR-038 put "a USER Goal's Job to be Done must serve an END goal" in
       the gate because a LinkML rule cannot reach through a reference.
       True premise, wrong conclusion: inheritance would not have helped
       either, but the constraint can be made **local**, which does.

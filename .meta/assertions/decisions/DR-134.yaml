@@ -19,8 +19,8 @@ decisions:
       reaches and left the rest, on the grounds that deciding whether a sentence
       supports a paraphrase means reading the entry — the work the check was
       meant to save. The rest is most of what went wrong: of the
-      six citation failures on solorepo's #138, #140 and #142 the new checks
-      catch two, and the other four — a sentence attributed to solorepo's DR-109 it does
+      six citation failures on #138, #140 and #142 the new checks
+      catch two, and the other four — a sentence attributed to DR-109 it does
       not support, a count of eighteen that was fifteen, a derivation stated of
       two numbers that held for one — were each found by a reviewer opening the
       target and reading it. That is an Opus round per pull request for work a
@@ -103,7 +103,7 @@ decisions:
         check. It is somebody's: the coder's, before the hand-off, with the
         reviewer behind it. What it still is not is the gate's.
       - >-
-        The model credential is `~/.config/solorepo/claude.env` where there is
+        The model credential is `~/.config/stereorepo/claude.env` where there is
         one, read the way the channel reads a Role's: outside the tree, refused
         when it is readable by others, and handed to one child process rather
         than exported. `CLAUDE_CODE_OAUTH_TOKEN` already in the environment
@@ -121,7 +121,7 @@ decisions:
         that reported the token unset. An ordinary variable crosses and the
         credential does not, which is the whole of what the file is for; what
         the harness overrides is the names it owns, `AI_AGENT` written in the
-        same block arriving as the harness's own build string. solorepo's DR-148 rests on
+        same block arriving as the harness's own build string. DR-148 rests on
         the narrow reading and is what the probe was run for. Absent both, the
         ambient `claude` answers and the step says so.
         That last term is where this parts from the channel and is the same

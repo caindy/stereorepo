@@ -1,6 +1,6 @@
 decisions:
   - id: work:decision/014
-    name: "DR-014 · A solorepo is a monorepo: one portfolio, one bounded context, one language"
+    name: "DR-014 · A stereorepo is a monorepo: one portfolio, one bounded context, one language"
     status: ADOPTED
     consequences:
       - "The repo boundary and the language boundary become the same boundary."

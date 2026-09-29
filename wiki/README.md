@@ -1,9 +1,9 @@
 # Knowledge Base (Wiki)
 
 The repository's home for maintainer-facing exposition, structured under the
-[[stereorepo/knowledge-management|Knowledge Management]] discipline (stereorepo's DR-184, stereorepo's DR-185).
+[[stereorepo/knowledge-management|Knowledge Management]] discipline (DR-184, DR-185).
 
-Where Decision Records capture *why a choice was made* (stereorepo's DR-065) and
+Where Decision Records capture *why a choice was made* (DR-065) and
 LinkML vocabularies capture *machine definitions and glosses*, the wiki captures
 **narrative explanations**: how architectures work, how subsystems interact,
 and how domain concepts behave in practice.
@@ -26,7 +26,7 @@ partitioned accordingly:
 
 ## Editorial Conventions
 
-Pages in this wiki adhere to Wikipedia-style conventions (stereorepo's DR-185):
+Pages in this wiki adhere to Wikipedia-style conventions (DR-185):
 
 1. **The Lead Sentence (MOS:LEAD):** Every page opens with a bolded subject
    followed by a copular definition stating what the concept is:

@@ -45,7 +45,7 @@ decisions:
         implies an instruction has to say where that instruction now lives, and
         the gate asks at the moment it is written.
       - >-
-        RECOMMENDED entries are exempt, which is what the status now buys: solorepo's DR-066
+        RECOMMENDED entries are exempt, which is what the status now buys: DR-066
         is endorsed, enacts nothing yet, and passes.
     falsifier: >-
       An artifact named by an entry whose rule is not in fact written there —

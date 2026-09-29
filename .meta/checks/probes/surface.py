@@ -63,7 +63,7 @@ TOLERATED: tuple[tuple[str, str], ...] = (
     ),
     (
         "a private recipe, which sits outside the operator surface even carrying a bare prose "
-        "positional the contract would otherwise refuse (solorepo's #771)",
+        "positional the contract would otherwise refuse (#771)",
         "# what landed\nlanded n *args:\n    python3 .meta/show.py {{n}} {{args}}\n\n"
         "_scratch note:\n    python3 .meta/show.py {{note}}\n",
     ),
@@ -80,7 +80,7 @@ def verb_surface_probes() -> list[str]:
     declares, invoking a tool under `.meta/` and interpolating every parameter
     it takes comes to `Passed`. Each departure in `DEPARTURES` comes to `Found`
     carrying the substring named beside it: a recipe the contract does not
-    declare, which is how a bare prose positional arrives (solorepo's #482); a
+    declare, which is how a bare prose positional arrives (#482); a
     declared recipe whose signature changed; a parameter never interpolated; an
     interpolation naming no parameter, which `just` expands to nothing rather
     than refusing; a recipe implementing its own verb; a recipe carrying no doc
@@ -89,7 +89,7 @@ def verb_surface_probes() -> list[str]:
     body interpolating a name the file assigns at its top level, a recipe
     `just` runs quietly, and a private (`_`-prefixed) recipe, which is outside
     the operator surface the contract governs even where its own shape would
-    otherwise be refused (solorepo's #771). A surface holding no recipe the
+    otherwise be refused (#771). A surface holding no recipe the
     contract declares is reported as the missing recipe rather than passing
     silently.
     """

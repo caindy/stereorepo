@@ -29,8 +29,8 @@ decisions:
           citations here are of an entry that does not name the file, 62 of
           them in files the record does name, and 82 of the 190 written in the
           parenthetical form a reader takes for an attribution — `.meta/say/move`
-          cites solorepo's DR-112, solorepo's DR-114 and solorepo's DR-116 ten times between them and is named
-          by solorepo's DR-117 and solorepo's DR-128. A citation is ordinarily a cross-reference to
+          cites DR-112, DR-114 and DR-116 ten times between them and is named
+          by DR-117 and DR-128. A citation is ordinarily a cross-reference to
           reasoning enacted elsewhere, which is what A12 — a citation in a
           durable artifact is dereferenced — asks it to be. A step that fails
           five hundred true lines is a step somebody turns off.
@@ -58,16 +58,16 @@ decisions:
           the citation that was worth having. What it costs is reach: a file
           citing several entries, one of which names it, hides a stray among
           them, so of #152's two sites this catches `AGENTS.md` and not
-          `template/.github/workflows/gate.yml`, which cited solorepo's DR-119
-          and solorepo's DR-120 already. A floor under the residue, not a sieve for it,
+          `template/.github/workflows/gate.yml`, which cited DR-119
+          and DR-120 already. A floor under the residue, not a sieve for it,
           and the counts above are why nothing tighter is available from the
           tree alone.
     consequences:
       - >-
         `enacting citations` is a step of `check.py`, over `cited decisions`'s
         file set and its rule for whose record a number names: under
-        `template/` a bare number is the seed's, and a citation of solorepo's
-        record counts only where this Portfolio is solorepo. A number that
+        `template/` a bare number is the seed's, and a citation of stereorepo's
+        record counts only where this Portfolio is stereorepo. A number that
         resolves to no entry is left to `cited decisions`, so one mistyped
         digit is one failure and not two.
       - >-
@@ -80,7 +80,7 @@ decisions:
         Two citations were written to clear it, and each is one a reader
         wanted: `bootstraps/rust/README.md` now cites DR-090 where it says the
         xtask gates the seed, and `template/.meta/assertions/authority.yaml`
-        cites solorepo's DR-123 where it says the Roles are inherited and the
+        cites DR-123 where it says the Roles are inherited and the
         accounts are the portfolio's.
       - >-
         The scan `cited decisions` did is now `copied_files` and `durable`, one

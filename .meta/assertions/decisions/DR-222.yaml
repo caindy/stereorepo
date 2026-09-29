@@ -14,7 +14,7 @@ decisions:
       from the moment it merges. The practice shows it: of the 215 entries
       under `.meta/assertions/decisions/` that preceded this one, 209 were
       `ADOPTED`, four `WITHDRAWN`, and two had ever sat anywhere else. Nothing
-      waits, because no step says it should. Solorepo's DR-221 is the case: over a hundred lines
+      waits, because no step says it should. DR-221 is the case: over a hundred lines
       describing how the channel behaves, standing `ADOPTED`. It was minted,
       adopted and merged inside one session, and #550 is open against a false
       claim in its context that the agent reviewer read for its wording rather
@@ -30,7 +30,7 @@ decisions:
       - name: A solo Role with a signing key, so adoption is an attributable act
         chosen: false
         reason: >-
-          It would make adoption evidenced: stereorepo's A19 has every commit
+          It would make adoption evidenced: A19 has every commit
           name its Actor, and the Trailer is written from the credential the
           channel speaks with, so an agent holding only a Role's credential
           could not sign as the human. It also introduces an identity to the

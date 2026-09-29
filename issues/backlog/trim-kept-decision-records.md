@@ -1,7 +1,7 @@
 # Trim PR First residue from the Decision Records that stayed
 
 The bootstrap removed the Decision Records that existed only for PR First, its
-GitHub choreography or the taxonomy of work (stereorepo's DR-297). Forty-nine
+GitHub choreography or the taxonomy of work (DR-297). Forty-nine
 of the 143 that stayed still carry some of it in their prose: an example drawn
 from a workflow, a clause about the coder and the reviewer, a class the
 ontology no longer has (Actor, Job, Remit, Goal, Personality, Securable).

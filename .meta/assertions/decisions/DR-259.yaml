@@ -17,8 +17,8 @@ decisions:
       - work:artifact/template-agents
       - work:artifact/wiki-stereorepo-knowledge-management
     context: >-
-      Stereorepo's DR-106 established the root `justfile` as an invoking-only verb surface,
-      and solorepo's DR-252 formally partitioned repository operational agency into three
+      DR-106 established the root `justfile` as an invoking-only verb surface,
+      and DR-252 formally partitioned repository operational agency into three
       distinct planes: the Local Operator Plane (`just`), the Attested Mutation Plane
       (`.meta/say/`), and the GitHub Inspection Plane (`gh`). Under this separation, the
       Local Operator Plane is reserved for local verification gates (`gate`, `pr`,
@@ -38,7 +38,7 @@ decisions:
       `wikisplain`, `dereference`, `search`, `terms`, `apm`, `bootstrap`, and
       `test-specialization`), yet only `wikisplain` took bare prose positionals. A caller
       could not discern whether quoting worked without inspecting the internal `argparse`
-      configuration of the invoked script, violating stereorepo's Article 22. Furthermore,
+      configuration of the invoked script, violating Article 22. Furthermore,
       `wikisplain` was an architectural outlier on the Local Operator Plane: an authoring
       workflow creating maintainer-facing prose in `wiki/<context>/`, whereas all other
       content authoring (decisions, challenges, personas, code) is governed by Agent Skills.
@@ -68,7 +68,7 @@ decisions:
         chosen: true
         reason: >-
           Removes `wikisplain` from the root `justfile`, restoring strict cohesion to the
-          Local Operator Plane under solorepo's DR-252. Content authoring is governed by
+          Local Operator Plane under DR-252. Content authoring is governed by
           Agent Skills: the `/wikisplain` skill invokes `.meta/wikisplain.py` directly,
           where standard process execution preserves quoted multi-word concept arguments
           in `sys.argv` without intermediate shell interpolation. The `just` verb surface

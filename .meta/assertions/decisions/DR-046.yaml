@@ -10,7 +10,7 @@ decisions:
         reason: "It needs its own copy of the Disciplines it implements, and copies drift."
       - name: "Bootstraps in the monorepo, under `bootstraps/`"
         chosen: true
-        reason: "It reads the same `assertions/imported/disciplines.yaml` everything else does, and gives solorepo a second Product delivered to a different reader."
+        reason: "It reads the same `assertions/imported/disciplines.yaml` everything else does, and gives stereorepo a second Product delivered to a different reader."
     consequences:
       - "Specialization gains a step: choose the languages, and copy in those Bootstraps' applied disciplines."
       - "`~/code/rust_bootstrap` is superseded and should be deleted; by Nothing Unconsumed a duplicate is debris."

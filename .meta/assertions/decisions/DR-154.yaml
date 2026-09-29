@@ -98,7 +98,7 @@ decisions:
         is this defect at one remove. "Most" is true unless three prechecks that
         need neither are added, and it is never arithmetic anybody has to redo.
       - >-
-        The count in solorepo's DR-115's rationale is left as it stands. An entry records
+        The count in DR-115's rationale is left as it stands. An entry records
         the ground a decision was taken on, and a number there is of its moment
         rather than a claim about today.
     falsifier: >-

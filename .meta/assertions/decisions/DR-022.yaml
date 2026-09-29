@@ -5,7 +5,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-disciplines
     rationale: |-
-      Two Disciplines adopted for every solorepo, in the sense settled earlier: a
+      Two Disciplines adopted for every stereorepo, in the sense settled earlier: a
       structured way of working that must be adhered to because it is not an imperative
       program.
 

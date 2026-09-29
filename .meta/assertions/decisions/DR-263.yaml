@@ -9,10 +9,10 @@ decisions:
       - work:artifact/meta-checks-probes-ruleset
       - work:artifact/meta-ruff-toml
     context: >-
-      Stereorepo's Article 2 refuses a suppression made in configuration: the `meta lints`
+      Article 2 refuses a suppression made in configuration: the `meta lints`
       step reads `lint.ignore` and `lint.extend-ignore` out of `.meta/ruff.toml` and fails
       on any entry, so switching a rule off after selecting it costs a site suppression,
-      a `reason:` under stereorepo's DR-177, and an argument on the pull request.
+      a `reason:` under DR-177, and an argument on the pull request.
 
       The step never read `select`. Declining to select a family reaches the same end at
       none of that cost: the rule is off, no site carries a comment, and the diff that

@@ -35,7 +35,7 @@ def role_agent(role_id: str, r: dict[str, Any]) -> str:
         "",
         f"**Role:** {r.get('description', '').strip()}",
         "",
-        "## Conversational Communication Register (stereorepo's DR-198, solorepo's DR-199)",
+        "## Conversational Communication Register (stereorepo's DR-198)",
         "",
         comm_style,
         "",
@@ -109,7 +109,7 @@ def persona_agent(p: dict[str, Any]) -> str:
 
 
 def agent_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
-    """Compiles Roles and Personas into agent primitives (solorepo's DR-199, stereorepo's DR-200).
+    """Compiles Roles and Personas into agent primitives (stereorepo's DR-200).
 
     Two kinds of agent, written into one directory. An operational Role, such as
     the technical writer, carries its own communication style, and is given

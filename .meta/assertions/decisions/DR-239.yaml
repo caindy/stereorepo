@@ -12,8 +12,8 @@ decisions:
       - work:artifact/meta-fixtures-specialization-tokens
       - work:artifact/meta-checks-probes-tools-test-specialization
     context: >-
-      Specialization is the core value proposition of solorepo: turning a clone
-      into an independent portfolio via an 8-step discipline (stereorepo's DR-204).
+      Specialization is the core value proposition of stereorepo: turning a clone
+      into an independent portfolio via an 8-step discipline (DR-204).
       While individual components were tested separately (such as template
       conventions, surviving placeholder checks, and APM compilation), there was
       no automated harness to verify that a fresh clone cleanly executes all eight
@@ -41,8 +41,8 @@ decisions:
           An automated runner (.meta/dogfood.py) executing into a hermetic temporary
           repository verifies all eight discipline steps end-to-end. Synthetic
           substitution fixtures (.meta/fixtures/specialization/tokens.json) live
-          outside .meta/assertions/ (stereorepo's DR-026), an operator recipe (`just dogfood`)
-          exposes the runner on the root surface (stereorepo's DR-106), and a scheduled CI
+          outside .meta/assertions/ (DR-026), an operator recipe (`just dogfood`)
+          exposes the runner on the root surface (DR-106), and a scheduled CI
           workflow (.github/workflows/dogfood.yml) guards against regressions continuously.
     consequences:
       - >-
@@ -67,6 +67,6 @@ decisions:
       portfolio gate to fail while .meta/test_specialization.py or just test-specialization exits cleanly.
     rationale: |-
       Per Article 9, a seed is data and is gated by rendering it and running the real
-      gates on the result. Specialization is solorepo's primary external seed transformation.
+      gates on the result. Specialization is stereorepo's primary external seed transformation.
       Running the discipline end-to-end in an automated, hermetic environment guarantees
       that every commit to the scaffold produces a fully functional, self-gating portfolio.

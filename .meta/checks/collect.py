@@ -101,7 +101,7 @@ def check(label: str, pre: bool = False) -> Callable[[StepFunction], StepFunctio
     `pre` runs the step before the schemas load. LinkML's loader raises on the
     first repeated key with no file and no line, so a duplicate in `work/*.yaml`
     used to take the whole gate down before the check that names both had a
-    chance to run (solorepo's #23). A precheck is a step that must not stand
+    chance to run (#23). A precheck is a step that must not stand
     behind that door.
 
     Args:

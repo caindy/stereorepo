@@ -1,4 +1,4 @@
-"""The Python under `.meta/`, held to its linters — a ruleset at its floor, no configuration ignore, ruff clean, `mypy --strict` clean, a line limit that ratchets, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (stereorepo's DR-177, stereorepo's DR-210, solorepo's #540, solorepo's #760).
+"""The Python under `.meta/`, held to its linters — a ruleset at its floor, no configuration ignore, ruff clean, `mypy --strict` clean, a line limit that ratchets, a docstring on every public item — and the whole worktree held to the interpreter that Python is written for, since a `uvx` invocation is as often a shebang, a recipe or a workflow line as it is a `.py` file (stereorepo's DR-177, stereorepo's DR-210, #540, #760).
 
 The line limit runs across two steps rather than one because it arrived over a
 tree that had never been held to one, and the debt it found is diffuse: `meta
@@ -266,7 +266,7 @@ def _call_problem(call: Invocation, where: str, version: str) -> str | None:
 
 @check("meta interpreter")
 def meta_interpreter() -> StepOutcome:
-    """Every invocation that asks `uvx` to run an interpreter names the version `.meta/ruff.toml` declares (solorepo's #760).
+    """Every invocation that asks `uvx` to run an interpreter names the version `.meta/ruff.toml` declares (#760).
 
     Reads the whole worktree — every file git tracks or does not ignore, so
     `justfile`, `template/`, `bootstraps/`, Markdown and
@@ -749,7 +749,7 @@ def mypy_errors(output: str) -> tuple[dict[str, int], dict[str, list[str]]]:
 
 @check("meta types")
 def meta_types() -> StepOutcome:
-    """`mypy --strict` over .meta/ (stereorepo's DR-210, solorepo's #540).
+    """`mypy --strict` over .meta/ (stereorepo's DR-210, #540).
 
     Product code instantiated from the Python bootstrap's seed is held to
     `mypy --strict` outright, and the tooling under `.meta/` that every

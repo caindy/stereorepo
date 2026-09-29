@@ -62,9 +62,9 @@ decisions:
         and nothing more; closing that means tokenising YAML to tell a comment
         from a `#` inside a scalar.
       - >-
-        An inherited file cites solorepo's Issues as solorepo's — the form
+        An inherited file cites stereorepo's Issues as stereorepo's — the form
         `cited decisions` already requires of its record — and `cited issues`
-        resolves that form only where this Portfolio is solorepo. Three
+        resolves that form only where this Portfolio is stereorepo. Three
         citations under `.meta/assertions/imported/` change. With neither half a
         portfolio is red on its first pull request for findings its author did
         not write, and with the form alone it is wrong the other way round: an

@@ -20,11 +20,11 @@ decisions:
       enforcing the Ubiquitous Language discipline. Previously, A17 was checked
       by nothing (#37), relying on human restraint that degrades under agentic
       maintenance (#35). Early experiments attempting to count word repetition
-      across diffs produced noisy false positives (solorepo's DR-058) because whether a
+      across diffs produced noisy false positives (DR-058) because whether a
       word is acting as a domain term requires semantic judgement.
 
-      With Knowledge Management (stereorepo's DR-184), closed-world wikilinks
-      (stereorepo's DR-185), and /wikisplain (stereorepo's DR-187) in place, the
+      With Knowledge Management (DR-184), closed-world wikilinks
+      (DR-185), and /wikisplain (DR-187) in place, the
       regime for Ubiquitous Language can now be enforced cleanly through a
       two-part mechanism: a deterministic gate verifying 1:1 parity between LinkML
       vocabulary assertions and wiki pages, and ambient reviewer role instructions
@@ -33,7 +33,7 @@ decisions:
       - name: Pure mechanical diff word-frequency heuristics
         chosen: false
         reason: >-
-          Attempted in solorepo's DR-058. Counting word repetition across files fails because
+          Attempted in DR-058. Counting word repetition across files fails because
           distinguishing domain terms from standard English vocabulary requires
           semantic evaluation, leading to high noise and triage fatigue.
       - name: Pure prompt instruction without deterministic parity checking

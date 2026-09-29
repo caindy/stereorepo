@@ -80,7 +80,7 @@ decisions:
         possessive already, and it is the overlap between the two scopes rather
         than a fourteenth file. The possessive goes on the first number of a run
         and a code span is untouched, as under DR-124. Eight would have read
-        `solorepo's #93's state`, and those sentences are turned rather than
+        `#93's state`, and those sentences are turned rather than
         doubled; two more were about the bare form itself and are turned rather
         than made to wear it.
       - >-
@@ -102,7 +102,7 @@ decisions:
         meets it in the record rather than in a portfolio.
     falsifier: >-
       A `#nn` in a copied file that means the reader's number rather than
-      solorepo's, held to a form it does not mean — a count, a threshold, a
+      stereorepo's, held to a form it does not mean — a count, a threshold, a
       port. None turned up in the sweep, where every match was a citation or a
       quoted string, but the exemption stated for the quoted string is the
       shape such a number would want too, and it holds only while they are few

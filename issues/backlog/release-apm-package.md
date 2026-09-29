@@ -1,6 +1,6 @@
 # Cut an APM release with a recipe instead of a workflow
 
-The APM package (`.meta/apm.yml`, stereorepo's DR-206) was released by a GitHub
+The APM package (`.meta/apm.yml`, DR-206) was released by a GitHub
 Actions workflow on a `v*` tag: it ran the gate, `just apm validate` and
 `just test-specialization`, then created a GitHub Release. The bootstrap
 removed every workflow, since the pair loop gates each Issue locally before it

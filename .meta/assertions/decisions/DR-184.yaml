@@ -43,7 +43,7 @@ decisions:
       - name: Knowledge Management Discipline with hermetic Bounded Context partitioning (wiki/stereorepo/)
         chosen: true
         reason: >-
-          Grounds the wiki directly in Domain-Driven Design. Solorepo's own
+          Grounds the wiki directly in Domain-Driven Design. Stereorepo's own
           concepts reside hermetically in `wiki/stereorepo/` matching its bounded
           context (`ddd:context/stereorepo`) and travel cleanly with the scaffold.
           Specialized portfolios retain this directory intact and add their own
@@ -71,7 +71,7 @@ decisions:
       genre distinct from decision records (which capture why a choice was made)
       and vocabulary glosses (which capture concise machine definitions).
 
-      Partitioning the wiki by Bounded Context mirrors the domain model: solorepo's
+      Partitioning the wiki by Bounded Context mirrors the domain model: stereorepo's
       own tooling lives in `wiki/stereorepo/`, and specialized portfolios manage their
       domain concepts under their own bounded context buckets. This preserves the
       hermetic boundary of the scaffold while giving every specialization an

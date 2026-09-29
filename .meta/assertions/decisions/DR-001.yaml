@@ -7,6 +7,6 @@ decisions:
       - work:artifact/agents
     rationale: |-
       Structure-explaining tooling and Specialization machinery live in `.meta/`;
-      product material lives everywhere else. solorepo is meant to be cloned, so the
+      product material lives everywhere else. stereorepo is meant to be cloned, so the
       machinery that performs and explains that Specialization has to be separable from
       the content it acts on.

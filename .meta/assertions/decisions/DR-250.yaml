@@ -16,7 +16,7 @@ decisions:
       - work:artifact/bootstraps-python-lint-gate
     context: >-
       Challenge #416 identified that while static comment and suppression guardrails
-      (stereorepo's DR-207) were implemented in `.meta/checks/comments.py` to gate
+      (DR-207) were implemented in `.meta/checks/comments.py` to gate
       the `.meta` Project, the Python Bootstrap seed at `bootstraps/python/seed/`
       and project packages lacked comment checks. The Challenge's original proposal
       suggested that `bootstraps/python/seed/gate/` inherit detector functions and

@@ -48,7 +48,7 @@ def duplicate_keys() -> list[str]:
     """Validate that no YAML or YML file across `.meta/` and `template/` defines duplicate keys.
 
     Enforces that all workflow and assertion YAML files parse without repeated keys,
-    preventing silent dictionary value overwrites during loading (stereorepo's DR-053, solorepo's DR-120).
+    preventing silent dictionary value overwrites during loading (stereorepo's DR-053).
 
     Returns:
         list[str]: Validation problem messages identifying file, line number, and duplicate key name.
@@ -114,7 +114,7 @@ def duplicate_concept_ids(
 
     Enforces that concept declarations within any concept_set carry unique identifiers,
     preventing silent dictionary overwrites and divergent definitions in the Ubiquitous
-    Language (stereorepo's DR-190, solorepo's #549).
+    Language (stereorepo's DR-190, #549).
 
     Args:
         paths: Specific paths to scan, or None to scan all assertion and template YAML files.

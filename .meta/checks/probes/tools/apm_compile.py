@@ -1,5 +1,5 @@
 """`apm_compile.py` byte fallback (stereorepo's DR-208)
-and worktree skill projection (solorepo's #1075).
+and worktree skill projection (#1075).
 """
 import contextlib
 import io
@@ -18,7 +18,7 @@ def apm_compile_probes() -> list[str]:
 
     One byte that does not decode — the shape a `__pycache__/*.pyc` beside a
     skill's script and a shipped diagram both take — used to end the compile
-    in a traceback (solorepo's #450). Written two levels below `skills/`, so
+    in a traceback (#450). Written two levels below `skills/`, so
     the check that only a nested file compiles still applies, the compiled
     entry for that file holds its own bytes unchanged, and the file is named
     on stderr rather than swapped in silently.
@@ -52,7 +52,7 @@ def apm_compile_probes() -> list[str]:
 def worktree_projection_probes() -> list[str]:
     """Worktree skill projection under constrained environments and hook error reporting.
 
-    Enacts stereorepo's DR-172, stereorepo's DR-201, solorepo's #430, and solorepo's #1075.
+    Enacts stereorepo's DR-172, stereorepo's DR-201, #430, and #1075.
     Verifies that .meta/hooks/post-checkout materializes skills into .agents/skills/
     under constrained execution environments without APM CLI or ambient PyYAML,
     and reports failures to stderr instead of masking them to /dev/null.

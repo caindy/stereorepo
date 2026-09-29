@@ -21,10 +21,10 @@ decisions:
       and one inheritance path inconsistency:
       1. Step 2 in SPECIALIZE.md and disciplines.yaml omitted the `.meta/` prefix
       on `render.py`, `check.py`, and `check_pr.py`.
-      2. `enacted_probes` hardcoded `solorepo's DR-160.yaml` and `.meta/arc/deploy`, failing
+      2. `enacted_probes` hardcoded `DR-160.yaml` and `.meta/arc/deploy`, failing
       in a fresh portfolio that starts at DR-001 and does not inherit deployment scripts.
-      3. `search_probes` expected solorepo-specific decisions (`solorepo's DR-100`, `solorepo's DR-072`)
-      and evaluated the 18-query DR-103 benchmark queries that target solorepo's
+      3. `search_probes` expected stereorepo-specific decisions (`DR-100`, `DR-072`)
+      and evaluated the 18-query DR-103 benchmark queries that target stereorepo's
       private decision and challenge history, which a portfolio intentionally does
       not inherit.
     alternatives:
@@ -32,7 +32,7 @@ decisions:
         chosen: false
         reason: >-
           Leaves specialized portfolios unable to verify their own search retrieval
-          or enacted artifact boundaries, violating stereorepo's Article 9 (gate holds
+          or enacted artifact boundaries, violating Article 9 (gate holds
           identical checks where possible).
       - name: Prefix inherited tool paths and generalize probe assertions over active collection documents
         chosen: true
@@ -42,7 +42,7 @@ decisions:
           allows the probe to verify the exact same negative and positive contracts
           in any portfolio. Filtering `run_benchmark()` in `search.py` to queries whose
           target documents exist in the indexed collection preserves rigorous multi-field
-          BM25F evaluation across both solorepo (18 queries, hit@5 >= 15/18) and newly
+          BM25F evaluation across both stereorepo (18 queries, hit@5 >= 15/18) and newly
           specialized portfolios (11 universal queries, hit@5 = 11/11).
     consequences:
       - >-
@@ -51,7 +51,7 @@ decisions:
         `enacted_probes` dynamically resolves on-disk decisions and declared artifacts.
       - >-
         `search.py`'s `run_benchmark()` evaluates active queries present in the collection,
-        and `search_probes` accepts stereorepo's Article 18 for trunk push authorization.
+        and `search_probes` accepts Article 18 for trunk push authorization.
       - >-
         End-to-end dogfooding validates that a freshly specialized portfolio executes
         77 gate steps across meta and python projects with zero errors.

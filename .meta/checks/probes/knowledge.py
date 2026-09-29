@@ -258,7 +258,7 @@ def wikisplain_probes() -> list[str]:
     self-referencing wikilink to it, which must raise no warning either —
     `verify_page` reads its own identity off `rel_path`'s stem rather than
     re-slugifying the title, so the two can diverge without false-positiving
-    (solorepo's #617); and `cli.main`, which is where the tree the tool reads is
+    (#617); and `cli.main`, which is where the tree the tool reads is
     resolved rather than passed: `--check-duplicate` on a concept the wiki and
     the vocabulary both hold, and a scaffold whose `--synonyms` name an avoided
     word. Each must exit 1, and the second is given `--force` and `--dry-run`,
@@ -331,7 +331,7 @@ def cli_probes(wikisplain: types.ModuleType) -> list[str]:
 
 @check("wikisplain argv probes", pre=True)
 def wikisplain_argv_probes() -> list[str]:
-    """`wikisplain.main` joins shell-split concepts and scaffolds beneath its resolved repository root (solorepo's #483).
+    """`wikisplain.main` joins shell-split concepts and scaffolds beneath its resolved repository root (#483).
 
     A shell splits an unquoted `Test Wiki Concept Two` into four argv words;
     driven through `wikisplain.main` with `--dry-run`, the generated page's
@@ -390,13 +390,13 @@ def wikisplain_argv_probes() -> list[str]:
 @check("wikisplain default root probes", pre=True)
 def wikisplain_default_root_probes() -> list[str]:
     """`find_duplicates`, `extract_known_concepts` and `cli.main`, called with
-    no `root`, read this repository (solorepo's #648).
+    no `root`, read this repository (#648).
 
     Every other probe over these functions passes `root=ROOT` explicitly, or
     points `cli.ROOT` at a temporary directory before calling, so the default
     `lib.wikisplain.ROOT` the command line actually relies on is exercised by
-    nothing else in the gate — the gap that let solorepo's #528's package
-    split leave the default wrong, silently, until solorepo's #647 corrected
+    nothing else in the gate — the gap that let #528's package
+    split leave the default wrong, silently, until #647 corrected
     it. Called with no `root` at all, `find_duplicates` must still find the
     wiki's own Knowledge Management page and `extract_known_concepts` must
     still know its slug; `cli.main` takes no `root` parameter at all, so
@@ -441,60 +441,35 @@ def wikisplain_default_root_probes() -> list[str]:
 
 @check("citation form probes", pre=True)
 def citation_form_probes() -> list[str]:
-    """`citations.FOREIGN` and `ISSUE_FOREIGN` hold every character exact but a leading `S` or `s`.
+    """`citations.FOREIGN` holds every character exact but a leading `S` or `s`.
 
-    `citations.issue_citation()` returns the `(ISSUE, ISSUE_FOREIGN)` pair. Two
-    forms, each put through the same split `cited_decisions` and
-    `inherited_citations` make between a citation the possessive marks as
-    foreign and one left over for the bare scan: `foreign.sub("", text)`
-    followed by the bare pattern's own `findall`. A sentence-initial
-    possessive citation must leave nothing for the bare scan to find, and a
-    genuinely bare one — no possessive at all — must still read as bare, so
-    the widened pattern is pinned in both directions and not merely proved
-    by the absence of a complaint. An all-uppercase possessive must remain
-    bare, proving that only the leading letter is widened. The number is spelled from `count` rather
-    than typed, because `DR-` or `#` immediately followed by digits in a file
-    a portfolio copies is a citation as far as `cited decisions` and
-    `inherited citations` are concerned, and this one is a fixture
+    `cited_decisions` splits a citation the possessive marks as foreign from one
+    left over for the bare scan: `FOREIGN.sub("", text)` followed by `DR`'s own
+    `findall`. A sentence-initial possessive citation must leave nothing for the
+    bare scan to find, a genuinely bare one must still read as bare, and an
+    all-uppercase possessive must remain bare, proving that only the leading
+    letter is widened. The number is spelled from `count` rather than typed,
+    because `DR-` followed by digits in a file a portfolio copies is a citation
+    as far as `cited decisions` is concerned, and this one is a fixture
     (stereorepo's DR-124).
     """
     problems = []
     count = 999
-    issue, issue_foreign = citations.issue_citation()
-    cases = (
-        ("Decision", citations.FOREIGN, citations.DR,
-         f"Stereorepo's DR-{count:03d} makes the skill a render target.",
-         f"DR-{count:03d} makes the skill a render target."),
-        ("Issue", issue_foreign, issue,
-         f"Solorepo's #{count} tracks the same fix.",
-         f"#{count} tracks the same fix."),
-    )
-    for name, foreign, pattern, capitalised, bare_text in cases:
-        left_over = set(pattern.findall(foreign.sub("", capitalised)))
-        if left_over:
-            problems.append(f"citation form: a sentence-initial {name} citation "
-                            f"read bare as {left_over!r}")
-        still_bare = set(pattern.findall(foreign.sub("", bare_text)))
-        if still_bare != {str(count)}:
-            problems.append(f"citation form: a genuinely bare {name} citation "
-                            f"read as {still_bare!r}, and the widened pattern "
-                            "must still catch it")
-        other_case = (
-            f"STEREOREPO'S DR-{count:03d} makes the skill a render target."
-            if name == "Decision"
-            else f"SOLOREPO'S #{count} tracks the same fix."
-        )
-        still_bare = set(pattern.findall(foreign.sub("", other_case)))
-        if still_bare != {str(count)}:
-            problems.append(f"citation form: an all-uppercase {name} citation "
-                            f"read as {still_bare!r}, but only the leading letter "
-                            "may be case-insensitive")
+    for label, text, want in (
+        ("a sentence-initial possessive", f"Stereorepo's DR-{count:03d} is a target.", set()),
+        ("a genuinely bare citation", f"DR-{count:03d} is a render target.", {str(count)}),
+        ("an all-uppercase possessive", f"STEREOREPO'S DR-{count:03d} is a render target.",
+         {str(count)}),
+    ):
+        found = set(citations.DR.findall(citations.FOREIGN.sub("", text)))
+        if found != want:
+            problems.append(f"citation form: {label} read bare as {found!r}, not {want!r}")
     return problems
 
 
 @check("concept duplicate id probes", pre=True)
 def concept_duplicate_id_probes() -> list[str]:
-    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (stereorepo's DR-190, solorepo's #549)."""
+    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (stereorepo's DR-190, #549)."""
     import pathlib
     import tempfile
 

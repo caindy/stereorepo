@@ -7,5 +7,5 @@ a reader opens; the script is what a shell runs. A script's own directory is
 `.meta/`, so its package imports as `lib.<name>` with nothing added; a hook one
 directory down puts `.meta/` on the path first. `.meta/lib/gh.py` is the single
 shared base GitHub CLI runner, shared across read-only tools and mutation
-channels without being the body of a single script (solorepo's #748).
+channels without being the body of a single script (#748).
 """

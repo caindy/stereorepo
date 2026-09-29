@@ -5,7 +5,7 @@ decisions:
     alternatives:
       - name: "Make bounded_contexts single-valued"
         chosen: false
-        reason: "DddModel is generic DDD, a Context Map legitimately holds many, and solorepo's own map has three."
+        reason: "DddModel is generic DDD, a Context Map legitimately holds many, and stereorepo's own map has three."
       - name: "Check it in the gate instead"
         chosen: true
         reason: "The constraint is enforced where it is true rather than where it is convenient: one context declared in domain_vocabulary.yaml, and the Portfolio names it."
@@ -16,7 +16,7 @@ decisions:
       A portfolio is exactly one Bounded Context (DR-014), and the plural
       `bounded_contexts` key invited listing several. The slot stays multivalued
       anyway: `DddModel` is generic DDD, a Context Map legitimately holds many, and
-      solorepo's own map has three. What is singular is a portfolio's **own** context.
+      stereorepo's own map has three. What is singular is a portfolio's **own** context.
 
       So the constraint is enforced where it is true rather than where it is
       convenient: the gate checks that `domain_vocabulary.yaml` declares one Bounded

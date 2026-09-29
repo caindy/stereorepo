@@ -1,4 +1,4 @@
-"""The files a render writes that are not prose: the justfile (stereorepo's DR-106) and the APM primitives (stereorepo's DR-172, stereorepo's DR-173, solorepo's DR-174).
+"""The files a render writes that are not prose: the justfile (stereorepo's DR-106) and the APM primitives (stereorepo's DR-172, stereorepo's DR-173).
 """
 
 from typing import Any
@@ -105,6 +105,6 @@ def justfile() -> str:
 
 
 def apm_primitives() -> dict[str, str | bytes]:
-    """Compiles .meta/assertions/ into .meta/.apm/ primitives and .meta/apm.yml (stereorepo's DR-172, stereorepo's DR-173, solorepo's DR-174)."""
+    """Compiles .meta/assertions/ into .meta/.apm/ primitives and .meta/apm.yml (stereorepo's DR-172, stereorepo's DR-173)."""
     import apm_compile
     return apm_compile.rendered_primitives(META)

@@ -10,26 +10,26 @@ decisions:
     context: >-
       Challenge #396 proposed canonizing YAGNI as a standalone Discipline alongside
       Literate Programming and Progressive Disclosure. Analysis of the bright line
-      between Articles and Disciplines (stereorepo's DR-025, stereorepo's DR-047, stereorepo's DR-048) revealed a category
+      between Articles and Disciplines (DR-025, DR-047, DR-048) revealed a category
       mistake: a Discipline prescribes an ordered procedural method requiring
       judgement that resists automation, while an Article asserts a checkable
       claim held against artifacts with zero judgement in its verification.
       YAGNI lacks procedural steps and ordered human discretion; forcing it into a
       Discipline produces contrived judgement and procedural boilerplate.
 
-      Furthermore, solorepo already formalizes this principle as the Discipline
+      Furthermore, stereorepo already formalizes this principle as the Discipline
       Nothing Unconsumed (work:discipline/nothing-unconsumed). Minting a competing
-      Discipline or a redundant Article violates stereorepo's DR-101 and Ubiquitous Language.
+      Discipline or a redundant Article violates DR-101 and Ubiquitous Language.
       However, Article A8 previously focused on retrospective drift prevention and
-      orphan detection, omitting the creation boundary articulated in stereorepo's DR-008
+      orphan detection, omitting the creation boundary articulated in DR-008
       ("a coordinate system invented ahead of its consumer is one that will be wrong").
     alternatives:
       - name: Canonize YAGNI as a standalone Discipline
         chosen: false
         reason: >-
-          Violates stereorepo's DR-025 and stereorepo's DR-047. YAGNI has no ordered procedural steps or
-          distinct human judgement. Solorepo already has Nothing Unconsumed; minting
-          a duplicate Discipline introduces synonym drift forbidden by stereorepo's DR-101.
+          Violates DR-025 and DR-047. YAGNI has no ordered procedural steps or
+          distinct human judgement. Stereorepo already has Nothing Unconsumed; minting
+          a duplicate Discipline introduces synonym drift forbidden by DR-101.
       - name: Mint YAGNI as a separate Article in the Charter
         chosen: false
         reason: >-
@@ -41,11 +41,11 @@ decisions:
         chosen: true
         reason: >-
           Integrates YAGNI directly into its canonical ontological home in Nothing
-          Unconsumed and Article A8, citing stereorepo's DR-008 and solorepo's DR-203.
+          Unconsumed and Article A8, citing DR-008 and DR-203.
     consequences:
       - >-
         Article A8 in `.meta/assertions/imported/charter.yaml` explicitly cites
-        the creation boundary, stereorepo's DR-008, and solorepo's DR-203.
+        the creation boundary, DR-008, and DR-203.
       - >-
         `work:discipline/nothing-unconsumed` in `.meta/assertions/imported/disciplines.yaml`
         incorporates the creation boundary into its description, judgement, and steps.

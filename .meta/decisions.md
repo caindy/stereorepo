@@ -30,9 +30,9 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-011](assertions/decisions/DR-011.yaml) | `.agents/` is staged under `.meta/` | Adopted |
 | [DR-012](assertions/decisions/DR-012.yaml) | Decisions are recorded in the repo | Adopted |
 | [DR-013](assertions/decisions/DR-013.yaml) | Specialization is an instruction, not a build step | Adopted |
-| [DR-014](assertions/decisions/DR-014.yaml) | A solorepo is a monorepo: one portfolio, one bounded context, one language | Adopted |
-| [DR-015](assertions/decisions/DR-015.yaml) | Two languages: the portfolio's own, and solorepo's imported | Adopted |
-| [DR-016](assertions/decisions/DR-016.yaml) | solorepo republishes DDD; portfolios conform transitively | Adopted |
+| [DR-014](assertions/decisions/DR-014.yaml) | A stereorepo is a monorepo: one portfolio, one bounded context, one language | Adopted |
+| [DR-015](assertions/decisions/DR-015.yaml) | Two languages: the portfolio's own, and stereorepo's imported | Adopted |
+| [DR-016](assertions/decisions/DR-016.yaml) | stereorepo republishes DDD; portfolios conform transitively | Adopted |
 | [DR-017](assertions/decisions/DR-017.yaml) | DDD is reified as LinkML alongside the work ontology | Adopted |
 | [DR-018](assertions/decisions/DR-018.yaml) | A Ubiquitous Language is a set of Concepts, not a set of Terms | Adopted |
 | [DR-019](assertions/decisions/DR-019.yaml) | Persona splits into Personality and Persona | Adopted |
@@ -92,7 +92,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-103](assertions/decisions/DR-103.yaml) | The record is retrieved by meaning: ck's semantic search over a corpus rendered one entry per file, compiled to a skill | Recommended |
 | [DR-104](assertions/decisions/DR-104.yaml) | One verb runs any Project's gate or a Product's, and reads the report each gate prints | Adopted |
 | [DR-106](assertions/decisions/DR-106.yaml) | The root justfile is the verb surface: rendered, invoking only, and never in a seed | Adopted |
-| [DR-121](assertions/decisions/DR-121.yaml) | What a portfolio inherits cites solorepo's record as solorepo's, and a portfolio's gate passes over a citation of a record it does not carry | Adopted |
+| [DR-121](assertions/decisions/DR-121.yaml) | What a portfolio inherits cites stereorepo's record as stereorepo's, and a portfolio's gate passes over a citation of a record it does not carry | Adopted |
 | [DR-124](assertions/decisions/DR-124.yaml) | A docstring is prose: every file a portfolio copies is held to the citation form, whatever its suffix | Adopted |
 | [DR-125](assertions/decisions/DR-125.yaml) | An identifier is a slug where the entity is its meaning and a number where it is an occurrence, and A12 states what would retire it | Adopted |
 | [DR-130](assertions/decisions/DR-130.yaml) | A citation's claim is checked in the shapes a string search reaches, and nowhere else | Adopted |
@@ -128,12 +128,12 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-201](assertions/decisions/DR-201.yaml) | APM package validation, distribution packing, and multi-harness compilation integrate into the operator surface and gate | Adopted |
 | [DR-204](assertions/decisions/DR-204.yaml) | Specialization dogfooding against a clean test repository validates inheritance and closes First Specialization | Adopted |
 | [DR-205](assertions/decisions/DR-205.yaml) | Anchor YAGNI at creation boundary in Article A8 and Nothing Unconsumed | Adopted |
-| [DR-206](assertions/decisions/DR-206.yaml) | Solorepo packages its cognitive layer for APM distribution via GitHub Releases | Adopted |
+| [DR-206](assertions/decisions/DR-206.yaml) | Stereorepo packages its cognitive layer for APM distribution via GitHub Releases | Adopted |
 | [DR-207](assertions/decisions/DR-207.yaml) | Four permissible comment exceptions, with routing, mechanization, and suppression audit as the alternatives to prose | Adopted |
 | [DR-208](assertions/decisions/DR-208.yaml) | Python Bootstrap declares its sixteen capabilities and compiles them into an APM package | Adopted |
 | [DR-209](assertions/decisions/DR-209.yaml) | The probes are a package under `.meta/checks/probes/`, one module per subject under test, with the harness in a module of its own | Adopted |
 | [DR-210](assertions/decisions/DR-210.yaml) | Strict type checking over .meta/, ratcheted per file against a two-sided baseline | Adopted |
-| [DR-212](assertions/decisions/DR-212.yaml) | Vendored skills carrying a solorepo guard are adapted in place and become locally owned | Adopted |
+| [DR-212](assertions/decisions/DR-212.yaml) | Vendored skills carrying a stereorepo guard are adapted in place and become locally owned | Adopted |
 | [DR-216](assertions/decisions/DR-216.yaml) | The rule its seven instances share is stated as an Article of its own | Adopted |
 | [DR-217](assertions/decisions/DR-217.yaml) | A script under .meta/ keeps its path as the entry point and its body lives in .meta/lib/<script>/, whose modules import each other as modules | Adopted |
 | [DR-218](assertions/decisions/DR-218.yaml) | A module under .meta/ that is imported rather than run becomes a package of its own name in place, whose __init__ registers what its modules define | Adopted |
@@ -152,14 +152,14 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-250](assertions/decisions/DR-250.yaml) | Dual-layer comment hygiene: portfolio governance via .meta/ scope broadening and bootstrap self-contained gate checking | Adopted |
 | [DR-259](assertions/decisions/DR-259.yaml) | Reserve the just verb surface for operator flags and identifiers by scoping authoring to skills | Adopted |
 | [DR-261](assertions/decisions/DR-261.yaml) | An unrunnable gate step is amber where a person runs it and a failure under CI | Adopted |
-| [DR-262](assertions/decisions/DR-262.yaml) | Bounding mutation testing worker concurrency to eight across seed gates to reconcile with solorepo's DR-147 burstable scheduling | Adopted |
+| [DR-262](assertions/decisions/DR-262.yaml) | Bounding mutation testing worker concurrency to eight across seed gates to reconcile with DR-147 burstable scheduling | Adopted |
 | [DR-263](assertions/decisions/DR-263.yaml) | Assert a floor on ruff's select in the gate's own code, each entry paired with the linter that owns it | Adopted |
 | [DR-268](assertions/decisions/DR-268.yaml) | Tooling shebangs retain python3 with Python 3.13 pre-baked in the runner image and asserted as a front-door prerequisite for fresh clones | Adopted |
 | [DR-270](assertions/decisions/DR-270.yaml) | A Discipline step is an identified entity with a semantic slug CURIE, cited in prose by its human name, and ordinal step citations are refused | Adopted |
 | [DR-271](assertions/decisions/DR-271.yaml) | Multiword term candidates scored against wordfreq's phrase reference, and minted labels excluded as phrases | Adopted |
 | [DR-272](assertions/decisions/DR-272.yaml) | Reserve the root verb surface for operator flags and identifiers by scoping search to skills | Adopted |
 | [DR-279](assertions/decisions/DR-279.yaml) | The term corpus holds prose alone, code fences and backtick spans excluded | Adopted |
-| [DR-297](assertions/decisions/DR-297.yaml) | The record keeps solorepo's numbers, and a number it does not hold was solorepo's | Adopted |
+| [DR-297](assertions/decisions/DR-297.yaml) | A decision number below 297 that the record does not hold is outmoded | Adopted |
 
 ## Holes
 
@@ -200,7 +200,7 @@ and the query a reader in a file actually has.
 | [`.meta/check.py`](check.py) | [DR-014](assertions/decisions/DR-014.yaml), [DR-029](assertions/decisions/DR-029.yaml), [DR-034](assertions/decisions/DR-034.yaml), [DR-037](assertions/decisions/DR-037.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-124](assertions/decisions/DR-124.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-130](assertions/decisions/DR-130.yaml), [DR-131](assertions/decisions/DR-131.yaml), [DR-132](assertions/decisions/DR-132.yaml), [DR-144](assertions/decisions/DR-144.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-169](assertions/decisions/DR-169.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-261](assertions/decisions/DR-261.yaml), [DR-268](assertions/decisions/DR-268.yaml) |
 | [`.meta/checks/citations/__init__.py`](checks/citations/__init__.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/citations/claims.py`](checks/citations/claims.py) | [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-270](assertions/decisions/DR-270.yaml) |
-| [`.meta/checks/citations/loaders.py`](checks/citations/loaders.py) | [DR-132](assertions/decisions/DR-132.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
+| [`.meta/checks/citations/loaders.py`](checks/citations/loaders.py) | [DR-132](assertions/decisions/DR-132.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-297](assertions/decisions/DR-297.yaml) |
 | [`.meta/checks/citations/prose.py`](checks/citations/prose.py) | [DR-130](assertions/decisions/DR-130.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/citations/record.py`](checks/citations/record.py) | [DR-121](assertions/decisions/DR-121.yaml), [DR-124](assertions/decisions/DR-124.yaml), [DR-131](assertions/decisions/DR-131.yaml), [DR-132](assertions/decisions/DR-132.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/collect.py`](checks/collect.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-169](assertions/decisions/DR-169.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-210](assertions/decisions/DR-210.yaml) |

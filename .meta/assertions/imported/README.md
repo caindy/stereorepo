@@ -19,6 +19,4 @@ about its own. The gate names the mistake either way round.
 **A DR cited here as stereorepo's is an entry of stereorepo's record**, which stays
 with the scaffold. This portfolio's record starts at `DR-001`, so a bare number is
 one of its own entries and a number written as stereorepo's is not — the gate
-resolves a citation of stereorepo's record only where that record is. A DR cited
-as solorepo's is an entry of the record stereorepo was seeded from, which neither
-repository holds, and nothing resolves it.
+resolves a citation of stereorepo's record only where that record is.

@@ -472,7 +472,7 @@ concept_set:
       technology this vocabulary uses — and names Stephen Toulmin as the source;
       his published one is *The Uses of Argument* (1958). Quoted rather than
       paraphrased, because four systems are intended to merge and a shared word
-      that acquires a second meaning here is the drift caindy/solorepo#488 exists
+      that acquires a second meaning here is the drift #488 exists
       to prevent.
 
       The same class continues: "A claim is its text and its warrants", and its
@@ -488,7 +488,7 @@ concept_set:
 
       What a history entry asserts, what an Article holds against an artifact,
       and what a Citation names in its target are each a Claim. Whether the rest
-      of Toulmin's ontology is taken with it is caindy/solorepo#576's judgement,
+      of Toulmin's ontology is taken with it is #576's judgement,
       not settled here (stereorepo's DR-228).
   - id: work:concept/evidence
     pref_label: Evidence

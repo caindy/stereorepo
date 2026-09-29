@@ -50,7 +50,7 @@ decisions:
       `.meta/` holds four scripts over a thousand lines: `check_pr.py` at
       1709, `checks/probes/loops.py` at 1320, `checks/files.py` at 1295 and
       `render.py` at 1175. The seed's complexity ceiling (`C90`,
-      `max-complexity = 12`), which stereorepo's DR-177 left out of `.meta/`,
+      `max-complexity = 12`), which DR-177 left out of `.meta/`,
       would report 71 findings over the tree today, three quarters of them in
       those four files. Applied to a module of that shape, every finding lands
       in one file and the refactor that answers them cannot be reviewed
@@ -122,7 +122,7 @@ decisions:
       - >-
         The type ratchet in `.meta/checks/types.baseline.yaml` holds one number
         per package module in place of the script's, each failing on either
-        side of it (stereorepo's DR-210).
+        side of it (DR-210).
       - >-
         The control plane is stated once, as `depth.CONTROL_PLANE`, and both
         boundary patterns are built from it, so `.meta/lib/` is inside the
@@ -140,7 +140,7 @@ decisions:
         `.meta/lib/gh.py` provides the credential-free base `gh` CLI execution
         logic (`UNSET`, `_degrade`, `GH_TIMEOUT`, subprocess calling, and JSON
         decoding) shared across read-only tools and mutation channels without
-        being the body of a single script (solorepo's #748).
+        being the body of a single script (#748).
     falsifier: >-
       A script under `.meta/` whose body lives in a package the Specialization
       copy set does not carry; a module under `.meta/lib/` that imports a

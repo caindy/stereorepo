@@ -32,7 +32,7 @@ decisions:
         reason: >-
           The copied set is already read off the Specialization step, and
           "copied" is the property the rule turns on — a file a portfolio
-          carries verbatim cites solorepo's record from inside a portfolio. A
+          carries verbatim cites stereorepo's record from inside a portfolio. A
           file that will not decode is passed over, which is the one
           exemption a suffix list was standing in for. What it costs: a
           hundred and one possessives in the scaffold's own tooling, where
@@ -47,14 +47,14 @@ decisions:
       - >-
         The eleven files are swept by the same pass #130 made: the possessive
         on the first number of a run, code spans untouched. A `--help` that
-        cited a decision now cites solorepo's.
+        cited a decision now cites stereorepo's.
       - >-
         DR-121's fourth consequence recorded the Python as left and named this
         change's trigger; that consequence is answered here and not amended
         there, since the record is what was decided and when.
     falsifier: >-
       A number in a copied file that means the reader's record rather than
-      solorepo's — a threshold, a starting number — held to a form it does
+      stereorepo's — a threshold, a starting number — held to a form it does
       not mean. Two turned up in `check.py` on the first sweep, the
       `OPTIONS_REQUIRED_FROM` boundary and the entry every record starts at,
       and neither trips the gate, since the number resolves either way. A

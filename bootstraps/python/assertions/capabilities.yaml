@@ -1,4 +1,4 @@
-# Agent capabilities declared by the Python Bootstrap (stereorepo's DR-208, solorepo's #59).
+# Agent capabilities declared by the Python Bootstrap (stereorepo's DR-208, #59).
 #
 # These sixteen skills are Capabilities rather than seed boilerplate. They originate
 # from upstream python_bootstrap (DR-094), eight sourced byte-identical from

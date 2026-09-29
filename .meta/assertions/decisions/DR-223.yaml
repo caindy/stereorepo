@@ -10,7 +10,7 @@ decisions:
       - work:artifact/meta-checks-probes-tools-comments
       - work:artifact/meta-assertions-structure
     context: >-
-      stereorepo's DR-207 holds that a lint or type suppression bypassing safety,
+      DR-207 holds that a lint or type suppression bypassing safety,
       correctness or type soundness is an actionable defect rather than a
       permanent comment, and the Suppression Audit Protocol of
       `/technical-writing` says it in full: the suppression is not the fix, it
@@ -22,11 +22,11 @@ decisions:
       suppressions across eight files under `.meta/checks/files/`, every one of
       them naming the same cause: the flat `collect` import that
       `.meta/check.py` sets up on `sys.path` and mypy cannot follow. The root
-      cause is caindy/solorepo#557. All 22 merged, and three mechanisms watched
+      cause is #557. All 22 merged, and three mechanisms watched
       them do it.
 
       `meta lints` refuses a suppression carrying no `# reason:` on its line
-      (stereorepo's DR-177); each of the 22 carries one, so it passed 22 times.
+      (DR-177); each of the 22 carries one, so it passed 22 times.
       `broad suppressions` refuses a suppression naming no rule; each of the 22
       names `untyped-decorator`, so it passed 22 times. The Protocol forbids a
       blanket suppression at file or module scope and prescribes narrowing it to
@@ -38,7 +38,7 @@ decisions:
       reason is evidence of a single root cause, which is precisely what the
       Protocol says to fix instead of suppressing.
 
-      caindy/solorepo#561 drained all 22 while this step was being written, by
+      #561 drained all 22 while this step was being written, by
       giving `.meta/checks` one import spelling so that the decorator resolves
       for mypy. That is the case for the step rather than against it: the fix
       was a change of import spelling, available on the day the first
@@ -96,11 +96,11 @@ decisions:
         A suppression whose reason cites a URL or an RFC is left out of the
         grouping. `DR-nnn`, `Article n` and `#n` do not lift it: they name
         something inside this repository, and a cause inside the repository is
-        one to fix. This is why caindy/solorepo#557's 22 sites are counted
+        one to fix. This is why #557's 22 sites are counted
         despite naming their cause precisely.
       - >-
         The comparison is `comments.against_repeats` rather than the shared
-        `collect.against_baseline` of stereorepo's DR-210. The shared one reads a
+        `collect.against_baseline` of DR-210. The shared one reads a
         key that is not a file on disk as a stale baseline entry, which is right
         for a per-file ratchet and wrong for every failing group here, where the
         key is a rule and a reason. A group over its number is told to fix the
@@ -116,7 +116,7 @@ decisions:
         imports the step modules for their registration side effect, so every
         package under `.meta/checks/` repeats the pair. The third group the step
         was written for, the 22 `type: ignore[untyped-decorator]` of
-        caindy/solorepo#541, was drained by caindy/solorepo#561 before this
+        #541, was drained by #561 before this
         landed.
     falsifier: >-
       Three or more suppressions under `.meta/` sharing one rule and one reason,
@@ -140,7 +140,7 @@ decisions:
       whether a suppression survives and not two that can disagree.
 
       Ratcheting rather than refusing outright is the same argument
-      stereorepo's DR-210 made for types. The tree is not clean, the standard is
+      DR-210 made for types. The tree is not clean, the standard is
       right, and a standard waiting on a sweep is a standard that is not in the
       gate. The number in the file is what the tree holds; lowering it is the
       only way to change it, and the failure line says so in the words of the

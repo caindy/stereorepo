@@ -17,9 +17,9 @@ def terms_probes() -> list[str]:
        1.0 for a maximally concentrated distribution.
     2. Log-likelihood keyness G² evaluates to 0.0 when observed occurrences do
        not exceed expected reference occurrences.
-    3. The labelled positive fixture (pre-solorepo's #581 tree or in-memory
+    3. The labelled positive fixture (pre-#581 tree or in-memory
        equivalent) surfaces `receipt` in the candidate rankings.
-    4. The labelled negative fixture (post-solorepo's #581 tree or in-memory
+    4. The labelled negative fixture (post-#581 tree or in-memory
        equivalent) excludes minted `evidence` from the candidate rankings.
     """
     terms = load_module(META / "terms.py", "terms", register=False)
@@ -58,7 +58,7 @@ def terms_probes() -> list[str]:
     )
     neg_terms = {c.term for c in neg_candidates}
     if "evidence" in neg_terms:
-        problems.append("terms: minted label 'evidence' was not excluded from post-solorepo's #581 candidates")
+        problems.append("terms: minted label 'evidence' was not excluded from post-#581 candidates")
 
     synth_pos = {
         "file1.md": "receipt receipt receipt receipt receipt receipt receipt receipt",

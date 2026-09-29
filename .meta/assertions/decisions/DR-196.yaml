@@ -11,8 +11,8 @@ decisions:
       - work:artifact/skill-technical-writing
       - work:artifact/meta-lib-render-skills
     context: >-
-      While solorepo established Wikipedia-style Knowledge Management (stereorepo's DR-184)
-      and layered technical writing standards (stereorepo's DR-194), arriving agents
+      While stereorepo established Wikipedia-style Knowledge Management (DR-184)
+      and layered technical writing standards (DR-194), arriving agents
       frequently lacked an unambiguous, deterministic pre-writing entrypoint to decide
       *where* to write for a given change and *how* to shape the prose. Consequently,
       maintainers and autonomous loops suffered from cross-boundary mode-mixing (e.g.

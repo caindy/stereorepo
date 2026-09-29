@@ -1,4 +1,4 @@
-"""The skill and hook primitives: Capabilities of kind SKILL compiled to `skills/`, and the gate as a hook (solorepo's DR-174).
+"""The skill and hook primitives: Capabilities of kind SKILL compiled to `skills/`, and the gate as a hook.
 """
 from __future__ import annotations
 
@@ -77,7 +77,7 @@ def skill_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
 
 
 def hook_primitives() -> dict[str, str]:
-    """Compiles the gate into a Stop hook primitive per solorepo's DR-174."""
+    """Compiles the gate into a Stop hook primitive."""
     gate_hook = {
         "Stop": [
             {

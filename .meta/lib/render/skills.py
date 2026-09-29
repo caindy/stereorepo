@@ -47,7 +47,7 @@ def search_skill() -> str:
 
 def technical_writing_skill() -> str:
     """Technical writing skill fusing Diátaxis, Google style, and Literate
-    Programming (stereorepo's DR-171, stereorepo's DR-175, solorepo's DR-176,
+    Programming (stereorepo's DR-171, stereorepo's DR-175,
     stereorepo's DR-187, stereorepo's DR-194, stereorepo's DR-196), and the rubric
     governing source bodies (stereorepo's DR-207)."""
     return authored_skill("technical-writing")

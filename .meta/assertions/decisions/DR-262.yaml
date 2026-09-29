@@ -1,13 +1,13 @@
 decisions:
   - id: work:decision/262
-    name: "DR-262 · Bounding mutation testing worker concurrency to eight across seed gates to reconcile with solorepo's DR-147 burstable scheduling"
+    name: "DR-262 · Bounding mutation testing worker concurrency to eight across seed gates to reconcile with DR-147 burstable scheduling"
     status: ADOPTED
     supersedes: []
     enacted_in:
       - work:artifact/bootstraps-python-gate
       - work:artifact/bootstraps-rust-xtask
     context: >-
-      solorepo's DR-147 established a burstable resource model for self-hosted ARC runner pods
+      DR-147 established a burstable resource model for self-hosted ARC runner pods
       on a single 24-vCPU host, permitting up to 12 concurrent pods with memory limits
       (4 GiB) but no CPU limits so compilation and tests burst freely across idle cores.
       In PR #740 (commit c50a9d4), `cargo xtask mutants` in `bootstraps/rust/seed/xtask/src/lib.rs`
@@ -22,14 +22,14 @@ decisions:
       unbounded process tree contention. Second, Kubernetes schedules runner pods independently without
       coordinating core partitions across concurrent gate runs and loop sessions; raising per-job concurrency
       to 16 workers would allow two concurrent gate runs to launch 32 heavy compilation processes,
-      triggering the exact CPU cache thrashing and wall-clock inflation warned by solorepo's DR-147's falsifier.
+      triggering the exact CPU cache thrashing and wall-clock inflation warned by DR-147's falsifier.
     alternatives:
       - name: Raise default worker ceiling to 16 in CI and declare a static core partition
         chosen: false
         reason: >-
           Static core budgets across separate pods are fictitious in Kubernetes. Bursting to 16 workers
           in a single pod starves concurrent loop sessions and other gate jobs, causing CPU cache contention
-          and risking solorepo's DR-147's falsifier.
+          and risking DR-147's falsifier.
       - name: Run mutation testing strictly sequentially with a single worker
         chosen: false
         reason: >-
@@ -56,7 +56,7 @@ decisions:
         environment override.
       - >-
         `.github/workflows/gate.yml` avoids hardcoding static concurrency overrides, relying on the
-        in-tree seed defaults to harmonize with solorepo's DR-147.
+        in-tree seed defaults to harmonize with DR-147.
       - >-
         Closes #756.
     falsifier: >-

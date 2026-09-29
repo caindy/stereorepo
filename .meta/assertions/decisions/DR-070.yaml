@@ -37,7 +37,7 @@ decisions:
     enacted_in:
       - work:artifact/meta-disciplines
     rationale: |-
-      Christopher, reading solorepo's DR-066: *decisions do not carry rules; they
+      Christopher, reading DR-066: *decisions do not carry rules; they
       carry consequences which beget rules, i.e. Articles.*
 
       The phrasing that gave it away — "DR-065's rule" — appeared four

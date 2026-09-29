@@ -19,7 +19,7 @@ decisions:
       - work:artifact/meta-lib-dereference-reading
     context: >-
       `check.py` reached 2,592 lines holding four subjects and one thing that is
-      not a subject at all. solorepo's #221 made each step register itself at
+      not a subject at all. #221 made each step register itself at
       its definition, which removed the two tables that were a second place to
       edit and left the file's size and its four subjects exactly where they
       were; this is the half that one could not answer, because where the steps
@@ -55,7 +55,7 @@ decisions:
           and it leaves 1,600 lines still holding three subjects with the
           citation grammar still in the middle of them. Worth doing, and not
           worth a Decision on its own; taken as part of this one.
-      - name: The registry in `check.py`, where solorepo's #221 put it
+      - name: The registry in `check.py`, where #221 put it
         chosen: false
         reason: >-
           It cannot be, once the steps are in modules. A step registers itself
@@ -108,7 +108,7 @@ decisions:
       - >-
         `.meta/check.py` is 100 lines: the module docstring, five imports, and
         `main()`. Adding a step means writing it in the module whose subject it
-        shares, and nothing else — solorepo's #221 removed the table it would
+        shares, and nothing else — #221 removed the table it would
         otherwise also be named in.
       - >-
         `.meta/checks/collect.py` holds `META`, `ROOT`, `TEMPLATE`, `TOKEN`,
@@ -124,7 +124,7 @@ decisions:
       - >-
         `files.py` holds `rendering()` and both steps that read it — `rendered
         prose` and `inherited prose` — so the one render the gate performs stays
-        beside the two steps that describe it (stereorepo's DR-144). `main()`
+        beside the two steps that describe it (DR-144). `main()`
         names them off `files.rendering()`.
       - >-
         The order the gate prints changes, because a module's steps enter the
@@ -159,7 +159,7 @@ decisions:
       one-line description that is true of everything in it, the boundary drawn
       here was drawn by subtraction.
     rationale: |-
-      solorepo's #221 answered the half of this that needed no Decision: the
+      #221 answered the half of this that needed no Decision: the
       two tables, the arity-adapting lambdas, and the arithmetic counting steps
       by hand. What it could not answer is where the steps live, because that is
       a judgement about names and about what a portfolio copies, and this entry
@@ -185,7 +185,7 @@ decisions:
       two changes merge in. Both rewrite the same file, so one of them rebases
       whichever way round they go; the question is which rebase is cheaper, and
       it is this one, because re-running a slicer over whatever `check.py` has
-      become costs a command. solorepo's #221's work is a hand-made edit at
+      become costs a command. #221's work is a hand-made edit at
       every step definition, and redoing it costs a pass. So it merges first and
       this is a layer on it.
 

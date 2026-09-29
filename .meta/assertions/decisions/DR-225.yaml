@@ -19,17 +19,17 @@ decisions:
       clause after the first sentence. The `broad suppressions` step of
       `.meta/checks/comments.py` refuses a suppression that names no rule, and
       the `meta lints` step refuses one that carries no `# reason:`
-      (stereorepo's DR-177), which the same skill calls the floor rather than the
+      (DR-177), which the same skill calls the floor rather than the
       justification. Between them, a suppression naming a rule and carrying any
       reason at all was unrefusable.
 
-      Solorepo's #541 is what that permits. It landed twenty-two
+      #541 is what that permits. It landed twenty-two
       `# type: ignore[untyped-decorator]` comments whose reason reads "flat
       `collect` import makes this Any; see collect.check", and `collect.check`
       is a function of this repository whose docstring blames a `sys.path`
       insertion of this repository. Both existing steps passed every one of
       them. An internal cause is one this repository can fix, which is what
-      stereorepo's DR-207 already says to do: "A lint or type suppression
+      DR-207 already says to do: "A lint or type suppression
       bypassing safety, correctness, or type soundness is an actionable defect
       rather than a permanent comment."
     alternatives:
@@ -46,7 +46,7 @@ decisions:
         chosen: false
         reason: >-
           "The root cause is filed as #557" is the exact spelling
-          solorepo's #541 used, so a step that blesses it reopens the hole it
+          #541 used, so a step that blesses it reopens the hole it
           closes: any suppression becomes permissible by filing an Issue beside
           it, and the Issue then has no deadline and no count. An interim state
           needs a direction and an owner, which a ratchet baseline has and a
@@ -59,8 +59,8 @@ decisions:
           `.meta/`, an Issue number, a Decision Record number — so the step
           refuses what it can prove rather than judging prose. The tree is not
           clean, so the count ratchets as `inline commentary` does
-          (stereorepo's DR-210): the debt is named, listed and falling, which is
-          what it did while this was being written — solorepo's #557 took
+          (DR-210): the debt is named, listed and falling, which is
+          what it did while this was being written — #557 took
           twenty-three of the twenty-four out before the step landed.
     consequences:
       - >-
@@ -68,7 +68,7 @@ decisions:
         `# reason:` of every `noqa` and `type: ignore` under `.meta/` and
         reports one whose reason names an internal cause, counted per file
         against `.meta/checks/suppressions.baseline.yaml` through
-        `collect.against_baseline` (stereorepo's DR-210).
+        `collect.against_baseline` (DR-210).
       - >-
         A URL is blanked before the scan, so a reason dereferencing
         `https://github.com/python/mypy/issues/…` is a foreign dereference and
@@ -80,10 +80,10 @@ decisions:
       - >-
         The baseline opens at one and may fall and may not rise. It was written
         against `aeeea1c`, where it stood at twenty-four — the twenty-two
-        `untyped-decorator` suppressions of solorepo's #541, the step's own
+        `untyped-decorator` suppressions of #541, the step's own
         registration, which took one from the same root cause, and the
         `no-untyped-call` in `.meta/checks/files/prose.py`. The trunk then
-        landed solorepo's #561, which made `@check` resolve for mypy and took
+        landed #561, which made `@check` resolve for mypy and took
         the first twenty-three out, so what the step ships guarding is the
         `no-untyped-call` alone.
       - >-
@@ -108,5 +108,5 @@ decisions:
       sentence — a library name is a word — but that a cause is local can be,
       because the thing named is in the tree and the checker can look. So the
       step refuses what resolves here and says nothing about the rest, which
-      leaves the remainder to the suppression audit stereorepo's DR-207 requires
+      leaves the remainder to the suppression audit DR-207 requires
       before a handoff and takes away the one escape that was being used.

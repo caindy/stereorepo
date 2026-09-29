@@ -14,11 +14,11 @@
 # stopped being one.
 #
 # Written by `python.py`, which names the file and the number in the failure.
-# Recorded as the ceilings were adopted, in caindy/solorepo#883, and it falls as
+# Recorded as the ceilings were adopted, in #883, and it falls as
 # scripts are decomposed into `.meta/lib/<script>/`.
 
 .meta/checks/comments.py: 317
 .meta/checks/files/python.py: 333
-.meta/checks/probes/knowledge.py: 110
+.meta/checks/probes/knowledge.py: 85
 .meta/terms.py: 397
 .meta/test_specialization.py: 130

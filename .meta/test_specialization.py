@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Operational test runner for automated Specialization end-to-end verification.
 
-Cites stereorepo's DR-239 and stereorepo's DR-244.
+Cites DR-239 and DR-244.
 
 Executes the 8-step Specialization Discipline into an isolated, temporary git repository
-using pre-judged portfolio fixtures (stereorepo's DR-026, stereorepo's DR-204), validating that:
+using pre-judged portfolio fixtures (DR-026, DR-204), validating that:
 1. Inherited tooling and ontologies assemble into a viable repository.
 2. Template replacements and agent symlinks initialize cleanly.
 3. Fixture tokens substitute with zero surviving placeholder tokens.

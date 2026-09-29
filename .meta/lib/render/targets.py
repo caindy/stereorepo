@@ -24,7 +24,7 @@ def gitattributes(snap: dict[str, Any] | None = None) -> str:
     They conflict anyway, and for a reason that will not stop: two branches
     that each record a decision both append a row after the last one in
     `decisions.md`, which is one insertion point and two additions. Minting
-    stopped them taking the same number (solorepo's DR-128); it does not stop
+    stopped them taking the same number; it does not stop
     them writing to the same line of the file rendered from the numbers.
 
     `union` takes both sides rather than asking, and `just render` then puts
@@ -36,7 +36,7 @@ def gitattributes(snap: dict[str, Any] | None = None) -> str:
     The list is `TARGETS` itself, so a page added there is covered by the act
     of adding it. Every pattern is anchored with a leading `/`: a pattern with
     no slash in it matches a basename at any depth, so a bare `justfile` would
-    union a nested one that no gate byte-compares (solorepo's #194).
+    union a nested one that no gate byte-compares (#194).
     """
     if snap is None:
         if _CURRENT_SNAPSHOT is not None:

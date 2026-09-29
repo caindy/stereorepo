@@ -17,6 +17,6 @@ decisions:
       Conformity is preserved by construction. The schema restates the canon for
       reference and says in its own header that where it and the book disagree, the
       book wins and the schema is wrong. Citations name the pattern rather than a
-      chapter number. Two departures are marked in place: `Term` is a solorepo
+      chapter number. Two departures are marked in place: `Term` is a stereorepo
       addition so a language can be enumerated rather than only described, and
       `DomainEvent` postdates the book.

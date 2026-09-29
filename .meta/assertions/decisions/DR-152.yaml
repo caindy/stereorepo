@@ -15,7 +15,7 @@ decisions:
       - work:artifact/meta-lib-render-record
       - work:artifact/meta-lib-render-skills
     context: >-
-      stereorepo's DR-144 moved a generated page's framing prose onto the Artifact
+      DR-144 moved a generated page's framing prose onto the Artifact
       it is written to, and said in its own consequences what it could not
       reach: prose woven *through* generated content rather than placed before
       or after it. Two blocks of that were left in `render.py`.
@@ -31,7 +31,7 @@ decisions:
       `preamble` and `postamble` could not take them. Both are identified by
       where they sit, and a block in the middle of a page has no position to be
       named by; `path` says which page and nothing says which block. That is why
-      this is a decision rather than a second use of stereorepo's DR-144, and why
+      this is a decision rather than a second use of DR-144, and why
       that entry stopped where it did.
 
       The second constraint is that `skill()` writes two pages from one
@@ -46,7 +46,7 @@ decisions:
           sit beside guidance the model supplies, so the pair drifts by an edit
           to either side, and the drift is silent — the form still renders and
           the byte-compare still passes. The cost compounds the way #11 says:
-          the next generated form written here reaches for the idiom solorepo's
+          the next generated form written here reaches for the idiom stereorepo's
           DR-144 established, finds nothing for its middle, and adds a block at
           the same rate.
       - name: A `{placeholder}` inside `preamble`, with the generator splitting on it
@@ -74,7 +74,7 @@ decisions:
           not supply: a generator asks for a block by name, so a reordering
           moves nothing and a dropped section is a `LookupError` that says which
           host and which block. Hosting it on what it frames follows the rule
-          stereorepo's DR-144 already set — the prose sits one slot from the thing
+          DR-144 already set — the prose sits one slot from the thing
           it is about — and answers the second-copy problem by construction,
           since a Discipline has one of each block however many readings are
           compiled from it. What it costs: two hosts rather than one, so a
@@ -131,7 +131,7 @@ decisions:
       year in which blocks were renamed and sections dropped, would say the
       residue it exists to catch does not happen and the step is ceremony.
     rationale: |-
-      stereorepo's DR-144 named this work and left it, on the grounds that a slot
+      DR-144 named this work and left it, on the grounds that a slot
       for woven prose is a different decision. It is, and the difference is one
       word: a preamble is identified by position and a woven block is identified
       by name. Everything else follows from that — the list, the `LookupError`

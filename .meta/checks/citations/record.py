@@ -35,7 +35,7 @@ def cited_decisions(index: dict[str, Any]) -> list[str]:
     for path in loaders.durable(copied):
         seeded = TEMPLATE in path.parents
         try:
-            text = loaders.LEGACY.sub("", FENCED.sub("", path.read_text()))
+            text = FENCED.sub("", path.read_text())
         except (UnicodeDecodeError, OSError):
             continue
         rel = path.relative_to(ROOT)
@@ -44,7 +44,8 @@ def cited_decisions(index: dict[str, Any]) -> list[str]:
         if home:
             for num in sorted(foreign - known):
                 problems.append(f"{rel}: stereorepo's DR-{num} is cited and does not exist")
-        for num in sorted(bare - (seed if seeded else known)):
+        outmoded = {n for n in bare if home and int(n) < loaders.OUTMODED_BELOW}
+        for num in sorted(bare - (seed if seeded else known) - outmoded):
             problems.append(f"{rel}: DR-{num} is cited and does not exist")
         if home and path in copied:
             for num in sorted(bare - seed):
@@ -95,7 +96,7 @@ def enacting_citations(index: dict[str, Any]) -> list[str]:
         if rel not in named:
             continue
         try:
-            text = loaders.LEGACY.sub("", FENCED.sub("", path.read_text()))
+            text = FENCED.sub("", path.read_text())
         except (UnicodeDecodeError, OSError):
             continue
         foreign = {num for m in loaders.FOREIGN.finditer(text) for num in loaders.DR.findall(m.group())}
@@ -105,31 +106,4 @@ def enacting_citations(index: dict[str, Any]) -> list[str]:
             problems.append(f"{rel}: cites {listed(cited)}, and the record names it in "
                             f"{listed(named[rel])}; a file the record names cites an entry "
                             "that names it, or the entry that does names the file")
-    return problems
-
-
-@check("inherited citations")
-def inherited_citations() -> list[str]:
-    """Validate that Issue references in files inherited by portfolios use qualified citations.
-
-    Enforces that Issue citations in files copied during specialization use `solorepo's #n`
-    rather than bare `#n` syntax to prevent collision with a portfolio's own
-    numbering (stereorepo's DR-132).
-
-    Returns:
-        list[str]: Validation problem messages for bare Issue citations in inherited files.
-    """
-    problems = []
-    issue, foreign = loaders.issue_citation()
-    for path in sorted(loaders.copied_files()):
-        if path.is_symlink() or not path.is_file() or ".git" in path.parts:
-            continue
-        try:
-            text = FENCED.sub("", path.read_text())
-        except (UnicodeDecodeError, OSError):
-            continue
-        for num in sorted(set(issue.findall(foreign.sub("", text))), key=int):
-            problems.append(f"{path.relative_to(ROOT)}: #{num} is cited bare in a file a "
-                            "portfolio inherits, where it will come to mean an Issue of "
-                            "the portfolio's; cite it as stereorepo's")
     return problems

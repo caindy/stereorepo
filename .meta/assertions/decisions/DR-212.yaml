@@ -1,6 +1,6 @@
 decisions:
   - id: work:decision/212
-    name: "DR-212 · Vendored skills carrying a solorepo guard are adapted in place and become locally owned"
+    name: "DR-212 · Vendored skills carrying a stereorepo guard are adapted in place and become locally owned"
     status: ADOPTED
     applies:
       - work:article/2
@@ -19,7 +19,7 @@ decisions:
       unmodified vendored file can be re-copied from upstream without losing
       anything.
 
-      They assume a standalone Python application package. A solorepo portfolio
+      They assume a standalone Python application package. A stereorepo portfolio
       holds two kinds of Python target instead: inherited repository tooling under
       `.meta/`, configured by `.meta/ruff.toml` and `.meta/mypy.ini` and gated by
       `just gate meta` (DR-177, DR-210), and Project workspaces that own a
@@ -28,14 +28,14 @@ decisions:
       root `pyproject.toml` that does not belong there, runs `mypy .` past
       `.meta/mypy.ini` and DR-210's baseline, and follows `pre-commit install`'s
       own refusal hint to unset `core.hooksPath`, which detaches
-      `.meta/hooks/post-checkout` (solorepo's #430).
+      `.meta/hooks/post-checkout` (#430).
 
       The guard therefore has to sit inside the skill that carries the hazard,
       because a skill is loaded by its own trigger and by nothing else. That is
       what forces the question: an adaptation at the point of use cannot be an
       overlay, and so it costs the refresh contract the byte-identical copy bought.
     alternatives:
-      - name: Keep py-* byte-identical and state the contract in one solorepo-owned overlay skill
+      - name: Keep py-* byte-identical and state the contract in one stereorepo-owned overlay skill
         chosen: false
         reason: >-
           Preserves cheap refresh and defeats the purpose. A skill is disclosed

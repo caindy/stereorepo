@@ -18,21 +18,21 @@ decisions:
       - work:artifact/agents
       - work:artifact/template-agents
     context: >-
-      Stereorepo's DR-259 established that the root `justfile` verb surface takes
+      DR-259 established that the root `justfile` verb surface takes
       only flags, subcommands, and atomic identifiers, and that bare multi-word
-      prose positionals are prohibited on the Local Operator Plane (solorepo's
-      solorepo's DR-252). While DR-259 resolved Challenge solorepo's #485 by removing `just
+      prose positionals are prohibited on the Local Operator Plane (stereorepo's
+      DR-252). While DR-259 resolved Challenge #485 by removing `just
       wikisplain`, it left `search *args:` on the root verb surface, forwarding
       `{{args}}` unquoted to `.meta/search.py`. In `search.py`, `nargs="*"` was
       accepted and rejoined into a query string via `" ".join(args.query)`,
       preserving the tolerant-tool workaround pattern DR-259 explicitly
       rejected.
 
-      Challenge solorepo's #764 identified that this discrepancy created an
+      Challenge #764 identified that this discrepancy created an
       inconsistent argument-passing contract on the operator surface: callers
       typing `just search "foo bar"` had their quotes discarded by `just`'s
       unquoted interpolation and silently reassembled by Python, violating
-      stereorepo's Article 22. Furthermore, search is a retrieval workflow taking
+      Article 22. Furthermore, search is a retrieval workflow taking
       bare prose queries; maintaining a variadic bare-query recipe on `just`
       conflicted with the boundary established in DR-259 reserving the root verb
       surface for verification gates, compilers, and status queries.
@@ -43,10 +43,10 @@ decisions:
           Leaving `just search *args:` forwarding unquoted arguments into
           `.meta/search.py`'s `nargs="*"` reassembly preserves an undeclared
           argument-passing contract on the root verb surface, violating
-          stereorepo's Article 22. DR-259 counted `search` among the "ten variadic
+          Article 22. DR-259 counted `search` among the "ten variadic
           recipes that accept flags, subcommands, or atomic identifiers" it left
           behind, having found that "only `wikisplain` took bare prose
-          positionals"; Challenge solorepo's #764 exists because that reading
+          positionals"; Challenge #764 exists because that reading
           was wrong about `search`, which takes a bare multi-word prose query.
       - name: Restrict just search to a single atomic query token
         chosen: false
@@ -86,7 +86,7 @@ decisions:
         `work:artifact/skill-search` in
         `.meta/assertions/imported/structure.yaml` and rendered through
         `.meta/lib/render/skills.py`'s `authored_skill()`, which wraps the
-        `authored(target, slot)` reader stereorepo's DR-144 settled, to
+        `authored(target, slot)` reader DR-144 settled, to
         `.claude/skills/search/SKILL.md` and
         `.meta/.apm/skills/search/SKILL.md`, carrying the dependency-bearing
         invocation the recipe held (`uvx --python 3.13 --with linkml --with
@@ -108,7 +108,7 @@ decisions:
       - >-
         AGENTS.md and template/AGENTS.md are updated to clarify that authoring
         and search workflows with prose arguments belong in dedicated agent
-        skills rather than the root operator surface: authoring on solorepo's
+        skills rather than the root operator surface: authoring on stereorepo's
         DR-259's authority, search on this entry's.
     falsifier: >-
       A recipe added to the root `justfile` that accepts bare multi-word prose
@@ -116,9 +116,9 @@ decisions:
       `just` recipe rather than mediated through an agent skill or direct tool
       execution.
     rationale: |-
-      Option A adopted by solo (@caindy) on Challenge solorepo's #764: following
-      the precedent set by wikisplain in stereorepo's DR-259, removing `just search`
+      Option A adopted by solo (@caindy) on Challenge #764: following
+      the precedent set by wikisplain in DR-259, removing `just search`
       from the root `justfile` restores plane cohesion to the Local Operator Plane
-      under solorepo's DR-252. Searching belongs in a dedicated `/search` skill or
+      under DR-252. Searching belongs in a dedicated `/search` skill or
       directly via `python3 .meta/search.py`, preserving the root `just` operator
       surface strictly for subcommands, flags, and atomic identifiers.

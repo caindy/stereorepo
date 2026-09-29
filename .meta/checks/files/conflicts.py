@@ -1,5 +1,5 @@
 """Merge conflict markers left in tracked or unignored text by a rebase
-that never finished (solorepo's #772).
+that never finished (#772).
 """
 import re
 
@@ -22,7 +22,7 @@ def conflict_markers() -> list[str]:
 
     A Python or Rust syntax checker fails on a stray `<<<<<<<`, but Markdown,
     YAML and the defect-history logs parse it as text and carry it to `main`
-    silently (solorepo's #742). Scans the tree as git sees it: tracked files
+    silently (#742). Scans the tree as git sees it: tracked files
     and untracked files that git does not ignore (`sources.tree()`). Binary
     files and symlinks are not text a marker could land in and are skipped.
 

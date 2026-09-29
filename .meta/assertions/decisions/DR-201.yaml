@@ -37,7 +37,7 @@ decisions:
       - name: Force `apm` as a hard prerequisite for every local gate check and CI run
         chosen: false
         reason: >-
-          Violates solorepo's lean bootstrapping principles: a developer or runner
+          Violates stereorepo's lean bootstrapping principles: a developer or runner
           without Homebrew or the native APM binary installed would be blocked from
           verifying core repository assertions.
       - name: Integrate APM operations through .meta/apm_compile.py into `just apm` and add an optional-run gate check
@@ -70,5 +70,5 @@ decisions:
       closes the loop.
 
       Integrating the APM CLI via the single-source operator surface and gate
-      ensures that solorepo's multi-harness agent projections remain verifiable,
+      ensures that stereorepo's multi-harness agent projections remain verifiable,
       packageable, and compliant across all supported AI harnesses.

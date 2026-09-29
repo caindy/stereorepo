@@ -14,9 +14,9 @@ import checks.citations.prose
 import checks.citations.record
 import checks.citations.claims  # noqa: F401  # reason: registers check steps
 from checks.citations import slots as slots
-from checks.citations.loaders import DR, FOREIGN, ISSUE, ISSUE_FOREIGN, LEGACY, SCAFFOLD, copied_files, durable, issue_citation
+from checks.citations.loaders import DR, FOREIGN, OUTMODED_BELOW, SCAFFOLD, copied_files, durable
 from checks.citations.prose import ARTICLE, BLOCK, CITE, GAP, HEDGED, NEAREST, SAYS, SPAN, comments, entry_text, flat, normalise, prose, scalars
-from checks.citations.record import cited_decisions, enacting_citations, inherited_citations
+from checks.citations.record import cited_decisions, enacting_citations
 from checks.citations.slots import cited_schema_slots
 from checks.citations.claims import (
     ELISION,
@@ -42,10 +42,8 @@ __all__ = [
     "FOREIGN",
     "GAP",
     "HEDGED",
-    "ISSUE",
-    "ISSUE_FOREIGN",
-    "LEGACY",
     "NEAREST",
+    "OUTMODED_BELOW",
     "PATH_LINE",
     "QUOTED",
     "RELATIONS",
@@ -65,8 +63,6 @@ __all__ = [
     "enacting_citations",
     "entry_text",
     "flat",
-    "inherited_citations",
-    "issue_citation",
     "loaders",
     "normalise",
     "path_and_line_claims",

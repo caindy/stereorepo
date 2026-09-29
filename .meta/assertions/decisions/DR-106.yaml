@@ -62,8 +62,8 @@ decisions:
         The justfile stays at the root. A seed carries none, per DR-092: a
         Project's gate is its own language's, and the verb comes from above.
       - >-
-        `gate.yml` calls `just` where a recipe wraps the tool (solorepo's DR-275).
-        Amended on #940: runner containers carry `just` (solorepo's DR-160, solorepo's DR-275),
+        `gate.yml` calls `just` where a recipe wraps the tool (DR-275).
+        Amended on #940: runner containers carry `just` (DR-160, DR-275),
         so the cost DR-106 weighed against the benefit has been paid, and seeded and
         repository workflows alike type `just gate` rather than `.meta/gate` directly.
       - >-

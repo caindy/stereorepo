@@ -209,7 +209,7 @@ artifacts:
       ## Capabilities and the APM Package
 
       The Python standard declares sixteen agent skills as Capabilities in
-      [`assertions/capabilities.yaml`](assertions/capabilities.yaml) (stereorepo's DR-208, solorepo's #59): eight refactoring
+      [`assertions/capabilities.yaml`](assertions/capabilities.yaml) (DR-208, #59): eight refactoring
       skills (`py-*`) from `l-mb/python-refactoring-skills` and eight lifecycle skills adapted from `obra/superpowers`.
 
       Rather than vendoring raw skills into the project seed, they are compiled into
@@ -681,7 +681,7 @@ artifacts:
     path: .meta/wikisplain.py
     description: >-
       Operational authoring tool for creating and explaining concepts in the
-      Knowledge Management wiki (stereorepo's DR-187).
+      Knowledge Management wiki (DR-187).
   - id: work:artifact/meta-lib-wikisplain
     name: .meta/lib/wikisplain/__init__.py
     path: .meta/lib/wikisplain/__init__.py

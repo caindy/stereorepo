@@ -4,6 +4,7 @@ from typing import Any
 
 import yaml
 
+from checks.citations.loaders import OUTMODED_BELOW
 from checks.collect import META, check
 
 OPTIONS_REQUIRED_FROM = 60
@@ -23,7 +24,7 @@ justified at the moment it is made and paid for afterwards.
 
 @check("decision alternatives")
 def decision_alternatives(index: dict[str, Any]) -> list[str]:
-    """One option is chosen, and it is stated at all from `solorepo's DR-060` onward.
+    """One option is chosen, and it is stated at all from number 60 onward.
 
     A recommendation is held to the same rule as something in force. It is the
     closing of the alternatives that makes a decision, and that happens when the
@@ -127,14 +128,12 @@ def withdrawn_decisions(index: dict[str, Any]) -> list[str]:
     return problems
 
 
-SEEDED_BELOW = 297
-"""The first number this record issued itself (stereorepo's DR-297).
+SEEDED_BELOW = OUTMODED_BELOW
+"""The first number this record issued after it was pruned (stereorepo's DR-297).
 
-Every number below it was solorepo's. The entries that survived the seeding
-keep their numbers, so a hole below this one is a record solorepo held and this
-repository did not keep, and a hole at or above it is a deletion. Applies to the
-scaffold's own record only: a portfolio's record starts at `DR-001` and holds
-every number it issues.
+A hole below it is an outmoded entry, which git holds, and a hole at or above
+it is a deletion. Applies to the scaffold's own record only: a portfolio's
+record starts at `DR-001` and holds every number it issues.
 """
 
 SCAFFOLD = "work:portfolio/stereorepo"
@@ -156,8 +155,8 @@ def decision_numbering(index: dict[str, Any]) -> list[str]:
 
     The next number is the highest the record holds plus one, on `main`. Work
     in a repository is serial, so no two branches race for it (stereorepo's DR-297).
-    In the scaffold's own record, a hole below `SEEDED_BELOW` is one of
-    solorepo's entries that the seeding did not keep, and is not reported.
+    In the scaffold's own record, a hole below `SEEDED_BELOW` is an outmoded
+    entry, and is not reported.
     """
     seen = [d.rsplit("/", 1)[-1] for d, (cls, _, _) in index.items() if cls == "Decision"]
     if not seen:

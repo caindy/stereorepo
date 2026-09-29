@@ -6,5 +6,5 @@ decisions:
       - work:artifact/agents
     rationale: |-
       git does not track directories, so the empty scaffolding folders would not have
-      survived a clone — and cloning is how solorepo is distributed. Each carries a
+      survived a clone — and cloning is how stereorepo is distributed. Each carries a
       README saying its contents are not yet decided.

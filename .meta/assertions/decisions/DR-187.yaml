@@ -27,8 +27,8 @@ decisions:
       - work:artifact/meta-lib-wikisplain-links
       - work:artifact/meta-lib-wikisplain-pages
     context: >-
-      With the Knowledge Management discipline (stereorepo's DR-184) and Wikipedia editorial
-      conventions (stereorepo's DR-185) landed, maintainer-facing exposition belongs in
+      With the Knowledge Management discipline (DR-184) and Wikipedia editorial
+      conventions (DR-185) landed, maintainer-facing exposition belongs in
       `wiki/<context>/` adhering to MOS:LEAD bold lead definitions and closed-world
       wikilinks. However, authoring new wiki pages previously required manual file
       creation, manual frontmatter composition, manual duplicate checking against
@@ -69,7 +69,7 @@ decisions:
         .claude/skills/wikisplain/SKILL.md is rendered from structure assertions.
       - >-
         justfile originally provided the `just wikisplain` recipe, superseded
-        by stereorepo's DR-259 which scoped authoring to the `/wikisplain` skill.
+        by DR-259 which scoped authoring to the `/wikisplain` skill.
       - >-
         SPECIALIZE.md copies .meta/wikisplain.py forward into specialized portfolios.
       - >-
@@ -82,7 +82,7 @@ decisions:
       Operational skills bridge the gap between static repository rules and the
       authoring habits of agents and maintainers. By packaging collision detection,
       frontmatter generation, MOS:LEAD copular structuring, and closed-world
-      wikilink embedding into an atomic tool `/wikisplain`, solorepo provides a
+      wikilink embedding into an atomic tool `/wikisplain`, stereorepo provides a
       frictionless path to creating high-quality, gate-compliant documentation.
 
       Copying `.meta/wikisplain.py` forward into specialized portfolios ensures that

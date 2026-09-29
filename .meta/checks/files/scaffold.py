@@ -19,7 +19,7 @@ def scaffold_only_paths() -> StepOutcome:
 
     Ensures that inherited files do not reference paths unique to the scaffold
     (`template/`, `SPECIALIZE.md`, `bootstraps/`) unless explicitly qualified
-    with the scaffold's name (stereorepo's DR-036, solorepo's DR-115).
+    with the scaffold's name (stereorepo's DR-036).
 
     Returns:
         Passed | Found | CouldNotRun: Validation result listing occurrences of scaffold-only paths.
@@ -33,7 +33,7 @@ def scaffold_only_paths() -> StepOutcome:
                 continue
             scanned.add(path)
             for number, line in enumerate(path.read_text().splitlines(), 1):
-                if "stereorepo" in line.lower() or "solorepo" in line.lower():
+                if "stereorepo" in line.lower():
                     continue
                 for name in names:
                     if name in line:

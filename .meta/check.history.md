@@ -15,7 +15,7 @@ Before self-registering checks, adding or removing a gate check required
 updating separate dispatch tables and manual step counts in `main()`,
 allowing steps to be registered without running or step counts to drift from
 reality. Established: checks register themselves at definition via `@check`
-(stereorepo's DR-150) and reports reflect the live registry.
+(DR-150) and reports reflect the live registry.
 
 Evidence: `.meta/checks/files/history.py::meta_history_evidence`
 
@@ -25,7 +25,7 @@ When operational conventions evolved at the root (`CLAUDE.md` and `GEMINI.md` sy
 `move mint`, `just --list` operator surface, PR First semaphores, `just next`, and
 the ban on harness memory files), `template/AGENTS.md` and `template/.meta/README.md`
 lagged behind. Established: `template conventions agree` verifies that root and
-template files both declare the core operational conventions (stereorepo's DR-183).
+template files both declare the core operational conventions (DR-183).
 
 Evidence: `.meta/checks/files/templates.py::template_conventions_agree`
 
@@ -44,7 +44,7 @@ Evidence: `.meta/checks/files/history.py::meta_history_evidence`
 When `check.py` executed within a subprocess pipeline or under `gate`, standard
 output defaulted to block buffering instead of flushing line by line, delaying
 real-time step reporting and violating the streaming contract asserted in
-stereorepo's DR-104. Established: `main()` configures line buffering on `sys.stdout`
+DR-104. Established: `main()` configures line buffering on `sys.stdout`
 when backed by a text stream wrapper.
 
 Evidence: `.meta/check.py::main`
@@ -61,7 +61,7 @@ one question, failing the run for a schema container that accepted nothing
 while passing it for a step that said the same thing through `CouldNotRun`.
 Established: every unrunnable step and every skipped container is collected
 into one closing block, and `closing_block()` fails the run where `CI` holds a
-non-empty value (Article 6, stereorepo's DR-261).
+non-empty value (Article 6, DR-261).
 
 Evidence: `.meta/check.py::closing_block`
 

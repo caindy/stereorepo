@@ -1,10 +1,10 @@
 # Specialization Fixture
 
-Reference documentation for the synthetic portfolio specialization fixture (stereorepo's DR-026, stereorepo's DR-239, stereorepo's DR-244).
+Reference documentation for the synthetic portfolio specialization fixture (DR-026, DR-239, DR-244).
 
 ## Purpose
 
-The files in this directory provide isolated, pre-judged substitution data for the Specialization Discipline test runner (`.meta/test_specialization.py`). In accordance with stereorepo's DR-026, synthetic fixtures used for testing live outside `.meta/assertions/` to maintain strict boundary separation between operational assertions and synthetic test corpora.
+The files in this directory provide isolated, pre-judged substitution data for the Specialization Discipline test runner (`.meta/test_specialization.py`). In accordance with DR-026, synthetic fixtures used for testing live outside `.meta/assertions/` to maintain strict boundary separation between operational assertions and synthetic test corpora.
 
 ## Files
 

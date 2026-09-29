@@ -27,7 +27,7 @@ decisions:
       - work:artifact/meta-checks-files
       - work:artifact/meta-lib-dereference-reading
     context: >-
-      Stereorepo's DR-217 settled where a script's body goes: the script stays at
+      DR-217 settled where a script's body goes: the script stays at
       its path, because the justfile, the workflows and the structure
       assertions invoke it there, and its body lives under `.meta/lib/`,
       because a package cannot take the name of a module beside it. The same
@@ -40,7 +40,7 @@ decisions:
       `import checks.probes.loops` resolves to the package because it is the only
       `loops` on `probes.__path__`. Nothing coexists and nothing is shadowed.
 
-      Stereorepo's DR-209 asks one module for one subject, so that a history
+      DR-209 asks one module for one subject, so that a history
       log's receipt names the file holding the probe it cites. Seven probes in
       one file satisfied it at the module's grain; seven modules satisfy it at
       the probe's.
@@ -79,7 +79,7 @@ decisions:
         `.meta/say/move.history.md` names the module holding each probe.
       - >-
         The type ratchet holds one number per probe module in place of the
-        module's (stereorepo's DR-210).
+        module's (DR-210).
       - >-
         An imported module under `.meta/checks/` that outgrows one subject
         splits the same way; a script splits as DR-217 says.

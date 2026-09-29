@@ -19,11 +19,11 @@ decisions:
     context: >-
       While work:role/technical-writer and work:personality/technical-writer
       were declared in imported authority assertions and enforced during PR review
-      (solorepo's DR-176), the repository lacked an operational authoring skill
+      (DR-176), the repository lacked an operational authoring skill
       providing concrete structural and sentence-level conventions for authoring
-      and maintaining literate exposition. Furthermore, while stereorepo's DR-192
+      and maintaining literate exposition. Furthermore, while DR-192
       assigned corpus-wide citation maintenance to the Technical Writer backed by
-      offline retrieval (stereorepo's DR-103), DR-103 remained RECOMMENDED with no
+      offline retrieval (DR-103), DR-103 remained RECOMMENDED with no
       implementation built, forcing agents and the human to rely on exact substring
       grep.
     alternatives:
@@ -36,16 +36,16 @@ decisions:
       - name: External binary indexer (ck or zg) with disk-persisted index files
         chosen: false
         reason: >-
-          Evaluated in Spike #18 (stereorepo's DR-103). Imposes 535 MB node_modules
+          Evaluated in Spike #18 (DR-103). Imposes 535 MB node_modules
           (zg) or cargo install per machine (ck), external embedding caches, and
           disk indices that drift when assertions change.
       - name: Layered technical writing skill and zero-dependency in-memory BM25F search engine
         chosen: true
         reason: >-
           Synthesizes Diátaxis documentation architecture (Reference, Explanation,
-          How-To, Tutorial) and Google developer style with solorepo's Literate
-          Programming (stereorepo's DR-171, DR-175, solorepo's DR-176) and Knowledge Management
-          (stereorepo's DR-184, DR-187). Implements Okapi BM25F multi-field scoring in
+          How-To, Tutorial) and Google developer style with stereorepo's Literate
+          Programming (DR-171, DR-175, DR-176) and Knowledge Management
+          (DR-184, DR-187). Implements Okapi BM25F multi-field scoring in
           ~50 lines of pure Python standard library over structured assertions and
           wiki pages, achieving 94.4% hit@5 (17/18) and 0.76 MRR over the 18 DR-103
           benchmark queries with zero dependencies, sub-100ms latency, and zero index drift.

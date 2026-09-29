@@ -10,7 +10,7 @@ from checks.probes.harness import load_module
 
 @check("gate runner probes", pre=True)
 def gate_runner_probes() -> list[str]:
-    """`.meta/gate` loads under the running interpreter, and `_emit` writes through the lock it is given (solorepo's #746).
+    """`.meta/gate` loads under the running interpreter, and `_emit` writes through the lock it is given (#746).
 
     Loading is the case: a function signature is evaluated at `def` time, so an
     annotation naming a runtime object rather than a type raises there and

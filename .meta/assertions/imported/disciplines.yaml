@@ -311,7 +311,7 @@ disciplines:
         name: Refuse speculative abstractions
         statement: >-
           Do not introduce schemas, coordinate systems, or metamodels ahead of concrete producers
-          and consumers at the creation boundary (stereorepo's DR-008, solorepo's DR-203).
+          and consumers at the creation boundary (stereorepo's DR-008).
       - id: work:discipline-step/nothing-unconsumed/name-artifact-consumers-and-checks
         name: Name artifact consumers and checks
         statement: >-

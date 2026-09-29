@@ -81,7 +81,7 @@ decisions:
         `.meta/check.py` runs every registered step, collects each `CouldNotRun`
         rather than letting one end the traversal, and closes with a block naming
         everything that could not run and what each needs — in Article 21's
-        output grammar beside `ok`, `x` and `?` (stereorepo's DR-092).
+        output grammar beside `ok`, `x` and `?` (DR-092).
       - >-
         The schema containers counted by `skipped` report through the same block,
         so the two answers `check.py` held become one.

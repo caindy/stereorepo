@@ -3,7 +3,7 @@
 
 Derives documentation, templates, skills, and configuration artifacts directly
 from declarative YAML models under `.meta/assertions/` (stereorepo's DR-026,
-stereorepo's DR-059, solorepo's DR-060). Re-exports compilation targets, markdown
+stereorepo's DR-059). Re-exports compilation targets, markdown
 formatters, and file writers from `lib.render`.
 """
 from lib.render import META, bootstraps, cli, pages, skills, targets, writers

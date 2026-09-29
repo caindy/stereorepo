@@ -2,11 +2,11 @@
 
 **Ubiquitous Language** is the discipline that ensures every concept within a
 Bounded Context carries exactly one unambiguous name shared by human and agents
-alike (stereorepo's DR-184, stereorepo's DR-185).
+alike (stereorepo's DR-184, DR-185).
 
 In an agentic development environment where autonomous loops author and review
 code at high velocity, semantic drift is an acute failure mode. When different
-agents invent ad-hoc synonyms for the same concept (for example, referring to a
+agents invent ad-hoc synonyms for the same concept (for example, referring to
 an Issue alternately as a "ticket", "story", or "task"), the mental model
 fractures. The Ubiquitous Language discipline eliminates floating signifiers by
 forcing every domain concept through an explicit vocabulary contract.
@@ -43,5 +43,5 @@ Writing explains; deciding decides.
 
 ---
 
-**See also:** [[knowledge-management]], stereorepo's DR-041, stereorepo's DR-184, stereorepo's DR-185.
+**See also:** [[knowledge-management]], stereorepo's DR-041, DR-184, DR-185.
 

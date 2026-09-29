@@ -26,7 +26,7 @@ decisions:
       Capabilities rather than seed boilerplate, and where a Capability is packaged
       is APM's question (#28).
       
-      Challenge #28 and DR-206 established solorepo's APM primitive compilation
+      Challenge #28 and DR-206 established stereorepo's APM primitive compilation
       and multi-harness distribution architecture. However, the sixteen skills
       still lacked an asserted home in the repository (Challenge #59).
       Declaring them globally in .meta/assertions/imported/authority.yaml would pollute
@@ -84,5 +84,5 @@ decisions:
       not to the core ontology of work and not to the filesystem of a project seed.
       
       By declaring capabilities in the bootstrap itself and leveraging APM's
-      subdirectory package semantics, solorepo keeps seeds lightweight and
+      subdirectory package semantics, stereorepo keeps seeds lightweight and
       hermetic while providing agents with rich, stack-specific skills on demand.
