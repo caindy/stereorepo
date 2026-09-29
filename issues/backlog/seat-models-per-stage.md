@@ -7,7 +7,7 @@ and implementation writes and checks it. A different model may suit each.
 Let the stage choose the seats' model. A seat's session is kept for the whole
 issue so its prompt cache stays warm, so changing model between stages starts
 fresh sessions and re-writes the cache (see
-`resume-seat-sessions-across-issues.md`); decide whether that cost is worth it,
+`seat-cache-write-per-session.md`); decide whether that cost is worth it,
 and measure it in `.pair/turns.jsonl`. Primary and secondary name only which
 seat takes the first turn in a stage, and should keep meaning only that.
 

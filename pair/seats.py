@@ -98,6 +98,46 @@ class Seat(Protocol):
     def stop(self) -> None: ...
 
 
+CONTEXT = ["--setting-sources", "project", "--strict-mcp-config"]
+"""What a seat loads beyond the loop's own prompt: the project's settings alone.
+
+The project source gives the seat the repository's `CLAUDE.md`, its skills under
+`.claude/skills/` and its `.claude/settings.json`. Leaving out the user and
+local sources keeps the developer's own plugins and settings out of the seat, so
+its context is the repository's and a fresh session re-uses more of the cached
+prefix: in stereorepo, about 7,300 tokens are written per fresh session against
+about 12,000 with every source loaded. `--setting-sources ""` writes less still,
+but it drops the project's skills too.
+"""
+
+
+def command(system_prompt: str, model: str | None = None, resume: str | None = None) -> list[str]:
+    """The command line that starts a Claude Code seat in stream-json mode."""
+    argv = [
+        "claude",
+        "-p",
+        "--input-format",
+        "stream-json",
+        "--output-format",
+        "stream-json",
+        "--verbose",
+        "--permission-mode",
+        "acceptEdits",
+        *CONTEXT,
+        "--append-system-prompt",
+        system_prompt,
+        "--allowedTools",
+        *ALLOWED,
+        "--disallowedTools",
+        *DISALLOWED,
+    ]
+    if model:
+        argv += ["--model", model]
+    if resume:
+        argv += ["--resume", resume]
+    return argv
+
+
 class ClaudeSeat:
     """Claude Code, held as one headless stream-json process per issue.
 
@@ -122,27 +162,7 @@ class ClaudeSeat:
         self.session_id = resume
         self.timeout = timeout
         self.log_dir = log_dir
-        argv = [
-            "claude",
-            "-p",
-            "--input-format",
-            "stream-json",
-            "--output-format",
-            "stream-json",
-            "--verbose",
-            "--permission-mode",
-            "acceptEdits",
-            "--append-system-prompt",
-            system_prompt,
-            "--allowedTools",
-            *ALLOWED,
-            "--disallowedTools",
-            *DISALLOWED,
-        ]
-        if model:
-            argv += ["--model", model]
-        if resume:
-            argv += ["--resume", resume]
+        argv = command(system_prompt, model=model, resume=resume)
         env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
         self.proc = subprocess.Popen(
             argv,

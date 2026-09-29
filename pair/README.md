@@ -5,7 +5,10 @@ The pair loop carries one Issue at a time from `issues/backlog/` on `main` to
 take turns in one worktree, `worktrees/pair`, on a branch named `pair/<slug>`.
 A deterministic supervisor, `loop.py`, decides every transition from what it can
 observe: where the Issue file sits, whether a turn changed anything, and the
-exit code of `just gate`. The seats are never told a protocol exists.
+exit code of `just gate`. The seats are never told a protocol exists. A seat
+loads the repository's own settings, `CLAUDE.md` and skills, and nothing from
+the developer's machine (`CONTEXT` in `seats.py`), so its context is the
+repository's and a fresh session re-uses most of the cached prompt.
 
 The loop's code lives here, outside every portfolio's tree. It was proven in a
 spike in booktutor, where the seats read the loop's own code when it sat in the

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import board
 from loop import Loop, State
-from seats import TurnResult
+from seats import ALLOWED, TurnResult, command
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 Action = Callable[[Path], None]
@@ -526,6 +526,19 @@ class BoardTest(unittest.TestCase):
         self.assertEqual(board.next_ripe(b.repo, "main"), "b")
         b.issue("done", "z", "Z")
         self.assertEqual(board.next_ripe(b.repo, "main"), "a")
+
+
+class SeatCommandTest(unittest.TestCase):
+    def test_a_seat_loads_the_project_settings_alone(self) -> None:
+        argv = command("seat prompt", model="sonnet", resume="abc")
+        at = argv.index("--setting-sources")
+        self.assertEqual(argv[at + 1], "project")
+        self.assertIn("--strict-mcp-config", argv)
+        self.assertNotIn("--disable-slash-commands", argv)
+        self.assertEqual(argv[argv.index("--append-system-prompt") + 1], "seat prompt")
+        self.assertEqual(argv[-4:], ["--model", "sonnet", "--resume", "abc"])
+        allowed = argv.index("--allowedTools") + 1
+        self.assertEqual(argv[allowed : allowed + len(ALLOWED)], ALLOWED)
 
 
 if __name__ == "__main__":
