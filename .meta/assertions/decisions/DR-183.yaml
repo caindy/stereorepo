@@ -9,7 +9,7 @@ decisions:
       - work:artifact/meta-checks-files
       - work:artifact/meta-checks-files-templates
     context: >-
-      Challenge #11 directs: "Changing one rule meant editing it in five places by hand,
+      The original Challenge directs: "Changing one rule meant editing it in five places by hand,
       and nothing would have failed if one had been missed. The measure of done is not that
       copies are removed: it is that an edit to one statement cannot leave another behind —
       either the second copy derives, or the gate names it."
@@ -26,7 +26,7 @@ decisions:
         chosen: false
         reason: >-
           Leaves the template files vulnerable to future drift whenever root conventions
-          change, violating Challenge #11's requirement that an edit cannot leave a copy behind.
+          change, violating the original Challenge's requirement that an edit cannot leave a copy behind.
       - name: Align template files, modernize schemas.md, and enforce convention agreement in the gate
         chosen: true
         reason: >-

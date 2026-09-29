@@ -39,7 +39,7 @@ under its own control, and following them against inherited `.meta/` tooling
 damages it. The guard has to sit inside the skill that carries the hazard,
 because a skill is loaded by its own trigger and by nothing else — which is why
 it could not be an overlay, and so why the byte-identical copy had to go
-(stereorepo's DR-212, #446).
+(stereorepo's DR-212).
 
 | Skill | The hazard it now names |
 |---|---|

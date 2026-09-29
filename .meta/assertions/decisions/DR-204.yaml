@@ -14,7 +14,7 @@ decisions:
       - work:artifact/meta-checks-probes-tools
       - work:artifact/meta-search
     context: >-
-      Challenge #343 required proving the 8-step specialization procedure
+      A Challenge required proving the 8-step specialization procedure
       (SPECIALIZE.md) against a clean test repository following the introduction
       of .meta/checks/, the APM compilation toolchain, and updated loop workflows.
       Executing the procedure into an empty repository revealed two probe defects
@@ -55,8 +55,6 @@ decisions:
       - >-
         End-to-end dogfooding validates that a freshly specialized portfolio executes
         77 gate steps across meta and python projects with zero errors.
-      - >-
-        Completes the First Specialization milestone and closes Challenge #343.
     falsifier: >-
       A failure during SPECIALIZE.md execution into an empty repository or a gate
       failure on a freshly specialized portfolio.

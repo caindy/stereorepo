@@ -12,7 +12,7 @@ decisions:
       page carries no information its sources do not. `.meta/decisions.md` is
       one of thirteen such pages, and it is the one that conflicts: entries
       render newest last, so two branches that each record a decision both add
-      a row after the same last row. On #192 that was DR-141 on `main` against
+      a row after the same last row. On one change that was DR-141 on `main` against
       the entry that branch was adding — `git merge-tree --write-tree` naming
       `.meta/decisions.md` as the only conflicted path, while the two entry
       files it renders from did not conflict, being separate files. DR-128
@@ -43,7 +43,7 @@ decisions:
           `vocabulary.md` as pages to open, and a portfolio's arriving agent is
           pointed at them by path. Un-committing turns every one of those links
           into an instruction to run a renderer first, which is a worse failure
-          than a conflict and a much larger change. #11 holds the question of
+          than a conflict and a much larger change. Another Challenge holds the question of
           what `.meta/` should stop duplicating; this is not the place to
           settle it.
       - name: Render entries in an order where two additions do not share a line
@@ -71,7 +71,7 @@ decisions:
         reason: >-
           It matches what the merge is actually worth. Union takes both sides
           rather than stopping, which on the real case is exactly right: merged
-          against the #192 conflict it produced both new entries as adjacent
+          against that conflict it produced both new entries as adjacent
           rows in numeric order, with no duplicated artifact rows, byte-identical
           to what a fresh render gives. Where it is wrong — both sides extending
           one artifact's row, which leaves both copies — it is wrong in the one

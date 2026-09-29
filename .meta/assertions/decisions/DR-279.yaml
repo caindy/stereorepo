@@ -21,7 +21,7 @@ decisions:
       phrase report inverted the ratio on its first reading, because a shell
       invocation is a run of tokens on one line and that is exactly the shape
       phrase segmentation admits: eight of the top ten multiword candidates over
-      #884 were command lines — `uv run`, `uv run gate`, `gh pr`,
+      one change were command lines — `uv run`, `uv run gate`, `gh pr`,
       `ruff check`, `gate meta`, `git commit` — leaving two lines of prose to find
       among eight of tooling.
 
@@ -30,8 +30,8 @@ decisions:
       the corpus total both axes divide by, so every candidate the audit has ever
       reported is measured against a different denominator and DR-234's
       two fitted knobs might no longer sit where they were fitted. That is a
-      judgment the change's own gate cannot prove, which is why Challenge
-      #898 was read as `human` and settled by the human before any code.
+      judgment the change's own gate cannot prove, which is why the Challenge
+      was read as `human` and settled by the human before any code.
       Measured over the whole corpus, the knobs hold: at DP ≥ 0.70, G² ≥ 10.83 and
       Zipf ≥ 3.0 the five invocations above leave the phrase report and
       `repository root`, `one module`, `workflow run` and `reviewer role` take
@@ -86,8 +86,6 @@ decisions:
         shapes, an inline span leaving two runs rather than one, an invocation that
         surfaces as prose and does not from inside a fence or a span, and an
         assertion YAML file read whole.
-      - >-
-        Challenge #898 is closed as answered.
     falsifier: >-
       A candidate in the audit output every occurrence of which lies inside a
       fenced code block or an inline code span of a markdown file, or a term the

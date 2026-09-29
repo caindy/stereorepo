@@ -39,7 +39,7 @@ decisions:
           noise on the first run over legacy code, fixed or annotated per
           site rather than by opening `ignore`.
 
-          Amended on #902: the set was enumerated here and asserted nowhere,
+          Amended: the set was enumerated here and asserted nowhere,
           so deleting a family from the manifest cost one line and no gate
           read it — the `select` door DR-263 closed for `.meta`,
           left open here. The enumeration is now a floor the gate states, and
@@ -56,7 +56,7 @@ decisions:
       - >-
         Maximum cyclomatic complexity is 12.
       - >-
-        Amended on #902: `SELECT_FLOOR` in
+        Amended: `SELECT_FLOOR` in
         `bootstraps/python/seed/gate/src/gate/__init__.py` states the selected
         set as a mapping from each rule to the prefix of the ruff linter that
         owns it, and `lints` reports the entries no selector under `select` or
@@ -68,13 +68,13 @@ decisions:
         exacts. The mechanism, and the reading of a selector as the linter that
         owns it, are DR-263's.
       - >-
-        Amended on #902: `PLR0912`, `PLR0913` and `PLR0915` are selected, with
+        Amended: `PLR0912`, `PLR0913` and `PLR0915` are selected, with
         `max-branches = 12`, `max-args = 5` and `max-statements = 50` under
         `[tool.ruff.lint.pylint]` — the values `.meta/ruff.toml` carries.
     falsifier: >-
       A rule proving wrong everywhere rather than at particular sites. That
       is the case for removing it from `select`, which is a different act
-      from ignoring it and is recorded as such — and, since #902, one the
+      from ignoring it and is recorded as such — and, since the amendment, one the
       floor makes a reviewer read, because the removal fails `lints` until
       `SELECT_FLOOR` is edited in the same diff.
     rationale: |-

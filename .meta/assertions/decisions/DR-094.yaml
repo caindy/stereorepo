@@ -62,7 +62,7 @@ decisions:
       - >-
         Its product records become Product-level Decisions, DR-095 to DR-097,
         the first entries at that level. Its architecture records are the
-        generator's and wait on its fate, which is what remains of #38. Its
+        generator's and wait on its fate, which is what remains of that question. Its
         fourth product record, configuration as a declaration, does not come:
         it binds an application, and a seed of one example module has nothing
         to enact it on.

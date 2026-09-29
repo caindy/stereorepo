@@ -4,7 +4,7 @@
 
 PyYAML's default loader silently accepted repeated mapping keys, retaining only
 the last occurrence and masking duplicate definitions such as repeated `steps:`
-blocks in composite actions and workflow jobs (stereorepo's DR-053, #129).
+blocks in composite actions and workflow jobs (stereorepo's DR-053).
 Established: `duplicate_keys` checks all YAML and YML files under `.meta/` and
 stereorepo's `template/` using `Strict`, reporting any repeated mapping keys.
 
@@ -14,7 +14,7 @@ Evidence: `.meta/checks/files/templates.py::duplicate_keys`
 
 Relative links in Markdown pages decayed after file relocations or renamings
 (e.g. `schemas.md` pointing to stale decision paths), remaining undetected by
-manual inspection (stereorepo's DR-036, #45). Established: `markdown_links`
+manual inspection (stereorepo's DR-036). Established: `markdown_links`
 verifies that every relative link in non-template Markdown files resolves to a
 tracked path or directory in the tree.
 
@@ -25,7 +25,7 @@ Evidence: `.meta/checks/files/markdown.py::markdown_links`
 Files copied into new portfolios by Specialization contained references to
 directories that exist only in stereorepo scaffolding (such as stereorepo's `template/`,
 stereorepo's `bootstraps/`, and stereorepo's `SPECIALIZE.md`), leaving broken references
-in portfolio documentation and workflows (stereorepo's DR-036, #45, #75).
+in portfolio documentation and workflows (stereorepo's DR-036).
 Established: `scaffold_only_paths` scans inherited documentation and workflows to ensure
 no unqualified references to scaffold-only paths survive Specialization.
 
@@ -36,7 +36,7 @@ Evidence: `.meta/checks/files/scaffold.py::scaffold_only_paths`
 Operational conventions updated in root repository instructions (`AGENTS.md`,
 `.meta/README.md`) drifted from the seeded template copies in stereorepo's `template/AGENTS.md`
 and stereorepo's `template/.meta/README.md`, causing clones to start with divergent conventions
-(stereorepo's DR-183, #11). Established: `template_conventions_agree` verifies
+(stereorepo's DR-183). Established: `template_conventions_agree` verifies
 that key operational conventions are mirrored in template seed files.
 
 Evidence: `.meta/checks/files/templates.py::template_conventions_agree`
@@ -47,7 +47,7 @@ Evidence: `.meta/checks/files/templates.py::template_conventions_agree`
 `*.py` and nothing else, so the eight programs that carry a Python shebang in
 place of a suffix — `.meta/gate`, the channel's four verbs and the three
 programs under `.meta/arc/` — were outside the step while `meta_doc`, in the
-same module, saw all thirty-six (stereorepo's DR-210, #436). The
+same module, saw all thirty-six (stereorepo's DR-210). The
 channel is where the credential is read and the `Actor:` Trailer composed, and
 it is the part of the tree a test run does not cover. Established: `is_py` is
 module-level and both steps ask it what Python under `.meta/` is, `meta_types`
@@ -61,8 +61,7 @@ Evidence: `.meta/checks/files/sources.py::is_py`
 
 The promotion step in `.github/workflows/coder.yml` embedded an inline Python
 invocation (`python3 -c '...'`), bypassing static analysis tools (`ruff`,
-`mypy`), syntax checkers, and gate checks (stereorepo's DR-241,
-#666). Established: `no_inline_python` scans workflow YAML files,
+`mypy`), syntax checkers, and gate checks (stereorepo's DR-241). Established: `no_inline_python` scans workflow YAML files,
 composite actions, shell scripts, and recipes, rejecting embedded Python
 invocations and requiring dedicated `.meta/` scripts or CLI flags.
 
@@ -74,10 +73,10 @@ A page's frontmatter `synonyms` and its concept's `avoid` list were both
 machine-readable and nothing compared them:
 `ubiquitous_language_wiki_parity` reads slugs against minted identifiers in
 both directions and reads neither list. Both pages minted in
-#581 declared as synonyms words their concept forbids —
+one change declared as synonyms words their concept forbids —
 `wiki/stereorepo/claim.md` carried `work:concept/claim`'s whole `avoid` list,
 word for word and in order — and the gate stayed green while the reviewer
-caught them (stereorepo's DR-231, #594). The cost is retrieval:
+caught them (stereorepo's DR-231). The cost is retrieval:
 `.meta/lib/search/build.py` folds a frontmatter list item into the title field
 of the BM25 index, which is the highest weight it carries, so the search
 answered with the page for the forbidden word. Established:
@@ -89,14 +88,14 @@ Evidence: `.meta/checks/files/wiki.py::wiki_synonyms_are_not_avoided`
 
 ### Concept set silent overwrites on duplicate concept identifiers
 
-PyYAML parses sequence items independently, and LinkML index collection keyed by identifier silently overwrites earlier definitions with later occurrences when an `id` is declared twice in a `concept_set` list, masking duplicate concept definitions with divergent attributes and avoid lists (stereorepo's DR-190, #549). Established: `duplicate_concept_ids` scans all YAML assertion and template files declaring a `concept_set`, reporting duplicate concept IDs with their line numbers.
+PyYAML parses sequence items independently, and LinkML index collection keyed by identifier silently overwrites earlier definitions with later occurrences when an `id` is declared twice in a `concept_set` list, masking duplicate concept definitions with divergent attributes and avoid lists (stereorepo's DR-190). Established: `duplicate_concept_ids` scans all YAML assertion and template files declaring a `concept_set`, reporting duplicate concept IDs with their line numbers.
 
 Evidence: `.meta/checks/files/templates.py::duplicate_concept_ids`
 
 ### Unbounded line length under `.meta/`
 
 `.meta/ruff.toml` selected no line-length family, so nothing bounded a line and
-the tree grew one of 488 characters (stereorepo's DR-177, #751). The
+the tree grew one of 488 characters (stereorepo's DR-177). The
 debt a 100-character bound found was diffuse — 1179 lines spread over the tree,
 the largest single file holding under a tenth of them — so no flat step could
 admit it in a diff anyone would read. Established: `meta_lines` ratchets `E501`
@@ -110,7 +109,7 @@ Evidence: `.meta/checks/files/python.py::meta_lines`
 Rebasing a branch current is routine (PR First's *Bring a branch current by rebase* step), but conflicts in
 documentation, YAML, or defect history files can append conflict markers to
 the tail of files, bypassing language syntax checkers and merging into `main`
-silently (#772, #742). Established: `conflict_markers`
+silently. Established: `conflict_markers`
 scans the tree as git sees it (tracked files and untracked files git does not
 ignore, excluding symlinks) via `sources.tree()`, reporting any line matching
 git's conflict marker patterns (`<<<<<<<`, `=======`, `>>>>>>>`).

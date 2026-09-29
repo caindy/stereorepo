@@ -15,8 +15,7 @@
 # Both entries are one cause: `.meta/check.py` imports the step modules for
 # their registration side effect, after inserting `.meta/` on `sys.path`, so
 # every package under `.meta/checks/` repeats the pair. The sweep that drained
-# the 22 untyped-decorator suppressions of #541 is
-# #561.
+# the 22 untyped-decorator suppressions is recorded in stereorepo's DR-223.
 "noqa:F401 — registers check steps": 9
 "noqa:I001 — registration order is deliberate": 5
 

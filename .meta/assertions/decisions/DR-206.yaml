@@ -26,8 +26,8 @@ decisions:
       of `.meta/.apm/` and `.claude/settings.json`, severing git history and orphaning
       specialized portfolios from upstream improvements. When stereorepo refines its
       disciplines, role definitions, or capability skills, existing portfolios had no
-      native mechanism to discover or apply updates (Challenge #61, Challenge #344).
-      Furthermore, Challenge #112 requires stereorepo's disciplines and roles to reach
+      native mechanism to discover or apply updates.
+      Furthermore, stereorepo requires stereorepo's disciplines and roles to reach
       OpenAI Codex and Kiro in addition to Claude Code and Gemini CLI, which APM's
       target adapters natively support if authorized in the manifest.
     alternatives:
@@ -54,9 +54,9 @@ decisions:
           archives) and GitHub Releases. Preserves the nested package layout under `.meta/` (DR-172)
           and the staging boundary rule that `.meta/` is the staging ground (DR-001).
           Expanding `target:` in `.meta/apm.yml` authorizes `codex` and `kiro` alongside
-          `claude`, `copilot`, and `gemini` (resolving #112). Publishing versioned releases (`v*`)
+          `claude`, `copilot`, and `gemini`. Publishing versioned releases (`v*`)
           via GitHub Actions provides an explicit, auditable signal enabling downstream portfolios
-          to discover and apply updates cleanly via `apm outdated` and `apm update` (resolving #61 and #344).
+          to discover and apply updates cleanly via `apm outdated` and `apm update`.
     consequences:
       - >-
         `.meta/apm.yml` and `.meta/.apm/` remain hermetically bounded inside `.meta/`, preserving

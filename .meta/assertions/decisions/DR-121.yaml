@@ -28,11 +28,11 @@ decisions:
           decision is `work:decision/085` too, and the seed's own `DR-001.yaml`
           already says the scaffold's record stays with the scaffold and the
           portfolio's starts at one. An id that names its home would let the
-          entries travel, and that is #19's question, not this one's.
+          entries travel, and that is another Challenge's question, not this one's.
       - name: The gate resolves a citation against the imported record as well as the local one
         chosen: false
         reason: >-
-          The smallest change as #114 put it, and it resolves against nothing:
+          The smallest change as the Challenge put it, and it resolves against nothing:
           no imported record is carried. It would also make "cited and does not
           exist" mean two things depending on which file the citation is in.
       - name: A citation of stereorepo's record says so, and the gate resolves it only where that record is
@@ -87,7 +87,7 @@ decisions:
       not a reference. Then either the record travels or the id names its home,
       and the possessive was the interim it is.
     rationale: |-
-      Verified the way #114 found it: a scratch tree built by steps one to
+      Verified the way the Challenge found it: a scratch tree built by steps one to
       three and six of the Discipline, and its gate run. Red on four steps
-      before — the three #114 named and a fourth that arrived since — and on
+      before — the three the Challenge named and a fourth that arrived since — and on
       one after, which is a different cause and its own notice.

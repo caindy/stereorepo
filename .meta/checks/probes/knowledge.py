@@ -257,8 +257,8 @@ def wikisplain_probes() -> list[str]:
     `verify_page` on a page filed under that same custom slug with a
     self-referencing wikilink to it, which must raise no warning either —
     `verify_page` reads its own identity off `rel_path`'s stem rather than
-    re-slugifying the title, so the two can diverge without false-positiving
-    (#617); and `cli.main`, which is where the tree the tool reads is
+    re-slugifying the title, so the two can diverge without false-positiving;
+    and `cli.main`, which is where the tree the tool reads is
     resolved rather than passed: `--check-duplicate` on a concept the wiki and
     the vocabulary both hold, and a scaffold whose `--synonyms` name an avoided
     word. Each must exit 1, and the second is given `--force` and `--dry-run`,
@@ -331,7 +331,7 @@ def cli_probes(wikisplain: types.ModuleType) -> list[str]:
 
 @check("wikisplain argv probes", pre=True)
 def wikisplain_argv_probes() -> list[str]:
-    """`wikisplain.main` joins shell-split concepts and scaffolds beneath its resolved repository root (#483).
+    """`wikisplain.main` joins shell-split concepts and scaffolds beneath its resolved repository root.
 
     A shell splits an unquoted `Test Wiki Concept Two` into four argv words;
     driven through `wikisplain.main` with `--dry-run`, the generated page's
@@ -390,13 +390,13 @@ def wikisplain_argv_probes() -> list[str]:
 @check("wikisplain default root probes", pre=True)
 def wikisplain_default_root_probes() -> list[str]:
     """`find_duplicates`, `extract_known_concepts` and `cli.main`, called with
-    no `root`, read this repository (#648).
+    no `root`, read this repository.
 
     Every other probe over these functions passes `root=ROOT` explicitly, or
     points `cli.ROOT` at a temporary directory before calling, so the default
     `lib.wikisplain.ROOT` the command line actually relies on is exercised by
-    nothing else in the gate — the gap that let #528's package
-    split leave the default wrong, silently, until #647 corrected
+    nothing else in the gate — the gap that let a package
+    split leave the default wrong, silently, until a later change corrected
     it. Called with no `root` at all, `find_duplicates` must still find the
     wiki's own Knowledge Management page and `extract_known_concepts` must
     still know its slug; `cli.main` takes no `root` parameter at all, so
@@ -469,7 +469,7 @@ def citation_form_probes() -> list[str]:
 
 @check("concept duplicate id probes", pre=True)
 def concept_duplicate_id_probes() -> list[str]:
-    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (stereorepo's DR-190, #549)."""
+    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (stereorepo's DR-190)."""
     import pathlib
     import tempfile
 

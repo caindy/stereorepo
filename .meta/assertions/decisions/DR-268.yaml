@@ -14,7 +14,7 @@ decisions:
       hooks (`hooks/signed_channel.py`). A `python3` shebang pins no version and
       resolves whatever the host or container provides. Because `.meta/ruff.toml`
       declares `target-version = "py313"` (DR-177), tooling is entitled to write Python
-      3.13 syntax. PR #768 pinned `--python 3.13` on all 35 `uvx` interpreter invocations
+      3.13 syntax. A change pinned `--python 3.13` on all 35 `uvx` interpreter invocations
       and added `meta interpreter`, but bare `python3` shebangs bypass `uvx`. On
       environments whose system `python3` resolves below 3.13 (such as the base ARC
       runner image's 3.12.3 or developer workstations), modern syntax like
@@ -28,7 +28,7 @@ decisions:
       - name: Route all 25 python3 shebangs through uvx --python 3.13
         chosen: false
         reason: >-
-          Uniform with #768, but imposes a dynamic `uv` resolution delay on every channel
+          Uniform with that change, but imposes a dynamic `uv` resolution delay on every channel
           verb, git commit, and git hook invocation.
       - name: Pre-bake Python 3.13 in the runner image and assert Python 3.13 as a front-door prerequisite for fresh clones
         chosen: true

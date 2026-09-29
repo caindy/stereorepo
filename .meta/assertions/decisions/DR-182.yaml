@@ -11,7 +11,7 @@ decisions:
       `.meta/assertions/imported/vocabulary.yaml`. It has since become load-bearing across
       Article 12, DR-121, DR-124, DR-125, DR-130, DR-132, and DR-134.
 
-      Issue #170 asked whether `citation` was overloaded across three operational layers
+      An Issue asked whether `citation` was overloaded across three operational layers
       (identifier existence, structural claim correspondence, and semantic support warrant),
       or whether it is a single concept.
     alternatives:

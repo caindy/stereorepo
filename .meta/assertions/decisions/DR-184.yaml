@@ -21,10 +21,10 @@ decisions:
       decision. When explanations were authored in sessions or pull request reviews,
       they were either lost in pull request bodies or dumped into unlinked markdown
       that Nothing Unconsumed flags as debris. Furthermore, a portfolio had no
-      designated place for product/domain explanation material (#39).
-      Issue #22 proposed borrowing Wikipedia's native conventions (MOS:LEAD bold lead
+      designated place for product/domain explanation material.
+      An Issue proposed borrowing Wikipedia's native conventions (MOS:LEAD bold lead
       definitions, closed-world wikilinks, encyclopedic tone) to leverage LLM priors.
-      Issue #24 originally coupled this with renaming Article to Steering, which
+      Another Issue originally coupled this with renaming Article to Steering, which
       risked massive churn across established A<n> citations.
     alternatives:
       - name: Rename Article to Steering to avoid homonym collision with Wikipedia "articles"
@@ -60,8 +60,6 @@ decisions:
       - >-
         Specialization's *Copy what is inherited* step copies `wiki/stereorepo/` so portfolios inherit the
         scaffold's operating documentation without namespace pollution.
-      - >-
-        Resolves Challenge 24 and Challenge 39.
     falsifier: >-
       A maintainer-facing explanation committed outside `wiki/`, or a wiki page
       authored under `wiki/stereorepo/` that defines a product-domain concept rather

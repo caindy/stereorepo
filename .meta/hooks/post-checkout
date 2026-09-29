@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Git post-checkout lifecycle hook (stereorepo's DR-172, stereorepo's DR-201, #430, #1075).
+# Git post-checkout lifecycle hook (stereorepo's DR-172, stereorepo's DR-201).
 # Materializes single-source APM cognitive assets into multi-harness target directories
 # (.agents/skills, .gemini/, .codex/) on branch switches and new worktree creation.
 
@@ -13,7 +13,7 @@ fi
 REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 cd "$REPO_ROOT"
 
-# Augment PATH so hook execution finds toolchains under constrained environments (#1075).
+# Augment PATH so hook execution finds toolchains under constrained environments.
 export PATH="/opt/homebrew/bin:/usr/local/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
 
 PYTHON_BIN=""

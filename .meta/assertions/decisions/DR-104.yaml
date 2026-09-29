@@ -72,7 +72,7 @@ decisions:
       slot of its own, or the report into a structured form.
     rationale: |-
       DR-092 chose the shape as an Article read by a runner above the
-      Projects, and left the runner to #53. What was open was where the
+      Projects, and left the runner to a later change. What was open was where the
       runner reads its list from and what it reads back. The list is the
       assertions, because that is where the slots already were and had
       never been consumed — A8 applied to two fields of the ABox. What it

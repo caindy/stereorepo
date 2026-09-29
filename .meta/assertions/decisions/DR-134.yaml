@@ -19,7 +19,7 @@ decisions:
       reaches and left the rest, on the grounds that deciding whether a sentence
       supports a paraphrase means reading the entry — the work the check was
       meant to save. The rest is most of what went wrong: of the
-      six citation failures on #138, #140 and #142 the new checks
+      six citation failures on three recent changes the new checks
       catch two, and the other four — a sentence attributed to DR-109 it does
       not support, a count of eighteen that was fifteen, a derivation stated of
       two numbers that held for one — were each found by a reviewer opening the
@@ -149,7 +149,7 @@ decisions:
       confident wrong verdicts: if a coder starts rewriting true sentences to
       satisfy the step, the step is costing more than the round it replaced.
     rationale: |-
-      The question underneath #148 is not where to put a script. It is what a
+      The question underneath the Challenge is not where to put a script. It is what a
       gate is here, and the answer this entry takes is that a gate is a
       predicate a re-run cannot overturn. Everything in `check.py` has that
       property: the number is in the index or it is not, the quoted words are in

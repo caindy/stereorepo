@@ -21,14 +21,14 @@ decisions:
       DR-259 established that the root `justfile` verb surface takes
       only flags, subcommands, and atomic identifiers, and that bare multi-word
       prose positionals are prohibited on the Local Operator Plane (stereorepo's
-      DR-252). While DR-259 resolved Challenge #485 by removing `just
+      DR-252). While DR-259 resolved a Challenge by removing `just
       wikisplain`, it left `search *args:` on the root verb surface, forwarding
       `{{args}}` unquoted to `.meta/search.py`. In `search.py`, `nargs="*"` was
       accepted and rejoined into a query string via `" ".join(args.query)`,
       preserving the tolerant-tool workaround pattern DR-259 explicitly
       rejected.
 
-      Challenge #764 identified that this discrepancy created an
+      A Challenge identified that this discrepancy created an
       inconsistent argument-passing contract on the operator surface: callers
       typing `just search "foo bar"` had their quotes discarded by `just`'s
       unquoted interpolation and silently reassembled by Python, violating
@@ -46,7 +46,7 @@ decisions:
           Article 22. DR-259 counted `search` among the "ten variadic
           recipes that accept flags, subcommands, or atomic identifiers" it left
           behind, having found that "only `wikisplain` took bare prose
-          positionals"; Challenge #764 exists because that reading
+          positionals"; the Challenge exists because that reading
           was wrong about `search`, which takes a bare multi-word prose query.
       - name: Restrict just search to a single atomic query token
         chosen: false
@@ -116,7 +116,7 @@ decisions:
       `just` recipe rather than mediated through an agent skill or direct tool
       execution.
     rationale: |-
-      Option A adopted by solo (@caindy) on Challenge #764: following
+      Option A adopted by solo (@caindy) on the Challenge: following
       the precedent set by wikisplain in DR-259, removing `just search`
       from the root `justfile` restores plane cohesion to the Local Operator Plane
       under DR-252. Searching belongs in a dedicated `/search` skill or

@@ -105,7 +105,7 @@ def _find_inline_python_in_file(path: pathlib.Path) -> list[str]:
 
 @check("inline python")
 def no_inline_python() -> StepOutcome:
-    """Shell scripts contain no embedded inline Python invocations (stereorepo's DR-241, #666).
+    """Shell scripts contain no embedded inline Python invocations (stereorepo's DR-241).
 
     Ensures that shell scripts and recipe
     definitions execute dedicated, type-checked Python scripts under `.meta/`

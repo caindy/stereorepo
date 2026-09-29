@@ -24,11 +24,11 @@ decisions:
       lifecycle skills adapted from obra/superpowers) were intentionally left
       behind rather than copied into the seed. DR-094 established that skills are
       Capabilities rather than seed boilerplate, and where a Capability is packaged
-      is APM's question (#28).
+      is APM's question.
       
-      Challenge #28 and DR-206 established stereorepo's APM primitive compilation
+      DR-206 established stereorepo's APM primitive compilation
       and multi-harness distribution architecture. However, the sixteen skills
-      still lacked an asserted home in the repository (Challenge #59).
+      still lacked an asserted home in the repository.
       Declaring them globally in .meta/assertions/imported/authority.yaml would pollute
       non-Python portfolios with Python-specific refactoring routines. Conversely,
       copying raw markdown skill files directly into bootstraps/python/seed/ would

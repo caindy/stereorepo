@@ -13,7 +13,7 @@ decisions:
       - name: Semantic CURIEs for Decisions and Articles, minted once and never edited
         chosen: false
         reason: >-
-          What #19 proposed. Minting once answers the objection DR-077 and
+          What the Challenge proposed. Minting once answers the objection DR-077 and
           DR-079 raised — that a name depends on prose that gets edited — and
           it is the weaker objection. The stronger one is that the claim is not
           the identity. DR-078 and DR-079 answer the same question — where a
@@ -66,15 +66,15 @@ decisions:
       - >-
         A12 stays in force and carries its falsifier: a citation whose
         identifier already carries the claim, so that dereferencing it writes
-        the same words twice. That is what #19 proposed, weighed here and not
+        the same words twice. That is what the Challenge proposed, weighed here and not
         observed, which is the slot doing what DR-085 introduced it for.
       - >-
-        The trigger #19 named does not bite. A retrieval index over the
-        assertions (#18) indexes the `name`, which carries the claim; the
+        The trigger the Challenge named does not bite. A retrieval index over the
+        assertions indexes the `name`, which carries the claim; the
         identifier being opaque costs the index nothing.
       - >-
         DR-085 says sixteen falsifiers were written, and the Charter holds one,
-        A21's. A12's is written here because #19 asked about it. Of the
+        A21's. A12's is written here because the Challenge asked about it. Of the
         eighteen Articles without one, A4, A8 and A17 are exempt by DR-085's
         own account, and the fifteen that remain are their own Challenge.
     falsifier: >-
@@ -82,7 +82,7 @@ decisions:
       reference reaching it by its name — which would mean the number was a
       filename and the meaning was the identity all along.
     rationale: |-
-      #19 asked whether an identifier can be semantic and stable, offering the
+      The Challenge asked whether an identifier can be semantic and stable, offering the
       Concept as the model: `pref_label` is not the identity, so a slug minted
       once could carry the claim and never move. The survey found the model
       cuts the other way. `pref_label` is not a Concept's identity because its
@@ -102,6 +102,6 @@ decisions:
       A12 is left doing what it did, and the reason is now recorded: a number
       names an occurrence and says nothing about it, so the claim has to travel
       with the citation or the reader dereferences every time. The Article's
-      falsifier is the scheme #19 proposed, which is the right shape for the
+      falsifier is the scheme the Challenge proposed, which is the right shape for the
       slot — an observation somebody could bring about, weighed once and not
       observed.

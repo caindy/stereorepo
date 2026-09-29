@@ -36,7 +36,7 @@ def gitattributes(snap: dict[str, Any] | None = None) -> str:
     The list is `TARGETS` itself, so a page added there is covered by the act
     of adding it. Every pattern is anchored with a leading `/`: a pattern with
     no slash in it matches a basename at any depth, so a bare `justfile` would
-    union a nested one that no gate byte-compares (#194).
+    union a nested one that no gate byte-compares.
     """
     if snap is None:
         if _CURRENT_SNAPSHOT is not None:

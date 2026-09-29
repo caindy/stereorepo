@@ -18,11 +18,11 @@ decisions:
       suppressions, so one root cause left unfixed passed as many times as it
       was written.
 
-      Pull request #541 wrote 22 identical `# type: ignore[untyped-decorator]`
+      A pull request wrote 22 identical `# type: ignore[untyped-decorator]`
       suppressions across eight files under `.meta/checks/files/`, every one of
       them naming the same cause: the flat `collect` import that
-      `.meta/check.py` sets up on `sys.path` and mypy cannot follow. The root
-      cause is #557. All 22 merged, and three mechanisms watched
+      `.meta/check.py` sets up on `sys.path` and mypy cannot follow, one root
+      cause. All 22 merged, and three mechanisms watched
       them do it.
 
       `meta lints` refuses a suppression carrying no `# reason:` on its line
@@ -38,7 +38,7 @@ decisions:
       reason is evidence of a single root cause, which is precisely what the
       Protocol says to fix instead of suppressing.
 
-      #561 drained all 22 while this step was being written, by
+      A later change drained all 22 while this step was being written, by
       giving `.meta/checks` one import spelling so that the decorator resolves
       for mypy. That is the case for the step rather than against it: the fix
       was a change of import spelling, available on the day the first
@@ -96,7 +96,7 @@ decisions:
         A suppression whose reason cites a URL or an RFC is left out of the
         grouping. `DR-nnn`, `Article n` and `#n` do not lift it: they name
         something inside this repository, and a cause inside the repository is
-        one to fix. This is why #557's 22 sites are counted
+        one to fix. This is why the 22 sites are counted
         despite naming their cause precisely.
       - >-
         The comparison is `comments.against_repeats` rather than the shared
@@ -116,7 +116,7 @@ decisions:
         imports the step modules for their registration side effect, so every
         package under `.meta/checks/` repeats the pair. The third group the step
         was written for, the 22 `type: ignore[untyped-decorator]` of
-        #541, was drained by #561 before this
+        that pull request, was drained before this
         landed.
     falsifier: >-
       Three or more suppressions under `.meta/` sharing one rule and one reason,

@@ -32,14 +32,14 @@ Primitives are **derived from `.meta/assertions/`**, never authored twice:
 | a Capability of kind SKILL | `skills` |
 | the gate | `hooks` |
 
-**Compiled by `.meta/apm_compile.py` / `.meta/render.py` from `.meta/assertions/` (stereorepo's DR-172, stereorepo's DR-173, stereorepo's DR-200, #28, #342).**
+**Compiled by `.meta/apm_compile.py` / `.meta/render.py` from `.meta/assertions/` (stereorepo's DR-172, stereorepo's DR-173, stereorepo's DR-200).**
 The primitives are generated derived artifacts rather than hand-written files.
 Running `just render` re-compiles them from the assertions and verifies that no
 drift has occurred.
 
 ## What the canon says, settled in stereorepo's DR-172 and DR-173
 
-Checked against APM's own pages and verified on #339, #340, and #341,
+Checked against APM's own pages and verified in practice,
 per the rule that an adopted convention is defined by its canon and not by us.
 
 - **`apm.yml` sits at `.meta/apm.yml`, beside `.meta/.apm/` (stereorepo's DR-172).** APM natively
@@ -63,9 +63,9 @@ per the rule that an adopted convention is defined by its canon and not by us.
   `.claude/commands/<name>.md`, and `hooks` as above; `CLAUDE.md` is generated
   at the root, omitting what `.claude/rules/` already holds, and `AGENTS.md`
   is not generated for it. So the invoked half of the Ubiquitous Language
-  regime (#35) is a `command` for this harness, not a `prompt`, and `AGENTS.md`
+  regime is a `command` for this harness, not a `prompt`, and `AGENTS.md`
   is not in Claude Code's compile path. — [targets matrix](https://microsoft.github.io/apm/reference/targets-matrix/)
-- **Frontmatter per primitive is verified (#339).** `instructions` uses `applyTo`
+- **Frontmatter per primitive is verified.** `instructions` uses `applyTo`
   for scoped rules; `agents` defines name, description, model, and tools; `skills`
   conforms to `agentskills.io` standard matching parent directory name; `prompts`
   defines input parameters and double as slash commands; `hooks` defines lifecycle handlers.

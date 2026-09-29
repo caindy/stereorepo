@@ -45,7 +45,7 @@ decisions:
         that spells `DR-` followed by `\d{3}` is not a citation and matches
         nothing; a docstring that spells a number is, and is held.
       - >-
-        The eleven files are swept by the same pass #130 made: the possessive
+        The eleven files are swept by the same pass an earlier change made: the possessive
         on the first number of a run, code spans untouched. A `--help` that
         cited a decision now cites stereorepo's.
       - >-
@@ -63,5 +63,5 @@ decisions:
       them — a fixture, a table — would want the exemption stated as a rule,
       which is where this rule would be restated.
     rationale: |-
-      Christopher took #134 up as a layer on #133 the same day it was filed,
+      Christopher took the Issue up as a layer on an earlier change the same day it was filed,
       which answered the question the Issue asked: a comment is prose.

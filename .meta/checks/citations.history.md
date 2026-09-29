@@ -4,7 +4,7 @@
 
 `entry_text()` enumerated an Article's slots explicitly and omitted `falsifier`,
 causing verbatim quotations from an Article's falsifier to be flagged as missing
-from the entry under `quoted_claims` (#147). Established: `entry_text()` extracts
+from the entry under `quoted_claims`. Established: `entry_text()` extracts
 and normalizes all string scalars across the entire article structure.
 
 Evidence: `.meta/checks/citations/prose.py::entry_text`
@@ -21,8 +21,7 @@ Evidence: `.meta/checks/citations/record.py::cited_decisions`
 ### Bare Decision citations leaked into inherited portfolio material
 
 Files inherited by portfolios contained bare `DR-nnn` citations, which become
-ambiguous or collide with the portfolio's own decision index upon specialization
-(#114). Established: `cited_decisions()` enforces that inherited files qualify
+ambiguous or collide with the portfolio's own decision index upon specialization. Established: `cited_decisions()` enforces that inherited files qualify
 citations of stereorepo's records with the possessive prefix `stereorepo's DR-nnn`.
 
 Evidence: `.meta/checks/citations/record.py::cited_decisions`
@@ -30,7 +29,7 @@ Evidence: `.meta/checks/citations/record.py::cited_decisions`
 ### Quoting from memory introduced untracked prose discrepancies
 
 Prose attributing verbatim quotations to Articles or Decisions diverged from
-the actual record texts, causing silent drift (#138, #140, #142).
+the actual record texts, causing silent drift.
 Established: `quoted_claims()` matches attributed quotations against normalized
 scalar contents of cited records, accommodating elisions.
 
@@ -39,8 +38,7 @@ Evidence: `.meta/checks/citations/claims.py::quoted_claims`
 ### Unrecorded supersession and departure relationships in prose
 
 Prose asserted relationship links (such as `supersedes` or `departs_from`)
-between Decisions and Articles without setting corresponding schema slots
-(#142). Established: `stated_relations()` verifies that relational verbs in
+between Decisions and Articles without setting corresponding schema slots. Established: `stated_relations()` verifies that relational verbs in
 indicative sentences match explicit relation slots in Decision assertions.
 
 Evidence: `.meta/checks/citations/claims.py::stated_relations`
@@ -48,7 +46,7 @@ Evidence: `.meta/checks/citations/claims.py::stated_relations`
 ### Stale line numbers in cited file paths
 
 Prose citing specific source lines (`path:line`) beside code snippets decayed
-when file edits shifted line offsets (#142, #147). Established:
+when file edits shifted line offsets. Established:
 `path_and_line_claims()` verifies that cited lines exist and contain the
 neighboring code tokens referenced in prose.
 
@@ -57,7 +55,7 @@ Evidence: `.meta/checks/citations/claims.py::path_and_line_claims`
 ### Disagreement between file citations and record enactment slots
 
 Files named in Decision `enacted_in` assertions cited disparate Decisions,
-creating inconsistencies between the index and file prose (#152). Established:
+creating inconsistencies between the index and file prose. Established:
 `enacting_citations()` validates that a file named by the record cites at least
 one Decision asserting enactment in that file (stereorepo's DR-131).
 
@@ -68,7 +66,7 @@ Evidence: `.meta/checks/citations/record.py::enacting_citations`
 `FOREIGN` matched only the
 lowercase possessive, so a sentence-initial `Stereorepo's DR-nnn` fell through
 to the bare scan and was reported as a citation missing the possessive it
-already carried (#484). Established: the pattern holds the
+already carried. Established: the pattern holds the
 leading letter of `stereorepo's`/`Stereorepo's` case-insensitive and every other
 character exact.
 
@@ -78,10 +76,10 @@ Evidence: `.meta/checks/probes/knowledge.py::citation_form_probes`
 
 Prose in assertion preambles and documentation cited schema slot names in backticks
 that had been removed or replaced in LinkML ontologies, leaving dangling slot
-references unchecked (#595). In stereorepo's DR-087, `Article.origin`
+references unchecked. In stereorepo's DR-087, `Article.origin`
 was removed from `.meta/work/disciplines.yaml` and replaced with `example`, but a
 preamble comment in `.meta/assertions/imported/charter.yaml` retained
-"`origin` is the receipt" silently until #581. Established:
+"`origin` is the receipt" silently until the minting change. Established:
 assertion comment blocks are parsed as prose alongside scalar fields, and
 `cited_schema_slots()` verifies qualified `Class.slot` citations, explicit slot phrases,
 and document-scoped former slot names against LinkML schema declarations across

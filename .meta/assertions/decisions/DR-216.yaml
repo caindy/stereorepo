@@ -23,7 +23,7 @@ decisions:
       guardrail never observed to fail is not evidence of anything.
 
       The generalisation was never written, so it was available only by noticing
-      that seven Articles rhyme. #478 is what that costs: the rule governing a
+      that seven Articles rhyme. That cost was real: the rule governing a
       session's branch existed in `.github/workflows/coder.yml`'s job condition
       and nowhere else, so knowing it required a privileged read of the
       implementation, and the session that needed it derived the right answer for

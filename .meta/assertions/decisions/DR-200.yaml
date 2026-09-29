@@ -16,7 +16,7 @@ decisions:
       the work is for, and noted that interrogating a Persona involves an Actor
       adopting its character (.meta/work/personas.yaml), the operational mechanics
       of interactive collaborative design with an agent remained unformalized.
-      Furthermore, under #342 and #28, compiling Personas to APM agent primitives
+      Furthermore, compiling Personas to APM agent primitives
       (.apm/agents/<persona>.agent.md) required clarifying how a human user
       archetype can be compiled into an executable agent definition without
       violating the boundary between human models and machine actors.
@@ -42,7 +42,7 @@ decisions:
           behaviors), 3-tier goal hierarchy (End, Experience, Life), and rejection
           boundaries (frustrations) as its prompt Personality. In turn dialogue,
           the Actor evaluates proposals strictly through this lens, resisting convenient
-          compromises and providing authentic design friction. For APM compilation (#342),
+          compromises and providing authentic design friction. For APM compilation,
           this grounds .apm/agents/<persona>.agent.md as an Interrogation Surrogate.
     consequences:
       - >-
@@ -53,7 +53,7 @@ decisions:
         .meta/assertions/imported/vocabulary.yaml updates definitions to articulate
         the Interrogated Persona and Stakeholder Surrogate design pattern.
       - >-
-        .meta/apm_compile.py under #342 compiles declared Personas into
+        .meta/apm_compile.py compiles declared Personas into
         .apm/agents/<persona>.agent.md with instructions synthesizing the Persona's
         context, goals, and frustrations into an interrogation prompt.
     falsifier: >-

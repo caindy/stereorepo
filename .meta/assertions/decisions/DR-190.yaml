@@ -18,8 +18,8 @@ decisions:
     context: >-
       Article 17 states that a term that arrived by use has not been agreed,
       enforcing the Ubiquitous Language discipline. Previously, A17 was checked
-      by nothing (#37), relying on human restraint that degrades under agentic
-      maintenance (#35). Early experiments attempting to count word repetition
+      by nothing, relying on human restraint that degrades under agentic
+      maintenance. Early experiments attempting to count word repetition
       across diffs produced noisy false positives (DR-058) because whether a
       word is acting as a domain term requires semantic judgement.
 
@@ -66,8 +66,6 @@ decisions:
         in .meta/assertions/imported/disciplines.yaml require grounding domain terms.
       - >-
         AGENTS.md and template/AGENTS.md record ambient conventions for 1:1 parity.
-      - >-
-        Resolves Challenge 37 and Challenge 35.
     falsifier: >-
       A concept minted in domain vocabulary lacking a corresponding wiki page,
       a domain wiki page lacking a corresponding vocabulary concept, or an

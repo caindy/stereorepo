@@ -11,8 +11,7 @@ decisions:
       - work:artifact/meta-lib-apm-compile-harness
       - work:artifact/meta-lib-apm-compile-instructions
     context: >-
-      Microsoft APM is stereorepo's target for packaging agent primitives (DR-007,
-      #28). While `.meta/.apm/` was designated as the producer staging
+      Microsoft APM is stereorepo's target for packaging agent primitives (DR-007). While `.meta/.apm/` was designated as the producer staging
       ground for authored primitives, `.meta/.apm/README.md` recorded an open question
       from 2026-09-06: where `apm.yml` must reside. APM canon mandates that `apm.yml`
       sits at the package root beside `.apm/`. Placing `apm.yml` and `.apm/` at the
@@ -29,7 +28,7 @@ decisions:
       - name: Nested package root under `.meta/` compiled to repository root via `--root ..`
         chosen: true
         reason: >-
-          Research on #339 verified APM's canon: nested package roots are
+          Research verified APM's canon: nested package roots are
           fully supported wherever `apm.yml` sits, and both `apm compile` and `apm install`
           natively provide the `--root <DIR>` flag. Executing `cd .meta && apm compile --root .. --all`
           resolves primitives from `.meta/.apm/` while deploying generated harness
@@ -43,7 +42,7 @@ decisions:
         rules, agents, skills, commands, and root context files into the repository root.
       - >-
         `.meta/.apm/README.md` is updated to record this settled layout, resolving
-        the open layout question from #339.
+        the open layout question.
     falsifier: >-
       An APM release that drops `--root` support or fails to compile across target
       harnesses when `apm.yml` is located in a nested subdirectory.

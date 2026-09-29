@@ -124,7 +124,7 @@ def authored(target: str, slot: str = "preamble") -> str:
 # `check.py`'s four prechecks load the channel or a hook" across the two
 # landings that added a fifth precheck and a sixth, and that sentence is the
 # reason the procedure gives for copying the channel into a portfolio
-# (#231). Filled here it is held by `rendered prose`, which compares
+#. Filled here it is held by `rendered prose`, which compares
 # the committed page against a fresh render: the count moves, the page is
 # stale, the gate says so — so the arithmetic is the render's and no step of
 # the gate is added to hold it (stereorepo's DR-154).

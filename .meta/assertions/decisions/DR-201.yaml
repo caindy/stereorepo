@@ -19,7 +19,7 @@ decisions:
       - work:artifact/meta-lib-apm-compile-harness
     context: >-
       DR-172 established that APM packages are nested under .meta/ and compile to
-      the repository root via `apm compile --root ..`. Challenge #342 implemented
+      the repository root via `apm compile --root ..`. A Challenge implemented
       the assertion-to-APM compiler generator (.meta/apm_compile.py), projecting
       LinkML assertions into .meta/.apm/ primitives and .meta/apm.yml. However, the
       repository operator surface (`just`) lacked recipes to validate, pack, or

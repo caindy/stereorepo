@@ -16,7 +16,7 @@ decisions:
       `ubiquitous_language_wiki_parity` reads slugs against minted identifiers
       in both directions and reads neither list, so a page could declare as
       findable the very words the vocabulary exists to stop denoting the
-      concept, and the gate stayed green. Both pages minted in #581
+      concept, and the gate stayed green. Both pages minted in one change
       did it: `wiki/stereorepo/claim.md` carried `[assertion, statement,
       hypothesis]`, which is `work:concept/claim`'s `avoid` list word for word
       and in order, and `wiki/stereorepo/evidence.md` carried `[grounds,

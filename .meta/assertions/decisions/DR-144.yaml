@@ -20,7 +20,7 @@ decisions:
       descriptions. That prose is consumed by nothing and checked against
       nothing, which is A8's question answered badly by the one tool built to
       answer it well. Editing it means editing the generator, so a change to
-      what a page says arrives in a diff about how pages are written. #11 names
+      what a page says arrives in a diff about how pages are written. The original Challenge names
       this first of the three kinds of place the renderer does not read,
       because it is the one where the tool against drift is the thing
       introducing it.
@@ -154,7 +154,7 @@ decisions:
       belongs. A partials directory would have moved it; the Artifact carries
       it. The difference is that `path` and `preamble` on one entry say the
       same kind of thing about the same file — where it is, and what it opens
-      with — and both are read by the gate that reads everything else. #11's
+      with — and both are read by the gate that reads everything else. The original Challenge's
       own finding is that the duplicated things were never modelled, and the
       fix is more ABox rather than less; this is the smallest instance of that
       claim that could be tested, and it holds.

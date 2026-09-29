@@ -26,13 +26,13 @@ decisions:
       `bootstrap`), and harness status inspection (`next`, `watch`, `sweep`, `timing`,
       `agents`, `terms`, `search`, `landed`, `merge-manager`).
 
-      In Issue #482, running `just wikisplain "Externalized Memory" --check-duplicate`
+      Running `just wikisplain "Externalized Memory" --check-duplicate`
       failed because `just` interpolates `*args` unquoted into the execution shell,
       splitting multi-word strings across space boundaries into separate argv tokens before
-      reaching Python's `argparse`. PR #483 patched `wikisplain.py` by accepting `nargs="+"`
+      reaching Python's `argparse`. A change patched `wikisplain.py` by accepting `nargs="+"`
       and rejoining tokens, mirroring an earlier ad-hoc pattern in `search.py`.
 
-      Challenge #485 recognized that this point fix left the root verb surface with an
+      A Challenge recognized that this point fix left the root verb surface with an
       undeclared, unenforced argument-passing contract. Across the root justfile on trunk,
       eleven recipes took `*args` unquoted (`pr`, `merge-manager`, `timing`, `agents`,
       `wikisplain`, `dereference`, `search`, `terms`, `apm`, `bootstrap`, and
@@ -57,7 +57,7 @@ decisions:
         chosen: false
         reason: >-
           Requiring every downstream script behind a variadic `just` recipe to accept
-          `nargs="+"` or `nargs="*"` and manually rejoin tokens (as PR #483 did for
+          `nargs="+"` or `nargs="*"` and manually rejoin tokens (as that change did for
           `wikisplain.py`) pushes shell-quoting workarounds into Python implementations.
           While `wikisplain.py` retains `nargs="+"` as a guarded ergonomic convenience
           for maintainers typing unquoted concepts directly at a terminal, adopting
@@ -95,8 +95,6 @@ decisions:
       - >-
         AGENTS.md, template/AGENTS.md, and Knowledge Management documentation are updated
         to route authoring through the `/wikisplain` skill and `.meta/wikisplain.py`.
-      - >-
-        Challenge #485 is settled and closed.
     falsifier: >-
       A recipe added to the root `justfile` that accepts bare multi-word prose positionals,
       or a content-authoring workflow generating repository documentation or code that is
@@ -106,5 +104,5 @@ decisions:
       Management, but was implemented as a `just` subcommand. Looking at the `just` recipes,
       there is strong cohesion across verification gates, assertion compilers, and status
       inspectors—except for wikisplain. Splitting wikisplain out of `just` into its own
-      skill restores plane cohesion and resolves the tension in Challenge #485 by adopting
+      skill restores plane cohesion and resolves the tension in that Challenge by adopting
       the flags-and-identifiers contract for the verb surface.

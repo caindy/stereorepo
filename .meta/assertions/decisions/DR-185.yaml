@@ -22,7 +22,7 @@ decisions:
       without deterministic syntactic grounding, they coin floating signifiers and
       ad-hoc terminology that fractures mental models. System prompt instructions
       asking models to "remember to define terms" degrade under context pressure,
-      whereas deterministic linter gates and schemas do not (#22). Wikipedia solved
+      whereas deterministic linter gates and schemas do not. Wikipedia solved
       knowledge management at scale through well-established information architecture
       primitives: closed-world wikilinks forcing an entity registry and MOS:LEAD bold
       copular lead sentences providing concise standalone digests.
@@ -56,8 +56,6 @@ decisions:
       - >-
         Knowledge Management wiki pages are linked via wikilinks and verified for
         MOS:LEAD concordance.
-      - >-
-        Resolves Challenge 22.
     falsifier: >-
       A markdown file in the tree carrying a wikilink that resolves to no wiki page
       or ontology entity, or a wiki page under wiki/<context>/ lacking a MOS:LEAD

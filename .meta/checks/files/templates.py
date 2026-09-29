@@ -114,7 +114,7 @@ def duplicate_concept_ids(
 
     Enforces that concept declarations within any concept_set carry unique identifiers,
     preventing silent dictionary overwrites and divergent definitions in the Ubiquitous
-    Language (stereorepo's DR-190, #549).
+    Language (stereorepo's DR-190).
 
     Args:
         paths: Specific paths to scan, or None to scan all assertion and template YAML files.

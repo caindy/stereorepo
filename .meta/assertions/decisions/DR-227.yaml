@@ -19,7 +19,7 @@ decisions:
       the entry is honest about what was weighed and silent about the thing that
       was tried, so the next reader reaches for it again. DR-221 is
       the case. Its fourth alternative, keying `promote` on the gate's own
-      `PROMOTED` pattern, is what #545 shipped; the reviewer's thread there
+      `PROMOTED` pattern, is what a change shipped; the reviewer's thread there
       argued that the broad pattern's false positive costs the Challenge rather
       than a repeated URL, the key was narrowed, and the closed option was
       written into the entry afterwards with the reviewer's reason. It sits

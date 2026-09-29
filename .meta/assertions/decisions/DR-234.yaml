@@ -71,9 +71,8 @@ decisions:
         and vocabulary.yaml are excluded before candidate ranking.
       - >-
         Probes in .meta/checks/probes/tools/terms.py verify the positive fixture
-        (`receipt` in pre-#581 tree) and negative fixture (`evidence` excluded in post-#581 tree).
-      - >-
-        Resolves Challenge 589.
+        (`receipt` in the tree before the minting change) and negative fixture (`evidence` excluded
+        in the tree after it).
     falsifier: >-
       An unminted domain term with high dispersion (DP ≥ 0.70), high keyness
       (G² ≥ 10.83), and English Zipf ≥ 3.0 that fails to surface in the

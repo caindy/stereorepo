@@ -16,7 +16,7 @@ decisions:
 
       The step never read `select`. Declining to select a family reaches the same end at
       none of that cost: the rule is off, no site carries a comment, and the diff that
-      turned it off is one deleted line in a TOML list. Challenge #736 named this the
+      turned it off is one deleted line in a TOML list. A Challenge named this the
       `select` door the no-`ignore` rule left open, and it is not hypothetical — `BLE`,
       `DTZ`, `PLW1510`, `RET` and `TRY003` were absent from the ruleset for as long as the
       file had existed, and the findings behind them had never been seen.
@@ -77,8 +77,6 @@ decisions:
         The floor comes out when ruff itself gains a way to declare a ruleset as a minimum,
         or when the portfolio's ruleset stops being a file a change can edit silently. The
         selected families come out one at a time, each by an argument on its own rule.
-      - >-
-        Challenge #736 is settled and closed.
     falsifier: >-
       A floor entry reported as reached by a selector that does not select its rules — a
       shorter selector belonging to a different ruff linter — or a floor derived from the

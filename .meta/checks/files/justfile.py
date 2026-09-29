@@ -7,7 +7,7 @@ The surface this governs is the public one: a `just` private recipe (its name
 prefixed `_`) is an internal subroutine called only from another recipe's
 body, never typed by an operator and never listed by `just --list`, so it
 sits outside stereorepo's DR-259's operator-facing contract and this module does
-not see it (#771).
+not see it.
 """
 
 import pathlib
@@ -27,7 +27,7 @@ RECIPE = re.compile(r"^@?(?P<name>[a-z][a-z0-9_-]*)(?P<params>(?:\s+[^\s:]+)*)\s
 Dependencies after the colon are matched and discarded, so a recipe that has them is still read;
 `(?!=)` keeps a top-level `name := value` assignment out. The name group excludes a leading `_`
 by design, not oversight: a `just` private recipe is outside the operator surface this contract
-governs (#771), so this pattern is deliberately blind to it rather than admitting it
+governs, so this pattern is deliberately blind to it rather than admitting it
 and exempting it downstream."""
 
 ASSIGNMENT = re.compile(r"^(?:export\s+)?(?P<name>[a-z][a-z0-9_-]*)\s*:=")

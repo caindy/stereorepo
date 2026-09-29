@@ -17,7 +17,7 @@ decisions:
       once (`<module>.history.md`). Under `.meta/`, docstrings and comments
       frequently litigated design choices: anticipating hypothetical challenges,
       narrating discarded alternatives, and defending decisions inside item
-      docstrings rather than stating usage contracts directly. Issue #191
+      docstrings rather than stating usage contracts directly. An Issue
       asked whether register is sayable beyond taste, recognizing that a target
       prose-to-code ratio is an easily gamed instrument while an objective
       reader's test provides actionable guidance.
@@ -55,7 +55,7 @@ decisions:
         `.meta/hooks/signed_channel.py`) are refactored to remove litigious
         justifications and defensive arguments, presenting direct usage contracts.
       - >-
-        Establishes the rubric required by the technical writer review pass (#346)
+        Establishes the rubric required by the technical writer review pass
         to hold prose and docstrings to the reader-facing literate programming register.
     falsifier: >-
       A docstring under `.meta/` or in a bootstrap package whose primary content

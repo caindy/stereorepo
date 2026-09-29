@@ -16,7 +16,7 @@ decisions:
       `ADOPTED`, four `WITHDRAWN`, and two had ever sat anywhere else. Nothing
       waits, because no step says it should. DR-221 is the case: over a hundred lines
       describing how the channel behaves, standing `ADOPTED`. It was minted,
-      adopted and merged inside one session, and #550 is open against a false
+      adopted and merged inside one session, and an Issue is open against a false
       claim in its context that the agent reviewer read for its wording rather
       than its truth.
     alternatives:

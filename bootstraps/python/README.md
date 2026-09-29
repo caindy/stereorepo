@@ -52,7 +52,7 @@ is the package's name, and `render` is the one copy of how it is substituted.
 ## Capabilities and the APM Package
 
 The Python standard declares sixteen agent skills as Capabilities in
-[`assertions/capabilities.yaml`](assertions/capabilities.yaml) (DR-208, #59): eight refactoring
+[`assertions/capabilities.yaml`](assertions/capabilities.yaml) (DR-208): eight refactoring
 skills (`py-*`) from `l-mb/python-refactoring-skills` and eight lifecycle skills adapted from `obra/superpowers`.
 
 Rather than vendoring raw skills into the project seed, they are compiled into

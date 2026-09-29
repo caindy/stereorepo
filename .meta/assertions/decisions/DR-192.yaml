@@ -11,10 +11,10 @@ decisions:
       - work:artifact/meta-checks-probes-tools-dereference
       - work:artifact/meta-lib-dereference-reading
     context: >-
-      Issue #291 noticed that dereference scopes only to the sentences a branch
+      It was noticed that dereference scopes only to the sentences a branch
       wrote over its merge base, while --all is uncapped (~1,140 questions) and
       run by nobody. A citation inaccurate when typed remains unverified
-      indefinitely (Issue #251). More critically, when an entry is superseded or
+      indefinitely. More critically, when an entry is superseded or
       amended, the ground moves under all prose citing it across the durable set
       without triggering any re-reading. The issue examined whether a third scope
       could maintain read state in git blame or whether a second place for state
@@ -70,8 +70,6 @@ decisions:
       - >-
         Corpus-wide citation debt maintenance is assigned to the Technical Writer
         Role backed by offline semantic retrieval (DR-103).
-      - >-
-        Resolves Challenge 291.
     falsifier: >-
       A pull request modifying a Decision or Article whose citing sentences across
       the durable set are omitted from dereference's scope on that branch, or

@@ -32,7 +32,7 @@ decisions:
       `wiki/<context>/` adhering to MOS:LEAD bold lead definitions and closed-world
       wikilinks. However, authoring new wiki pages previously required manual file
       creation, manual frontmatter composition, manual duplicate checking against
-      LinkML vocabulary schemas, and manual gate verification (#371).
+      LinkML vocabulary schemas, and manual gate verification.
 
       Without a deterministic authoring skill, agents and maintainers face friction
       scaffolding wiki pages when minting domain terms or explaining subsystems,
@@ -72,8 +72,6 @@ decisions:
         by DR-259 which scoped authoring to the `/wikisplain` skill.
       - >-
         SPECIALIZE.md copies .meta/wikisplain.py forward into specialized portfolios.
-      - >-
-        Resolves Challenge 371.
     falsifier: >-
       A wiki page scaffolded by wikisplain that fails `wiki lead paragraphs` or
       `wikilinks` verification, or a concept that collides with an existing

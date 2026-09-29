@@ -10,9 +10,9 @@ decisions:
       DR-147 established a burstable resource model for self-hosted ARC runner pods
       on a single 24-vCPU host, permitting up to 12 concurrent pods with memory limits
       (4 GiB) but no CPU limits so compilation and tests burst freely across idle cores.
-      In PR #740 (commit c50a9d4), `cargo xtask mutants` in `bootstraps/rust/seed/xtask/src/lib.rs`
+      In commit c50a9d4, `cargo xtask mutants` in `bootstraps/rust/seed/xtask/src/lib.rs`
       introduced parallelism clamped to `std::thread::available_parallelism().map_or(4, |n| n.get().clamp(1, 8))`
-      with a `CARGO_MUTANTS_JOBS` override. Challenge #756 noticed that Python's `mutmut run` in
+      with a `CARGO_MUTANTS_JOBS` override. A Challenge noticed that Python's `mutmut run` in
       `bootstraps/python/seed/gate/src/gate/__init__.py` passed no `--max-children` flag, and proposed
       raising Rust concurrency to 16 workers, adding `--max-children` to Python, and establishing a static
       16/4/2 core partition across Rust, Python, and .meta gates.
@@ -57,8 +57,6 @@ decisions:
       - >-
         `.github/workflows/gate.yml` avoids hardcoding static concurrency overrides, relying on the
         in-tree seed defaults to harmonize with DR-147.
-      - >-
-        Closes #756.
     falsifier: >-
       Mutation testing in either seed gate spawning more than 8 workers in the absence of explicit environment
       overrides, or concurrent gate mutation testing ballooning wall-clock execution beyond 120 seconds due to

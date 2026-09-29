@@ -8,7 +8,7 @@ decisions:
       - work:artifact/meta-charter
       - work:artifact/meta-disciplines
     context: >-
-      Challenge #396 proposed canonizing YAGNI as a standalone Discipline alongside
+      A Challenge proposed canonizing YAGNI as a standalone Discipline alongside
       Literate Programming and Progressive Disclosure. Analysis of the bright line
       between Articles and Disciplines (DR-025, DR-047, DR-048) revealed a category
       mistake: a Discipline prescribes an ordered procedural method requiring
@@ -51,8 +51,6 @@ decisions:
         incorporates the creation boundary into its description, judgement, and steps.
       - >-
         Re-rendering updates `.meta/charter.md` and `.meta/disciplines.md`.
-      - >-
-        Closes Challenge #400 and resolves the YAGNI question on parent Issue #396.
     falsifier: >-
       An artifact, schema, or coordinate system admitted to the active ontology
       or tree with no active consumer, or a candidate Discipline minted for a rule

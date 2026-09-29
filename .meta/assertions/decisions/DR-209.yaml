@@ -39,9 +39,9 @@ decisions:
       `.meta/hooks/` and `.meta/checks/` named the same path, and the receipt
       said nothing about which subsystem a defect belonged to. And the file held
       129 body comment blocks, 88% of the 146 that `comments.baseline.yaml`
-      still allowed after the sweep of #412 — case headers,
+      still allowed after the `.meta/` sweep — case headers,
       narration of fixture state, and defect stories with no container but the
-      line they sat on. Pull request 419 tried to sweep those comments in place
+      line they sat on. A pull request tried to sweep those comments in place
       and was refused for pruning the only explanation six constructor
       parameters had; the knowledge had nowhere to go because the fake that
       owned it had no module of its own.
@@ -49,7 +49,7 @@ decisions:
       - name: Leave it one module and sweep the comments in place
         chosen: false
         reason: >-
-          The position pull request 419 took, and the one that produced the
+          The position that pull request took, and the one that produced the
           refusal. A comment routed nowhere is deleted, not moved; and the
           file's size is what left the fakes' contracts as comments in the
           first place, since a class docstring three thousand lines from the
@@ -112,7 +112,7 @@ decisions:
         `stood_in`, `environment`, `outcome`, `run_verb`, and the
         four fakes — `FakeGitHub`, `WatchGitHub`, `FakeIssue`, `FakeWikiPath`.
         `FakeGitHub`'s per-pull-request fields and its six keyword sets are its
-        class docstring's contract, which is the explanation pull request 419
+        class docstring's contract, which is the explanation that pull request
         pruned.
       - >-
         The probes report in the order `probes/__init__.py` imports their

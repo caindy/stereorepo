@@ -36,7 +36,7 @@ decisions:
       - name: External binary indexer (ck or zg) with disk-persisted index files
         chosen: false
         reason: >-
-          Evaluated in Spike #18 (DR-103). Imposes 535 MB node_modules
+          Evaluated in a Spike (DR-103). Imposes 535 MB node_modules
           (zg) or cargo install per machine (ck), external embedding caches, and
           disk indices that drift when assertions change.
       - name: Layered technical writing skill and zero-dependency in-memory BM25F search engine
@@ -61,7 +61,7 @@ decisions:
         The DR-103 benchmark suite is embedded in .meta/search.py --benchmark,
         verifying hit@5 >= 15/18.
       - >-
-        Enacts RECOMMENDED decision DR-103 and resolves Challenge 386.
+        Enacts RECOMMENDED decision DR-103.
     falsifier: >-
       A query on the built search engine scoring below the DR-103 threshold (15
       of 18 on the benchmark queries), or a documentation artifact that mixes

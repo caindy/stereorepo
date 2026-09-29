@@ -80,9 +80,8 @@ decisions:
         A lint or type suppression bypassing safety, correctness, or type
         soundness is an actionable defect rather than a permanent comment.
       - >-
-        Establishes the rubric that the static checks of Challenge #410, the
-        pre-handoff workflow wiring of Challenge #411, and the `.meta/` sweep
-        of Challenge #412 are held against.
+        Establishes the rubric that the static checks, the pre-handoff
+        workflow wiring, and the `.meta/` sweep are held against.
     falsifier: >-
       A comment anywhere in a source file that is none of the four
       exceptions and whose content has no destination among a history log, a

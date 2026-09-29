@@ -84,7 +84,7 @@ decisions:
       down to the Bootstraps that can hold it.
     rationale: |-
       The Rust page declined to promote a rule generalised from one
-      implementation, and said what would change its mind. #57 changed it:
+      implementation, and said what would change its mind. The Python gate changed it:
       the Python gate holds both rules by the same three steps, and the
       Python page restated both rather than pointing at a statement that did
       not yet exist anywhere neutral. So the question this record settles is

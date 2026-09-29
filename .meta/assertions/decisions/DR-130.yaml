@@ -69,8 +69,7 @@ decisions:
         portfolio is red on its first pull request for findings its author did
         not write, and with the form alone it is wrong the other way round: an
         inherited number resolving silently against an unrelated Issue of its
-        own, once its sequence is long enough. #114 is that failure for the
-        record.
+        own, once its sequence is long enough. The record has already met that failure once.
       - >-
         Only an attributed quotation is read. `DR-043's step read "…"` puts a
         noun between the citation and the words and thereby attributes them to

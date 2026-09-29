@@ -45,7 +45,7 @@ decisions:
           Length is not the test and A8's is. The decision form's placeholders
           sit beside guidance the model supplies, so the pair drifts by an edit
           to either side, and the drift is silent — the form still renders and
-          the byte-compare still passes. The cost compounds the way #11 says:
+          the byte-compare still passes. The cost compounds the way the original Challenge says:
           the next generated form written here reaches for the idiom stereorepo's
           DR-144 established, finds nothing for its middle, and adds a block at
           the same rate.

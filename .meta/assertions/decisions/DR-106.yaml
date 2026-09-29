@@ -33,7 +33,7 @@ decisions:
         chosen: false
         reason: >-
           `gate-rust-seed` beside `gate-meta` is the hand-kept list that
-          `gate.yml` was, and #53's runner exists so nothing keeps that list.
+          `gate.yml` was, and the runner exists so nothing keeps that list.
           One recipe takes a word and the runner resolves it.
       - name: A justfile, rendered, invoking only
         chosen: true
@@ -63,7 +63,7 @@ decisions:
         Project's gate is its own language's, and the verb comes from above.
       - >-
         `gate.yml` calls `just` where a recipe wraps the tool (DR-275).
-        Amended on #940: runner containers carry `just` (DR-160, DR-275),
+        Amended: runner containers carry `just` (DR-160, DR-275),
         so the cost DR-106 weighed against the benefit has been paid, and seeded and
         repository workflows alike type `just gate` rather than `.meta/gate` directly.
       - >-

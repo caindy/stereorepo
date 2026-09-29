@@ -15,9 +15,9 @@ decisions:
       Discipline steps were un-identified nested strings in `disciplines.yaml`. As a
       result, citations across code, assertions, and history relied on positional
       ordinals (such as `PR First's eighth step` or unanchored step numbers). Every time
-      a step was inserted or reordered (such as PR #601 adding `move obviate`), every
+      a step was inserted or reordered (such as adding `move obviate`), every
       subsequent ordinal citation drifted silently out of sync without triggering
-      verification failures (#603, #638, #848).
+      verification failures.
     alternatives:
       - name: Retain ordinal position and check numbers against step indices
         chosen: false

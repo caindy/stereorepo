@@ -62,7 +62,7 @@ decisions:
         .meta/search.py indexes LinkML concepts using pref_label, alt_labels, and definition
         in title and summary fields.
       - >-
-        DR-103 benchmark achieves 100% hit@5 (18/18), resolving Challenge 388.
+        DR-103 benchmark achieves 100% hit@5 (18/18).
     falsifier: >-
       A search for 'leftover work' or benchmark query 16 scoring outside the top 5
       results on the search index, or an assertion of noticed and not done that uses

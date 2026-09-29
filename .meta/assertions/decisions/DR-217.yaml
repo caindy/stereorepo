@@ -140,7 +140,7 @@ decisions:
         `.meta/lib/gh.py` provides the credential-free base `gh` CLI execution
         logic (`UNSET`, `_degrade`, `GH_TIMEOUT`, subprocess calling, and JSON
         decoding) shared across read-only tools and mutation channels without
-        being the body of a single script (#748).
+        being the body of a single script.
     falsifier: >-
       A script under `.meta/` whose body lives in a package the Specialization
       copy set does not carry; a module under `.meta/lib/` that imports a

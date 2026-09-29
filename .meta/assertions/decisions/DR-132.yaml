@@ -15,7 +15,7 @@ decisions:
           DR-121 and DR-124 turned on a property an Issue number has just as
           much: a file a portfolio carries verbatim cites the scaffold's
           numbers from inside a portfolio, and the portfolio has a sequence of
-          its own that will reach them. `check.py` cites #114 in the docstring
+          its own that will reach them. `check.py` cites an Issue in the docstring
           of the check written because of it, and a portfolio reaching a
           hundred and fourteen Issues reads that as its own — the citation that
           silently comes to mean something else, which the Charter holds worse

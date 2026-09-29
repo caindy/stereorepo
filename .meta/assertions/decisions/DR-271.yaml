@@ -11,7 +11,7 @@ decisions:
       DR-234 placed `just terms` on the operator surface as the one
       mechanical instrument reading in the direction Article 17 cares about:
       words that arrived by use without being minted. It modelled the corpus as
-      unigrams on both sides of its own test, and Challenge #643
+      unigrams on both sides of its own test, and a Challenge
       showed that this costs twice.
 
       It could not propose a compound. `tokenize` matched
@@ -31,7 +31,7 @@ decisions:
       a heavy domain noun here, so minting *[[dev-loop|Dev Loop]]* took the word
       the repository actually leans on out of reach.
 
-      Challenge #643 read the second part as the expensive one,
+      The Challenge read the second part as the expensive one,
       because scoring a compound needs a reference frequency `wordfreq` supplies
       for words and not for arbitrary bigrams, which would mean choosing a null
       model DR-234 did not choose. `wordfreq` supplies one for both:
@@ -105,8 +105,6 @@ decisions:
         multiword candidate surfacing, a minted phrase excluded without its
         parts, and the Zipf floor read against a phrase's combined reference
         rather than its component words'.
-      - >-
-        Challenge #643 is closed as answered.
     falsifier: >-
       A word restored to candidacy by phrase-wise exclusion that is itself a
       minted preferred or alternative label, a minted multiword label appearing

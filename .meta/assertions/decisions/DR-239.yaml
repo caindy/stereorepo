@@ -59,8 +59,6 @@ decisions:
         .github/workflows/release.yml runs Specialization verification prior to publishing releases.
       - >-
         .meta/checks/probes/tools/test_specialization.py provides regression probes for fixture loading, retargeting, and substitution.
-      - >-
-        Resolves Challenge 657, Challenge 658, Challenge 659, and Challenge 660.
     falsifier: >-
       A change to the scaffold, template files, bootstrap templates, or inherited tooling
       that breaks any step of the 8-step Specialization discipline or causes the specialized

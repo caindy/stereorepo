@@ -23,8 +23,8 @@ decisions:
       out, for an audience it names. Every citation dereferenced. Length is not the
       cost here; ambiguity is") was misconstrued by agents as an authoring license
       to inflate durable source code docstrings with defensive litigation,
-      speculative commentary, and historical narratives, generating the cognitive
-      bulk targeted by Challenge 393.
+      speculative commentary, and historical narratives, generating cognitive
+      bulk.
     alternatives:
       - name: Rewrite the Coder personality to enforce verbose exposition across all tasks
         chosen: false

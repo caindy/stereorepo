@@ -50,7 +50,7 @@ decisions:
         PR First gains a step: post what landed before merging.
       - >-
         The summary is exactly as complete as the record, which is the property
-        that makes it worth having. Running it against #11 is what found DR-083 —
+        that makes it worth having. Running it against the original Challenge is what found DR-083 —
         a decision built inside another change with no entry of its own.
       - >-
         `Challenge` has instances for the first time. Two are asserted, for the

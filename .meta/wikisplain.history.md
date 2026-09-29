@@ -9,7 +9,7 @@ which was the repository root while the command line lived in
 no `wiki/` and no `.meta/assertions/`, so `find_duplicates` found nothing and
 `--check-duplicate "Knowledge Management"` answered `Clear` over a concept the
 wiki, the vocabulary and the disciplines all hold, while a scaffold would have
-been written to `.meta/lib/wiki/` (DR-231, #594). The
+been written to `.meta/lib/wiki/` (DR-231). The
 probes did not see it because each called the library functions with `root=ROOT`
 and none went through the command line. Established: `ROOT` is module-level in
 `cli.py`, named from `parents[3]`, and two probes go through `cli.main` itself —
@@ -20,9 +20,9 @@ Evidence: `.meta/checks/probes/knowledge.py::cli_probes`
 ### A synonym scaffolded from a word the concept's `avoid` list forbids
 
 `--synonyms` was documented as "synonyms or alternate labels" and took a word on
-the concept's `avoid` list without complaint (#594). It wrote that word
+the concept's `avoid` list without complaint. It wrote that word
 into the frontmatter that `.meta/lib/search/build.py` folds into the title field of the BM25 index
-(DR-231, #594). Established: `avoided_synonyms` reads the
+(DR-231). Established: `avoided_synonyms` reads the
 proposed synonyms against the `avoid` list of the concept minted at the page's
 slug, matched on the slugified word, and `cli.main` refuses before the page is
 generated, naming the word, the concept and the vocabulary file that forbids it.

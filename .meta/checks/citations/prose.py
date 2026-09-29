@@ -11,7 +11,7 @@ from checks.collect import META
 
 # A12 asks three things of a citation and `cited decisions` resolves one of them:
 # the number. What follows resolves the rest — the claim the citation goes on to
-# make about the thing it names (stereorepo's DR-130, #147). Four shapes, chosen
+# make about the thing it names (stereorepo's DR-130). Four shapes, chosen
 # because each is a string search rather than a reading: an Article number that
 # resolves, a quotation that appears where it is attributed, a relation that is
 # the slot it claims to be, and a line that reads what it is cited for. A

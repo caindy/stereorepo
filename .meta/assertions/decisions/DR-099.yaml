@@ -62,7 +62,7 @@ decisions:
         declared once, compared by value, and is the written definition of
         what the standard owns.
       - >-
-        #38 closes with this entry. What it leaves open — a sync that moves a
+        The Challenge closes with this entry. What it leaves open — a sync that moves a
         portfolio's Projects and its imported assertions forward — is intent,
         and goes to an Issue.
     falsifier: >-
@@ -74,7 +74,7 @@ decisions:
     rationale: |-
       Proposed rather than adopted, because it is the human's call and
       the reconciliation was his framing: the generator was the last of
-      #38's four questions, and it is the one where the answer forecloses
+      the Challenge's four questions, and it is the one where the answer forecloses
       a working package rather than a copy. The argument for leaving it
       is that everything it does is either done here in sixty lines or
       was never built; the argument against is that a real Python

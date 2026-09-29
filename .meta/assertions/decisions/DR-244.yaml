@@ -13,7 +13,7 @@ decisions:
       - work:artifact/meta-fixtures-specialization-tokens
       - work:artifact/meta-checks-probes-tools-test-specialization
     context: >-
-      Challenge #657 delivered an automated runner and CI workflow to verify the 8-step
+      A Challenge delivered an automated runner and CI workflow to verify the 8-step
       Specialization procedure into an isolated temporary directory (DR-239),
       automating the clean test repository verification that closed First Specialization
       (DR-204). That work carried over the colloquial identifier "dogfood" across
@@ -55,8 +55,6 @@ decisions:
         Synthetic fixture tokens (.meta/fixtures/specialization/tokens.json) and documentation
         (.meta/fixtures/specialization/README.md) supply deterministic specialization inputs
         for the test runner, reserving the Dogfooding discipline for authentic application.
-      - >-
-        Resolves Challenge 679.
     falsifier: >-
       Any script, recipe, workflow, or assertion under .meta/ or .github/ retaining the
       "dogfood" identifier for synthetic Specialization test execution.

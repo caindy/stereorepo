@@ -28,7 +28,7 @@ decisions:
       root `pyproject.toml` that does not belong there, runs `mypy .` past
       `.meta/mypy.ini` and DR-210's baseline, and follows `pre-commit install`'s
       own refusal hint to unset `core.hooksPath`, which detaches
-      `.meta/hooks/post-checkout` (#430).
+      `.meta/hooks/post-checkout`.
 
       The guard therefore has to sit inside the skill that carries the hazard,
       because a skill is loaded by its own trigger and by nothing else. That is

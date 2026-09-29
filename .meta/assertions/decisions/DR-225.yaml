@@ -23,7 +23,7 @@ decisions:
       justification. Between them, a suppression naming a rule and carrying any
       reason at all was unrefusable.
 
-      #541 is what that permits. It landed twenty-two
+      One pull request shows what that permits. It landed twenty-two
       `# type: ignore[untyped-decorator]` comments whose reason reads "flat
       `collect` import makes this Any; see collect.check", and `collect.check`
       is a function of this repository whose docstring blames a `sys.path`
@@ -45,8 +45,8 @@ decisions:
       - name: Pass a reason that cites an internal Issue as an interim state
         chosen: false
         reason: >-
-          "The root cause is filed as #557" is the exact spelling
-          #541 used, so a step that blesses it reopens the hole it
+          "The root cause is filed as" an Issue is the exact spelling
+          that pull request used, so a step that blesses it reopens the hole it
           closes: any suppression becomes permissible by filing an Issue beside
           it, and the Issue then has no deadline and no count. An interim state
           needs a direction and an owner, which a ratchet baseline has and a
@@ -60,7 +60,7 @@ decisions:
           refuses what it can prove rather than judging prose. The tree is not
           clean, so the count ratchets as `inline commentary` does
           (DR-210): the debt is named, listed and falling, which is
-          what it did while this was being written — #557 took
+          what it did while this was being written — the root-cause fix took
           twenty-three of the twenty-four out before the step landed.
     consequences:
       - >-
@@ -80,10 +80,10 @@ decisions:
       - >-
         The baseline opens at one and may fall and may not rise. It was written
         against `aeeea1c`, where it stood at twenty-four — the twenty-two
-        `untyped-decorator` suppressions of #541, the step's own
+        `untyped-decorator` suppressions of that pull request, the step's own
         registration, which took one from the same root cause, and the
         `no-untyped-call` in `.meta/checks/files/prose.py`. The trunk then
-        landed #561, which made `@check` resolve for mypy and took
+        landed the fix that made `@check` resolve for mypy and took
         the first twenty-three out, so what the step ships guarding is the
         `no-untyped-call` alone.
       - >-

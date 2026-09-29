@@ -4,7 +4,7 @@
 
 `just dereference` was reported finding `x` on the first run after a change
 and passing on the run that followed, four times in one session, each first run
-printing `Installed 84 packages` from a cold `uvx` cache (#804). No
+printing `Installed 84 packages` from a cold `uvx` cache. No
 cold-start mechanism exists. Probed on `--sample 6`, whose rotation is keyed to
 the commit count and so holds the same six pairs across runs: `--pairs`, which
 asks nothing, printed identical pairs from a cold cache and from a warm one, so

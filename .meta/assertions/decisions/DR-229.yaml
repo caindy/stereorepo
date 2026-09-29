@@ -12,7 +12,7 @@ decisions:
       indistinguishable from a checked one. In one session a coder produced
       five: that two doubled pull requests had landed one change twice, which
       `gh pr view` disproves in one call, which reached the trunk in an adopted
-      entry and which #550 corrected; that two Decisions supported
+      entry and which a later change corrected; that two Decisions supported
       statements they do not, which `just dereference` reported; that
       `receipt` was an agreed word, which appears in no vocabulary across 151
       uses; that a merge was the human's to withhold, which `evaluate_pr`
@@ -76,13 +76,12 @@ decisions:
         check, and gains two steps: check a Claim before asserting it, and watch
         a refusal stand aside rather than only fire. The second is the guardrail
         instance of the same Article — a refusal probe with only true positives
-        has never been watched failing where it costs most — and closes
-        #546.
+        has never been watched failing where it costs most.
       - >-
         `Claim` is minted into the inherited vocabulary as Toulmin's Claim, in
         the shape `~/fitch-mvp` models it, with a page under `wiki/stereorepo/`.
         Only that term is taken: `Warrant`, `Grounds`, `Backing`, `Credence`,
-        `Rebuttal` and `Qualifier` wait for #576, since a word with no
+        `Rebuttal` and `Qualifier` wait for an open Challenge, since a word with no
         consumer here is what Nothing Unconsumed refuses.
       - >-
         A22 is named in the Article as its complement rather than its general
@@ -100,5 +99,5 @@ decisions:
       has to sit with whoever writes the sentence.
       The cost is not carried by the Claim that is caught. It is carried by the
       reader who catches one and can no longer tell which of the rest were
-      checked. That is what the entry #550 corrects had done to its
+      checked. That is what the corrected entry had done to its
       own record.

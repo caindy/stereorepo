@@ -44,7 +44,7 @@ decisions:
       - >-
         A falsifier naming something somebody could bring about is a Challenge,
         and needs an Issue. A19's is the credential boundary DR-069 left
-        unfinished, now #21; without it the Charter was holding a plan nobody had
+        unfinished, now its own Challenge; without it the Charter was holding a plan nobody had
         scheduled.
       - >-
         DR-050, DR-052 and DR-054 lose `applies: work:article/13`. `applies` says

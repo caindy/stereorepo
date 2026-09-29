@@ -53,8 +53,6 @@ decisions:
       - >-
         `bootstraps/python/README.md`, `bootstraps/python/ratchet.md`, and `bootstraps/python/seed/gate/README.md`
         remove `fmt` and record that formatting is not a gate check.
-      - >-
-        Resolves Challenge 383.
     falsifier: >-
       A formatting check failing the Python seed gate, or a semantic defect passing
       the gate because formatting was retired.

@@ -29,8 +29,8 @@ decisions:
         chosen: true
         reason: >-
           A gate stays in its Project's language — DR-090 — and what is uniform
-          is what it prints. A21 names the three lines; the runner intended in
-          #53 consumes them and gives every Project the same verb and every
+          is what it prints. A21 names the three lines; the runner intended
+          consumes them and gives every Project the same verb and every
           Product a gate. What it costs is that a gate wrapping a tool has to
           restate the tool's result in these lines, and the tool's own output
           streams above them rather than replacing them.

@@ -12,7 +12,7 @@ decisions:
       - name: Every entry that names a file is cited in it
         chosen: false
         reason: >-
-          The relation read straight, and the shape #158 was raised in. It
+          The relation read straight, and the shape the Challenge was raised in. It
           fails 71 sites over 33 files, and it is not drift: of the 224
           entry-and-file pairs where the commit that added an entry also
           edited the file it names, 72 wrote no citation of it. That is the
@@ -25,7 +25,7 @@ decisions:
       - name: Every citation's entry names the file it is written in
         chosen: false
         reason: >-
-          The rule #158 guessed at, and the tree says no: 528 of the 693
+          The rule the Challenge guessed at, and the tree says no: 528 of the 693
           citations here are of an entry that does not name the file, 62 of
           them in files the record does name, and 82 of the 190 written in the
           parenthetical form a reader takes for an attribution — `.meta/say/move`
@@ -57,7 +57,7 @@ decisions:
           that names it. Two sites in this tree, both repaired here by writing
           the citation that was worth having. What it costs is reach: a file
           citing several entries, one of which names it, hides a stray among
-          them, so of #152's two sites this catches `AGENTS.md` and not
+          them, so of the two sites a reviewer found this catches `AGENTS.md` and not
           `template/.github/workflows/gate.yml`, which cited DR-119
           and DR-120 already. A floor under the residue, not a sieve for it,
           and the counts above are why nothing tighter is available from the
@@ -103,10 +103,10 @@ decisions:
       rule is buying agreement instead of finding disagreement, and the count
       to look at is how many of them a reviewer would have asked for anyway.
       The other end is quieter: a renumber whose residue lands in a file that
-      already cites an entry naming it passes here, and #152's second site is
+      already cites an entry naming it passes here, and the second of those sites is
       that case.
     rationale: |-
-      The reviewer found both stray citations on #152 by reading, and what
+      The reviewer found both stray citations on a change by reading, and what
       made them findable was that the tree already held the contradiction:
       `decisions.md`, generated from `enacted_in`, named the new entry against
       each file while the prose in the file named the entry below it. The

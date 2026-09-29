@@ -15,7 +15,7 @@ decisions:
       - work:artifact/bootstraps-python-gate
       - work:artifact/bootstraps-python-lint-gate
     context: >-
-      Challenge #416 identified that while static comment and suppression guardrails
+      A Challenge identified that while static comment and suppression guardrails
       (DR-207) were implemented in `.meta/checks/comments.py` to gate
       the `.meta` Project, the Python Bootstrap seed at `bootstraps/python/seed/`
       and project packages lacked comment checks. The Challenge's original proposal
@@ -76,15 +76,13 @@ decisions:
       - >-
         A regression probe under `.meta/checks/probes/tools/comments.py` verifies
         rule synchronization across `.meta/` and the bootstrap seed gate.
-      - >-
-        Challenge #416 is closed as answered.
     falsifier: >-
       A Python source file in the Python Bootstrap seed or an instantiated portfolio
       project containing commented-out code, a bare suppression lacking an error code,
       or inline body commentary outside the four keep-exceptions that passes either
       `uv run gate` locally or `.meta/gate` at the repository root.
     rationale: |-
-      Christopher, on settling Issue #416: We need to figure out a way for the
+      Christopher, on settling the Issue: We need to figure out a way for the
       bootstrap to inherit `comments.py` or at least the bits it needs, having
       `.meta/` govern from above while ensuring comment checking works from within
       a specialized Python repo.

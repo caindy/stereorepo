@@ -46,7 +46,7 @@ decisions:
         reason: >-
           It says both halves in one word and reuses one this repository already
           has. That is the objection: `falsifier` is already a slot on a Decision
-          and on an Article, and #576 owns the reconciliation of
+          and on an Article, and an open Challenge owns the reconciliation of
           the four instruments over this subject — `falsifier`, the history
           entry's line, `checked_by`, and `just dereference`. Committing the word
           to a third site from the bounded half would decide that question
@@ -126,7 +126,7 @@ decisions:
         the field, so a reader can tell which half of an entry a later change may
         touch.
       - >-
-        What remains of Toulmin is #576, which holds whether the
+        What remains of Toulmin is an open Challenge, which holds whether the
         other terms are taken and whose definition wins where they differ.
     falsifier: >-
       A history entry whose Evidence is a citation that cannot go stale — a
@@ -141,7 +141,7 @@ decisions:
       rewording the commentary alone does the second and not the first.
 
       Taking the words from outside settles a third thing that was not the
-      Challenge's. #488 says the vocabulary is the first place a
+      Challenge's. Another Challenge says the vocabulary is the first place a
       merge of four systems would have to decide whose word wins, and a word
       defined here first is a word that has to be reconciled later. The authority
       is Toulmin, and caindy/fitch-mvp already states him on LinkML, so taking

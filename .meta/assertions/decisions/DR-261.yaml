@@ -20,7 +20,7 @@ decisions:
       that could not run means the provisioning broke or the tree did, and the
       exit code is the whole signal because nobody reads a green run's log.
 
-      Challenge #735 was filed on a live instance rather than a hypothetical.
+      A Challenge was filed on a live instance rather than a hypothetical.
       `apm package` returns `CouldNotRun` when `apm` is absent from `PATH`, and
       the `files` job of the gate workflow installs `linkml`, `pyyaml`, `ruff`,
       `mypy` and `types-pyyaml` and no `apm`. Nothing else in the workflows
@@ -89,9 +89,9 @@ decisions:
         `.github/workflows/gate.yml` installs `apm` in the `files` job, because
         the job goes red on the `apm package` step the moment this lands.
       - >-
-        Unblocks #735, which carries the enactment. This record settles the
-        decision the Challenge was waiting on and closes nothing: the three
-        consequences above are the work, and they are #735's.
+        This record settles the decision the Challenge was waiting on and
+        closes nothing: the three consequences above are the work, and the
+        Challenge carries the enactment.
     falsifier: >-
       A CI run in which a step reports that it could not run and the run exits
       zero. Or a maintainer's run that stops at the first unrunnable step instead
