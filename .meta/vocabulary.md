@@ -8,7 +8,7 @@ _The words this repo uses, and what they mean._
 
 A Concept is a unit of meaning, not a word — which is why two entries
 below share a label. Use the preferred label; do not mint a Concept
-without the human. Check DDD first, then this vocabulary, then ask.
+without the developer. Check DDD first, then this vocabulary, then ask.
 
 ### DDD canon
 
@@ -50,11 +50,11 @@ _Who does the work, and how it moves from the backlog to main._
 |---|---|---|
 | **Capability** | A kind of thing that can be done or used. Never names an object. | permission, tool access |
 | **Role** | A named set of Capabilities. | — |
-| **Human** | The one person a repository serves, who builds it with agents and decides what they cannot. | solo, user, owner, operator |
+| **Developer** | The one person a repository serves, who builds it with agents and decides what they cannot. | solo, user, owner, operator |
 | **Seat** | One of the two long-lived harness sessions that take an Issue from the backlog to `main` in turns, in one shared worktree. | coder, reviewer, agent |
 | **Supervisor** | The deterministic program that runs the seats and moves an Issue between stages from what it can observe: where the Issue file is, the working tree, and the gate's exit code. | orchestrator, captain, lead |
 | **Quiet turn** | A seat's turn that changes nothing, by which the seat accepts the state the other left. | approval, verdict, sign-off |
-| **Desk check** | The human's check of a `human` Issue's result, by hand, before it lands on `main`. | review, approval |
+| **Desk check** | The developer's check of a `developer` Issue's result, by hand, before it lands on `main`. | review, approval |
 | **Skill (stereorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 
 #### What the work is for
@@ -72,7 +72,7 @@ _The units a stereorepo is made of._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Portfolio** | Everything one human builds inside one Bounded Context. One per repo. | — |
+| **Portfolio** | Everything one developer builds inside one Bounded Context. One per repo. | — |
 | **Client Repo** | A software repository that specializes stereorepo by adopting its cognitive operating layer via the APM package, inheriting its SDLC and verification gates, and instantiating language Projects from Bootstraps on demand. | — |
 | **Product** | Something delivered to users, with its own interface and therefore its own primary Persona. The unit of value. | — |
 | **Project** | A unit of build — one toolchain, one language, its own tests and gate. The unit of construction. | workstream |
@@ -107,7 +107,7 @@ _The named ways of working, each adhered to because it is not a program._
 | **Journaling** | Routing narrative to the artifact that owns it, and the residue to the issue file — never to a commit message. | — |
 | **Knowledge Management** | Organizing maintainer-facing exposition into an encyclopedic wiki partitioned by Bounded Context. | — |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
-| **Modelling the Human** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
+| **Modelling the Developer** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
 | **Ratchet** | Quality moves one way — green before commit, and never by silencing a checker. | — |
 | **Observed Failure** | A guardrail never observed to fail is not evidence of anything. | test coverage |
 | **Nothing Unconsumed** | An artifact prevents drift only if something consumes it and checks it against something. | — |
@@ -127,13 +127,13 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Persona goal.** Standing rather than a bounded commitment. What the work in hand is for is an Issue's to say, not a Persona goal's.
 
-**Human.** The common word, as in "human in the loop", narrowed to one person. Never a second person: a repository has exactly one human, and a process that needs two is a poor fit. Never an agent acting for the human: an agent's judgement is not the human's, however it is labelled. The `human` difficulty names the Issues that wait for this person's desk check.
+**Developer.** The common word, narrowed twice. To one person: a repository has exactly one developer, and a process that needs two is a poor fit. And to a person: the seats write code too, but a seat is never the developer, and neither is any agent acting for the developer, however it is labelled. The `developer` difficulty names the Issues that wait for this person's desk check.
 
-**Issue.** The common word, narrowed. An Issue has no number: its slug is its id. It has no status, labels or assignee: its stage is the directory it sits in. It has no comment thread: the seats' notes and the human's desk-check notes are written in the file. Its front matter holds only what cannot be observed or derived — `difficulty`, and optionally `waits_on` and `parent`. An Issue with children is a parent issue; there is no other type.
+**Issue.** The common word, narrowed. An Issue has no number: its slug is its id. It has no status, labels or assignee: its stage is the directory it sits in. It has no comment thread: the seats' notes and the developer's desk-check notes are written in the file. Its front matter holds only what cannot be observed or derived — `difficulty`, and optionally `waits_on` and `parent`. An Issue with children is a parent issue; there is no other type.
 
 **Board.** One per repository, and the board on `main` is authoritative. Not GitHub Issues or Projects, not a status field, and not a kanban view: a view of the board is a projection of it and holds no state of its own.
 
-**Stage.** A directory, never a field. The human adds Issues to `roadmap` and `backlog`; every other move is the supervisor's, and always a `git mv`.
+**Stage.** A directory, never a field. The developer adds Issues to `roadmap` and `backlog`; every other move is the supervisor's, and always a `git mv`.
 
 **Seat.** Coined, because pair programming's driver and navigator divide the typing and here both seats write code. Within a stage the primary seat takes the first turn and the secondary the next; the secondary fixes what it finds rather than describing it. A seat is told the Issue file, what the stage is for, and what changed since its last turn, and nothing about the protocol that moves the Issue.
 
@@ -141,7 +141,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Quiet turn.** Agreement is observed, never declared: when both seats have accepted the same state, by making it or by leaving it alone, the stage advances if its requirement holds.
 
-**Desk check.** The one stage that waits for the human. Accepting lands the Issue; leaving notes in the Issue file and resuming sends it back to the pair.
+**Desk check.** The one stage that waits for the developer. Accepting lands the Issue; leaving notes in the Issue file and resuming sends it back to the pair.
 
 **Discipline.** Not a Capability, and not a characterisation such as a communication style.
 
@@ -155,7 +155,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Dogfooding.** A Discipline here, not a slogan: each adopted Discipline is applied to this repo first, and a schema is instantiated before it is trusted.
 
-**Modelling the Human.** Not Cooper's persona research, which models absent users from evidence. This models a present person who can read and correct it.
+**Modelling the Developer.** Not Cooper's persona research, which models absent users from evidence. This models a present person who can read and correct it.
 
 **Ratchet.** A suppression at the site with a rule and a reason is an exception. One in configuration is a rule deleted quietly.
 
@@ -212,9 +212,9 @@ more often a collision than a gap.
 | **Client Repo** | Portfolio, Project |
 | **Product** | Portfolio, Project |
 | **Project** | Issue, Product |
-| **Human** | Seat |
+| **Developer** | Seat |
 | **Issue** | Project |
-| **Seat** | Human, Supervisor |
+| **Seat** | Developer, Supervisor |
 | **Supervisor** | Seat |
 | **Evidence** | Citation |
 | **Skill (stereorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |

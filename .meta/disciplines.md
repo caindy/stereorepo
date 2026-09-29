@@ -64,14 +64,14 @@ _Produces: A core that routes, and satellites that own what they hold._
 
 One set of words, meaning the same thing in the code, the schemas, the prose and the conversation — and a word enters it by decision, never by use.
 Evans' practice, with one thing his setting did not have to handle. The language is now shared with agents that write fluently, tire of nothing, and reach for a fresh word the moment an existing one is slightly awkward. A team drifts slowly because writing is expensive and someone eventually objects. A fleet drifts quickly and *consistently*, and the drift reads as good prose, which is why nobody objects.
-So the rule is not to prefer the agreed word. It is that **minting is a decision taken with the human**, and a word that arrived any other way has not been minted however well it is being used.
+So the rule is not to prefer the agreed word. It is that **minting is a decision taken with the developer**, and a word that arrived any other way has not been minted however well it is being used.
 
 **Where the judgement is.** Whether an idea needs a word at all. Most do not — a phrase, or an existing term used precisely, leaves the vocabulary smaller and the reader better off, and a vocabulary that grows with every distinction stops being one.
 And whether a word is a term or is ordinary English, which is not decidable mechanically. The gate narrows the field; a person routes what it finds.
 
 1. **Prefer the vocabulary and canon.** Reach for the vocabulary before reaching for a word, and for a canon before minting one.
 2. **Borrow rather than invent.** A term with a literature behind it arrives with its distinctions already argued.
-3. **Mint only with the human.** Record the decision when a term is minted. A word in the Charter or a Discipline without one is a word nobody agreed to.
+3. **Mint only with the developer.** Record the decision when a term is minted. A word in the Charter or a Discipline without one is a word nobody agreed to.
 4. **Check candidate against existing meaning.** Check a candidate against what the repository already means by it, including in the schemas. A collision found afterwards is a rename.
 5. **Mark confusables in both directions.** Mark a confusable in both directions, at the moment the collision is noticed.
 6. **Bias every output toward the vocabulary.** Align code, prose and conversation alike with the shared vocabulary.
@@ -92,10 +92,10 @@ Use what is being built, on itself, before anyone else has to. When a Discipline
 
 _Produces: Findings that reasoning about the artifact does not reach._
 
-### Modelling the Human
+### Modelling the Developer
 
 Keep a Persona of the person the agent works with, in the repo, current as the work reveals things.
-External memory rather than private memory, and the distinction is the whole point: the human can see how they are being read, and another agent can pick the model up. An agent's model of the person it works with exists whether or not it is written down. Writing it down is what makes it correctable and transferable instead of a private guess that steers the work invisibly.
+External memory rather than private memory, and the distinction is the whole point: the developer can see how they are being read, and another agent can pick the model up. An agent's model of the person it works with exists whether or not it is written down. Writing it down is what makes it correctable and transferable instead of a private guess that steers the work invisibly.
 
 **Where the judgement is.** What is a durable trait and what was a one-off. A correction made twice is a preference; made once it is a correction. And where inference ends and evidence begins — the model has to be correctable by its subject rather than defended by its author, which it cannot be unless it says which is which.
 
@@ -105,7 +105,7 @@ External memory rather than private memory, and the distinction is the whole poi
 4. **Update as work reveals things.** Update it as the work reveals things, not in a pass at the end.
 5. **Surface for correction.** Surface it for correction rather than defending it.
 
-_Produces: A Persona of the human that another agent can pick up cold.; A visible account of how the agent is framing the work._
+_Produces: A Persona of the developer that another agent can pick up cold.; A visible account of how the agent is framing the work._
 
 ### Ratchet
 

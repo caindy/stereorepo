@@ -3,7 +3,7 @@
 A cockpit across repositories comes later (`WHY_FORK.md`, section 7). What it
 needs from each repository now is one convention for publishing what the loop
 knows: for each repository, the Issue in flight, its stage, its round, whether
-it needs the human, and why — a desk check, an Issue sent back to the roadmap,
+it needs the developer, and why — a desk check, an Issue sent back to the roadmap,
 a seat that failed twice, a fast-forward that was refused.
 
 Everything the loop knows is already in `.pair/` and git. Have the supervisor

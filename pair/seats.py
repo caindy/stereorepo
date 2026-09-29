@@ -103,7 +103,7 @@ class ClaudeSeat:
 
     The process runs in its own session, so a Ctrl-C aimed at the loop does not
     kill the seat mid-turn. Its pid is written to `<role>.pid` in the log
-    directory, so the human or a test can find the process, and its session id
+    directory, so the developer or a test can find the process, and its session id
     to `<role>.session` as soon as it is known, so a restart can resume a seat
     that died before its first turn ended.
     """

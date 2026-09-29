@@ -17,7 +17,7 @@ for what it owns. This file routes. It does not restate.
 
 | Touching… | Load first |
 | :-- | :-- |
-| naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a Concept without the human |
+| naming anything, or reaching for a word | [`vocabulary.md`](vocabulary.md) — and do not mint a Concept without the developer |
 | what this repo asserts | [`assertions/`](assertions/) — the ABox. The prose satellites derive from it. |
 | a term for **this** domain | `assertions/domain_vocabulary.yaml` — owned here, never synced |
 | anything under `assertions/imported/` | do not edit it. It came from the scaffold, and a sync overwrites it. |
@@ -27,7 +27,7 @@ for what it owns. This file routes. It does not restate.
 | **why** something is built this way | [`decisions.md`](decisions.md) — find its DR, then read [`assertions/decisions/DR-0nn.yaml`](assertions/decisions/) |
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
 | changing or defending a rule | its DR in `assertions/decisions/`, **and** the file that states it |
-| an id you need to resolve — `work:persona/the-human`, say | `grep -rn -A2 "id: <the curie>" .meta/assertions/`. Every identified object is declared once, there |
+| an id you need to resolve — `work:persona/the-developer`, say | `grep -rn -A2 "id: <the curie>" .meta/assertions/`. Every identified object is declared once, there |
 | what to work on next, or what is intended but unbuilt | the board, `issues/` at the root: `backlog/` is the queue, `roadmap/` what is intended and not yet elaborated |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 | writing a Decision | [`templates/decision.md`](templates/decision.md) — the form |

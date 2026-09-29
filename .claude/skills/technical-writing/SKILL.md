@@ -27,7 +27,7 @@ This standard combines Diátaxis documentation architecture, Google developer st
 ## Five Overarching Invariants
 
 1. **Every citation dereferenced (stereorepo's DR-134, stereorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`stereorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search via the `/search` skill, which carries the invocation (stereorepo's DR-103).
-2. **Use the Ubiquitous Language (stereorepo's DR-190):** The codebase and LinkML ontologies are the word list. Write `Issue` (not ticket/story), `seat` (not coder/reviewer), `human` (not user/owner), `Role`, `Persona`.
+2. **Use the Ubiquitous Language (stereorepo's DR-190):** The codebase and LinkML ontologies are the word list. Write `Issue` (not ticket/story), `seat` (not coder/reviewer), `developer` (not user/owner), `Role`, `Persona`.
 3. **The Reader's Test (stereorepo's DR-175):** Can a reader use this item from its docstring alone without reading commit histories or Issue files?
 4. **No Reviewer Litigation in Code (stereorepo's DR-171):** Docstrings state usage contracts, parameters, and invariants. They do not argue against past reviewers. The 'why' and trade-offs belong in Decision Records (`DR-nnn.yaml`) or module docstrings. Incident narratives belong in `<module>.history.md`.
 5. **The Residue Principle (stereorepo's DR-196):** Issue files and commit messages are not documentation containers. What fits into any of the four Diátaxis quadrants belongs in a durable repository artifact. What remains is residue, and only residue belongs in the Issue file.

@@ -5,7 +5,7 @@ bootstraps:
       What a Python project in a portfolio inherits — the gates, the rule
       set, the pins and the documentation layout, and stereorepo's Disciplines
       made executable for one language.
-    primary_persona: work:persona/the-human
+    primary_persona: work:persona/the-developer
     built_from:
       - work:project/python-seed
     discipline_implementations:
@@ -52,7 +52,7 @@ bootstraps:
     description: >-
       What a Rust project in a portfolio inherits — the gates, the documentation
       layout, and stereorepo's Disciplines made executable for one language.
-    primary_persona: work:persona/the-human
+    primary_persona: work:persona/the-developer
     built_from:
       - work:project/rust-seed
     discipline_implementations:

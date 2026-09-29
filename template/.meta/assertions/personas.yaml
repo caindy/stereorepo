@@ -8,8 +8,8 @@
 # there is research in `stakeholders/customers/` to draw them from — an empty
 # file is a truthful one.
 #
-# The *human's* Persona is the marked exception. Its subject is present and can
+# The *developer's* Persona is the marked exception. Its subject is present and can
 # correct it, so it is a record of requirements rather than a research surrogate,
-# and the Modelling the Human Discipline says to keep it current from the start.
+# and the Modelling the Developer Discipline says to keep it current from the start.
 
 personas: []

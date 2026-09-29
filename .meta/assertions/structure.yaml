@@ -1,6 +1,6 @@
 # stereorepo asserting its own structure.
 #
-# The scaffold is a Product because it has a primary Persona: the human who uses
+# The scaffold is a Product because it has a primary Persona: the developer who uses
 # it. Dogfooding is what makes that true rather than a stretch — the scaffold's
 # first user is the person building it, and they are present to be asked.
 
@@ -67,9 +67,9 @@ products:
   - id: work:product/scaffold
     name: The scaffold
     description: >-
-      stereorepo itself, used by the human who builds it. Its interface is the load
+      stereorepo itself, used by the developer who builds it. Its interface is the load
       map, the vocabulary, the gate and the Specialization procedure.
-    primary_persona: work:persona/the-human
+    primary_persona: work:persona/the-developer
     built_from:
       - work:project/meta
       - work:project/pair
@@ -82,7 +82,7 @@ products:
     description: >-
       What a Rust project in a portfolio inherits — the gates, the documentation
       layout, and stereorepo's Disciplines made executable for one language.
-    primary_persona: work:persona/the-human
+    primary_persona: work:persona/the-developer
     built_from:
       - work:project/rust-seed
 
@@ -95,7 +95,7 @@ products:
       What a Python project in a portfolio inherits — the gates, the rule
       set, the pins and the documentation layout, and stereorepo's Disciplines
       made executable for one language.
-    primary_persona: work:persona/the-human
+    primary_persona: work:persona/the-developer
     built_from:
       - work:project/python-seed
 
@@ -127,7 +127,7 @@ artifacts:
       how it is satisfied in Rust and which step of the gate holds it there.
     postamble: |
       The other Disciplines bind the Portfolio rather than a Project — Progressive
-      Disclosure, Ubiquitous Language, Dogfooding, Modelling the Human,
+      Disclosure, Ubiquitous Language, Dogfooding, Modelling the Developer,
       Journaling — so a Bootstrap has nothing to implement for them.
 
       Three Articles bind the gate itself rather than being implemented by it: A5 —
@@ -177,7 +177,7 @@ artifacts:
       satisfied in Python and which step of the gate holds it there.
     postamble: |
       The other Disciplines bind the Portfolio rather than a Project — Progressive
-      Disclosure, Ubiquitous Language, Dogfooding, Modelling the Human,
+      Disclosure, Ubiquitous Language, Dogfooding, Modelling the Developer,
       Journaling — so a Bootstrap has nothing to implement for them.
 
       Four Articles bind the gate itself rather than being implemented by it: A5 —

@@ -31,7 +31,7 @@ decisions:
       reported is measured against a different denominator and DR-234's
       two fitted knobs might no longer sit where they were fitted. That is a
       judgment the change's own gate cannot prove, which is why the Challenge
-      was read as `human` and settled by the human before any code.
+      was read as `developer` and settled by the developer before any code.
       Measured over the whole corpus, the knobs hold: at DP ≥ 0.70, G² ≥ 10.83 and
       Zipf ≥ 3.0 the five invocations above leave the phrase report and
       `repository root`, `one module`, `workflow run` and `reviewer role` take

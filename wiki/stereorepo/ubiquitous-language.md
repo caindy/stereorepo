@@ -1,7 +1,7 @@
 # Ubiquitous Language
 
 **Ubiquitous Language** is the discipline that ensures every concept within a
-Bounded Context carries exactly one unambiguous name shared by human and agents
+Bounded Context carries exactly one unambiguous name shared by the developer and agents
 alike (stereorepo's DR-184, DR-185).
 
 In an agentic development environment where autonomous loops author and review
@@ -37,7 +37,7 @@ preventing cross-domain collisions.
 ## The Minting Ceremony
 
 Agents do not casually invent new terminology in freeform text. When a new
-concept is required, it must undergo the minting ceremony with the human:
+concept is required, it must undergo the minting ceremony with the developer:
 establishing its preferred label, scope note, and avoid-list in the assertions.
 Writing explains; deciding decides.
 

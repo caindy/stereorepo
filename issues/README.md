@@ -6,11 +6,11 @@ authoritative one.
 
 | Stage | What sits there | Who moves an Issue in |
 |---|---|---|
-| [`roadmap/`](roadmap/) | intended, and not yet elaborated enough to work | the human; the pair loop, when it sends an Issue back |
-| [`backlog/`](backlog/) | ready to work, in filename order; the queue | the human, or a session working with the human |
+| [`roadmap/`](roadmap/) | intended, and not yet elaborated enough to work | the developer; the pair loop, when it sends an Issue back |
+| [`backlog/`](backlog/) | ready to work, in filename order; the queue | the developer, or a session working with the developer |
 | [`todo/`](todo/) | groomed, with a difficulty, and waiting for a plan | the supervisor |
 | [`in-progress/`](in-progress/) | planned, and being implemented | the supervisor |
-| [`desk-check/`](desk-check/) | a `human` Issue whose result waits for the human's check | the supervisor |
+| [`desk-check/`](desk-check/) | a `developer` Issue whose result waits for the developer's check | the supervisor |
 | [`done/`](done/) | landed on `main` | the supervisor |
 
 ## Writing an Issue
@@ -21,7 +21,7 @@ observed or derived, and all of it is optional:
 
 ```markdown
 ---
-difficulty: medium      # easy, medium, hard or human; the pair sets it if you do not
+difficulty: medium      # easy, medium, hard or developer; the pair sets it if you do not
 waits_on: [other-slug]  # Issues that must be done first
 parent: parent-slug     # the Issue this one was split from
 ---

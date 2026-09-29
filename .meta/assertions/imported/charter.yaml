@@ -220,12 +220,12 @@ articles:
     enforces: work:discipline/ubiquitous-language
     checked_by: >-
       Review checking that any word doing the work of a term is enclosed in
-      closed-world wikilinks or minted with the human, and
+      closed-world wikilinks or minted with the developer, and
       `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity
       between vocabulary concepts and wiki pages (stereorepo's DR-190).
     example: >-
       `Issue` is used because it is a Concept in the vocabulary. A
-      word that is not gets minted with the human before it is used again.
+      word that is not gets minted with the developer before it is used again.
   - id: work:article/20
     name: Article 20
     statement: A rule that lives only in the decision record is not in force.
@@ -268,7 +268,7 @@ articles:
       no privilege beyond the record could reconstruct (stereorepo's DR-216).
     example: >-
       Which stage an issue is in is the directory its file sits in, so a seat,
-      the supervisor and the human all read it from the same place, and none of
+      the supervisor and the developer all read it from the same place, and none of
       them holds a copy the others cannot see.
     falsifier: >-
       A participant that proceeds correctly on state it could not observe, which
@@ -303,7 +303,7 @@ articles:
       says otherwise — it concluded successfully and carries no error at all,
       and the verb was simply typed twice, eleven seconds apart, with a
       recomposed body. Nothing had failed. Reading the log took one call and was
-      done only when the human asked why the stated mechanism would produce the
+      done only when the developer asked why the stated mechanism would produce the
       stated effect, by which point the Claim had survived a review and two
       earlier corrections to the same paragraph.
     falsifier: >-

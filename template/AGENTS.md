@@ -5,7 +5,7 @@ __PORTFOLIO_DESCRIPTION__
 `.meta/` holds the tools and ideas that make sense of the structure. Everything
 outside `.meta/` is product material.
 
-Judge any proposal by whether it still works with one human and agents. A
+Judge any proposal by whether it still works with one developer and agents. A
 process that assumes several people — hand-offs, review rotas, team ceremonies —
 is a poor fit here.
 

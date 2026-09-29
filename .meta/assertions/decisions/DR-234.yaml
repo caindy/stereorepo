@@ -54,7 +54,7 @@ decisions:
         chosen: true
         reason: >-
           Placing `just terms` on the operator surface under `uvx --with wordfreq`
-          provides an on-demand audit read by the human during minting ceremonies. It
+          provides an on-demand audit read by the developer during minting ceremonies. It
           evaluates keyness (G²) against general English and Gries' DP across
           the repository's durable prose, governed by two fitted knobs: a Zipf floor
           (≥ 3.0) to distinguish repurposed English words from coinages, and a

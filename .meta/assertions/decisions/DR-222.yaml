@@ -1,6 +1,6 @@
 decisions:
   - id: work:decision/222
-    name: "DR-222 · Only the human puts a decision in force, and a change carrying one waits for it"
+    name: "DR-222 · Only the developer puts a decision in force, and a change carrying one waits for it"
     status: ADOPTED
     applies:
       - work:article/11
@@ -33,8 +33,8 @@ decisions:
           It would make adoption evidenced: A19 has every commit
           name its Actor, and the Trailer is written from the credential the
           channel speaks with, so an agent holding only a Role's credential
-          could not sign as the human. It also introduces an identity to the
-          channel for one act, and the human is not a Role — the human directs a
+          could not sign as the developer. It also introduces an identity to the
+          channel for one act, and the developer is not a Role — the developer directs a
           coder session rather than speaking as one.
       - name: Adoption recorded as a second act on the mint reservation
         chosen: false
@@ -52,7 +52,7 @@ decisions:
     consequences:
       - >-
         A coder writes a decision as `PROPOSED` and never as `ADOPTED`. Only
-        the human adopts one, and a human who sounds agreeable has not adopted
+        the developer adopts one, and a developer who sounds agreeable has not adopted
         anything.
       - >-
         The first step is followed rather than checked. Nothing records who
@@ -63,21 +63,21 @@ decisions:
         record already carries.
       - >-
         A pull request carrying a decision merges once that decision is in
-        force: proposed on the branch, adopted by the human, the status moved,
-        then merged. Decision-carrying work therefore blocks on the human, which
+        force: proposed on the branch, adopted by the developer, the status moved,
+        then merged. Decision-carrying work therefore blocks on the developer, which
         is a gate on the merge path that no semaphore of `evaluate_pr` knows
         about and that nothing enforces.
       - >-
         The entries already on the trunk are not re-opened. `ADOPTED` means two
         things either side of this Decision — before it, that a coder wrote the
-        word; after it, that the human said so — and saying that here is cheaper
+        word; after it, that the developer said so — and saying that here is cheaper
         than leaving a reader to find it.
     falsifier: >-
       A change merging while the decision it carries is still `PROPOSED`. The
       other half of this Decision has no falsifier: a decision reaching the
-      trunk `ADOPTED` that the human never adopted leaves no trace, so nothing
+      trunk `ADOPTED` that the developer never adopted leaves no trace, so nothing
       can establish it, and saying so here is the honest form of a step that is
       followed rather than checked.
     rationale: |-
       The repository already draws this line on the way in, where a `hard`
-      Challenge waits for the human, and drew it nowhere on the way out.
+      Challenge waits for the developer, and drew it nowhere on the way out.

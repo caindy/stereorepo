@@ -102,11 +102,11 @@ class FakeSeat:
 
 
 class Bench:
-    """The human's checkout with a board, and a loop wired to fake seats and a fake gate."""
+    """The developer's checkout with a board, and a loop wired to fake seats and a fake gate."""
 
     def __init__(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
-        self.repo = Path(self.tmp.name) / "human"
+        self.repo = Path(self.tmp.name) / "developer"
         self.repo.mkdir()
         sh(self.repo, "init", "-q", "-b", "main")
         for key, value in (
@@ -127,16 +127,16 @@ class Bench:
         self.gates: list[bool] = []
         self.gate_runs = 0
         self.stop_when_empty = False
-        self.human_between: dict[int, Action] = {}
+        self.developer_between: dict[int, Action] = {}
         self.notes: list[str] = []
         bench = self
 
         class TestLoop(Loop):
-            def absorb_human(self, st):  # type: ignore[no-untyped-def]
-                edit = bench.human_between.pop(len(bench.sent), None)
+            def absorb_developer(self, st):  # type: ignore[no-untyped-def]
+                edit = bench.developer_between.pop(len(bench.sent), None)
                 if edit:
                     edit(self.wt)
-                return super().absorb_human(st)
+                return super().absorb_developer(st)
 
         def factory(role: str, cwd: Path, resume: str | None) -> FakeSeat:
             self.opened.append((role, resume))
@@ -338,13 +338,13 @@ class LoopTest(unittest.TestCase):
     def test_a_human_edit_between_turns_resets_agreement(self) -> None:
         b = self.b
         b.issue("backlog", "x", "X")
-        b.human_between[1] = front("x", difficulty="easy")
+        b.developer_between[1] = front("x", difficulty="easy")
         b.stop_when_empty = True
         b.script(("primary", quiet), ("secondary", quiet), ("primary", quiet))
         b.loop.run()
         self.assertEqual(b.state().stage, "todo")
-        self.assertIn("human: edits on x", sh(b.loop.wt, "log", "--format=%s"))
-        self.assertIn("The human changed things", b.sent[1][1])
+        self.assertIn("developer: edits on x", sh(b.loop.wt, "log", "--format=%s"))
+        self.assertIn("The developer changed things", b.sent[1][1])
 
     def test_a_crashed_seat_restarts_once_from_its_session(self) -> None:
         b = self.b
@@ -376,7 +376,7 @@ class LoopTest(unittest.TestCase):
         self.assertTrue(b.sent[-1][1].startswith("(Your session was restarted"))
         log = sh(b.loop.wt, "log", "--format=%s", "main..HEAD")
         self.assertIn("primary: backlog turn on x", log)
-        self.assertNotIn("human:", log)
+        self.assertNotIn("developer:", log)
 
     def test_reap_stops_only_an_orphaned_seat_in_this_worktree(self) -> None:
         b = self.b
@@ -406,7 +406,7 @@ class LoopTest(unittest.TestCase):
         b = self.b
         b.issue("backlog", "x", "X", difficulty="easy")
 
-        def human_has_a_local_file(_cwd: Path) -> None:
+        def developer_has_a_local_file(_cwd: Path) -> None:
             (b.repo / "a.txt").write_text("mine")
 
         b.script(
@@ -414,7 +414,7 @@ class LoopTest(unittest.TestCase):
             ("secondary", quiet),
             ("primary", append("x", PLAN)),
             ("secondary", quiet),
-            ("primary", both(write("a.txt", "branch"), human_has_a_local_file)),
+            ("primary", both(write("a.txt", "branch"), developer_has_a_local_file)),
             ("secondary", quiet),
         )
         self.assertEqual(b.loop.run(), "paused")
@@ -425,7 +425,7 @@ class LoopTest(unittest.TestCase):
 
     def test_a_human_issue_waits_for_the_desk_check(self) -> None:
         b = self.b
-        b.issue("backlog", "h", "Human", difficulty="human")
+        b.issue("backlog", "h", "Developer", difficulty="developer")
         b.script(
             ("primary", quiet),
             ("secondary", quiet),
@@ -442,7 +442,7 @@ class LoopTest(unittest.TestCase):
 
     def test_a_failed_desk_check_returns_to_the_pair(self) -> None:
         b = self.b
-        b.issue("backlog", "h", "Human", difficulty="human")
+        b.issue("backlog", "h", "Developer", difficulty="developer")
         b.script(
             ("primary", quiet),
             ("secondary", quiet),

@@ -15,7 +15,7 @@ underlying tooling and gate mechanisms.
 - **[[externalized-memory|Externalized Memory]]** — Why what a session would
   remember is compiled into artifacts rather than held in the agent.
 - **[[ubiquitous-language|Ubiquitous Language]]** — How terms are defined,
-  bounded, and checked to prevent semantic collision across agents and human.
+  bounded, and checked to prevent semantic collision across agents and the developer.
 
 ## Specialization Invariant
 

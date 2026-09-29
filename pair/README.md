@@ -21,7 +21,7 @@ the seat left uncommitted, with a `Seat:` trailer.
 
 1. **Acceptance.** A turn that changes nothing is a quiet turn: that seat
    accepts the state it found. A turn that changes something makes its author
-   the only seat that has accepted the new state. An edit the human makes
+   the only seat that has accepted the new state. An edit the developer makes
    between turns clears acceptance for both.
 2. **Advancing.** When both seats have accepted the same state, the stage
    advances with `git mv` if its requirement holds:
@@ -30,7 +30,7 @@ the seat left uncommitted, with a `Seat:` trailer.
    |---|---|---|
    | `backlog/` | `difficulty` is set | `todo/`; for `hard`, the child Issues land in `backlog/` and the parent goes to `done/` |
    | `todo/` | a `## The plan` section | `in-progress/` |
-   | `in-progress/` | code outside `issues/` changed, and `just gate` passes after a rebase onto `main` | `desk-check/` for `human`, otherwise landing |
+   | `in-progress/` | code outside `issues/` changed, and `just gate` passes after a rebase onto `main` | `desk-check/` for `developer`, otherwise landing |
    | `desk-check/` | `just pair-accept` | landing; `just pair-resume` sends it back to `in-progress/` |
 
    If the requirement does not hold, acceptance is cleared and the next turn is
@@ -40,7 +40,7 @@ the seat left uncommitted, with a `Seat:` trailer.
    `main`, without its code.
 4. **Landing.** The loop rebases the branch onto `main`, squashes it into one
    commit that includes the move to `done/`, and fast-forwards `main` in the
-   human's checkout with `--ff-only`, which refuses rather than overwrite local
+   developer's checkout with `--ff-only`, which refuses rather than overwrite local
    edits.
 
 A seat that crashes is restarted once from its session id. A supervisor that

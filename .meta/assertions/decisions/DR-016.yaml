@@ -12,7 +12,7 @@ decisions:
 
       Minting has a search order. Does DDD already name it? Use it. Does
       stereorepo's vocabulary? Use it. Only when neither does is a term
-      minted, and that is the explicit decision with the human.
+      minted, and that is the explicit decision with the developer.
 
       Departures must be marked, or transitive conformity breaks silently.
       DR-014 is already one: a single Bounded Context per portfolio, where

@@ -38,7 +38,7 @@ The compensation is that these are paid once and apply to everything, where cura
 
 ## Relationship to the pair loop
 
-The pair loop is the same commitment on the coordination side. Its supervisor holds nothing a seat or the human cannot read for themselves: an Issue's stage is the directory its file sits in, a turn's work is the working tree, and the gate's verdict is its exit code. A seat therefore needs no memory of the protocol, and a protocol it forgets cannot stall. stereorepo's Article 22 is the rule that follows from both.
+The pair loop is the same commitment on the coordination side. Its supervisor holds nothing a seat or the developer cannot read for themselves: an Issue's stage is the directory its file sits in, a turn's work is the working tree, and the gate's verdict is its exit code. A seat therefore needs no memory of the protocol, and a protocol it forgets cannot stall. stereorepo's Article 22 is the rule that follows from both.
 
 ---
 

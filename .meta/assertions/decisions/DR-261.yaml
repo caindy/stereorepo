@@ -59,7 +59,7 @@ decisions:
       - name: Abort the run on the first unrunnable step under CI
         chosen: false
         reason: >-
-          Considered as the reading of "fail fast" and rejected with the human. A
+          Considered as the reading of "fail fast" and rejected with the developer. A
           CI run is an expensive round trip, so a gate that stops at the first
           missing tool costs one cycle per missing tool. The reason a maintainer
           wants every step attempted — learning what is missing in one pass — is
@@ -67,7 +67,7 @@ decisions:
       - name: One traversal everywhere, with the exit code conditioned on CI
         chosen: true
         reason: >-
-          Settled with the human. Every step runs and every unrunnable step is
+          Settled with the developer. Every step runs and every unrunnable step is
           collected, so the report is identical in both environments and a
           maintainer is never debugging output CI alone can produce. The single
           environment-dependent line is the exit code, read from `CI` rather than

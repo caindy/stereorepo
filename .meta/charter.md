@@ -125,9 +125,9 @@ _Retired when:_ A commit message the record indexes where the artifacts are read
 
 ### A17. A term that arrived by use has not been agreed.
 
-**Enforces** Ubiquitous Language. **Checked by** Review checking that any word doing the work of a term is enclosed in closed-world wikilinks or minted with the human, and `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity between vocabulary concepts and wiki pages (stereorepo's DR-190).
+**Enforces** Ubiquitous Language. **Checked by** Review checking that any word doing the work of a term is enclosed in closed-world wikilinks or minted with the developer, and `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity between vocabulary concepts and wiki pages (stereorepo's DR-190).
 
-_In practice:_ `Issue` is used because it is a Concept in the vocabulary. A word that is not gets minted with the human before it is used again.
+_In practice:_ `Issue` is used because it is a Concept in the vocabulary. A word that is not gets minted with the developer before it is used again.
 
 ### A18. Retired.
 
@@ -153,7 +153,7 @@ _Retired when:_ A Project whose toolchain reports in a form this shape cannot ca
 
 **Checked by** Its instances, each of which carries its own check: A11, A14, A17 and A20 say the same thing of a decision, of reasoning, of a term and of a rule. The general claim is held by the second seat, by asking what a participant with no privilege beyond the record could reconstruct (stereorepo's DR-216).
 
-_In practice:_ Which stage an issue is in is the directory its file sits in, so a seat, the supervisor and the human all read it from the same place, and none of them holds a copy the others cannot see.
+_In practice:_ Which stage an issue is in is the directory its file sits in, so a seat, the supervisor and the developer all read it from the same place, and none of them holds a copy the others cannot see.
 
 _Retired when:_ A participant that proceeds correctly on state it could not observe, which would mean a privilege nobody declared.
 
@@ -161,7 +161,7 @@ _Retired when:_ A participant that proceeds correctly on state it could not obse
 
 **Enforces** Observed Failure. **Checked by** `just dereference`, which reads the citations a branch wrote against what they name, for a Claim citing an Article, a Decision or a Discipline. Nothing resolves a Claim about behaviour or history: that half is held by the author before it is written and by the second seat after, by asking what was consulted rather than whether it reads well. A22 is its complement and not its general case — that Article has the record carry what a participant needs, this one has the author go and read it.
 
-_In practice:_ A Decision of this repository explained a defect by the shape of the code that produced it: three acts that are not one transaction, so a failure part-way through was retried and did the first act twice. The run's log says otherwise — it concluded successfully and carries no error at all, and the verb was simply typed twice, eleven seconds apart, with a recomposed body. Nothing had failed. Reading the log took one call and was done only when the human asked why the stated mechanism would produce the stated effect, by which point the Claim had survived a review and two earlier corrections to the same paragraph.
+_In practice:_ A Decision of this repository explained a defect by the shape of the code that produced it: three acts that are not one transaction, so a failure part-way through was retried and did the first act twice. The run's log says otherwise — it concluded successfully and carries no error at all, and the verb was simply typed twice, eleven seconds apart, with a recomposed body. Nothing had failed. Reading the log took one call and was done only when the developer asked why the stated mechanism would produce the stated effect, by which point the Claim had survived a review and two earlier corrections to the same paragraph.
 
 _Retired when:_ A landed Claim about behaviour or history that no party checked and no citation resolves, or a Claim hedged as uncertain where the check was available and cheap.
 

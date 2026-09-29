@@ -125,7 +125,7 @@ decisions:
         the narrow reading and is what the probe was run for. Absent both, the
         ambient `claude` answers and the step says so.
         That last term is where this parts from the channel and is the same
-        rule: a Role's file exists so GitHub can tell the Role from the human,
+        rule: a Role's file exists so GitHub can tell the Role from the developer,
         and nothing attributes a model's reading to anybody. Refusing without
         one would leave the file as the only way in, and the only thing that
         writes one is the CI step above — never the machine `just dereference`

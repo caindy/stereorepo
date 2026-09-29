@@ -16,7 +16,7 @@ from typing import Any
 import yaml
 
 STAGES = ("roadmap", "backlog", "todo", "in-progress", "desk-check", "done")
-DIFFICULTIES = ("easy", "medium", "hard", "human")
+DIFFICULTIES = ("easy", "medium", "hard", "developer")
 ISSUES = "issues"
 
 _FRONT = re.compile(r"\A---\n(?P<block>.*?)\n---(?:\n|\Z)", re.DOTALL)

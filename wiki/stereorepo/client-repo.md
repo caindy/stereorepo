@@ -12,7 +12,7 @@ minted: 2026-09-14
 
 **Client Repo** is a software repository that specializes stereorepo by adopting its cognitive operating layer via the APM package, inheriting its SDLC and verification gates, and instantiating language Projects from Bootstraps on demand (stereorepo's DR-206).
 
-In the ontology of work, stereorepo distinguishes between conceptual domain groupings and physical storage repositories. While a [[portfolio]] defines the monorepo boundary enclosing a single Bounded Context and its [[ubiquitous-language]], a *Client Repo* (synonymously termed a *Specialization*, *Child Repo*, or *Specialized Portfolio*) is the downstream version control repository created by a single human to build and operate products.
+In the ontology of work, stereorepo distinguishes between conceptual domain groupings and physical storage repositories. While a [[portfolio]] defines the monorepo boundary enclosing a single Bounded Context and its [[ubiquitous-language]], a *Client Repo* (synonymously termed a *Specialization*, *Child Repo*, or *Specialized Portfolio*) is the downstream version control repository created by a single developer to build and operate products.
 
 ## Architectural Boundary & APM Consumption
 

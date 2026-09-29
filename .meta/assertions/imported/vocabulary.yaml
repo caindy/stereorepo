@@ -145,7 +145,7 @@ concept_set:
     broader: work:concept/g-doing
   - id: work:concept/portfolio
     pref_label: Portfolio
-    definition: Everything one human builds inside one Bounded Context. One per repo.
+    definition: Everything one developer builds inside one Bounded Context. One per repo.
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-divided
     scope_note: >-
@@ -218,19 +218,20 @@ concept_set:
     scope_note: >-
       Standing rather than a bounded commitment. What the work in hand is for is
       an Issue's to say, not a Persona goal's.
-  - id: work:concept/human
-    pref_label: Human
+  - id: work:concept/developer
+    pref_label: Developer
     definition: >-
       The one person a repository serves, who builds it with agents and decides
       what they cannot.
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-doing
     scope_note: >-
-      The common word, as in "human in the loop", narrowed to one person. Never
-      a second person: a repository has exactly one human, and a process that
-      needs two is a poor fit. Never an agent acting for the human: an agent's
-      judgement is not the human's, however it is labelled. The `human`
-      difficulty names the Issues that wait for this person's desk check.
+      The common word, narrowed twice. To one person: a repository has exactly
+      one developer, and a process that needs two is a poor fit. And to a
+      person: the seats write code too, but a seat is never the developer, and
+      neither is any agent acting for the developer, however it is labelled.
+      The `developer` difficulty names the Issues that wait for this person's
+      desk check.
     avoid: [solo, user, owner, operator]
     confusable_with:
       - work:concept/seat
@@ -244,7 +245,7 @@ concept_set:
     scope_note: >-
       The common word, narrowed. An Issue has no number: its slug is its id. It
       has no status, labels or assignee: its stage is the directory it sits in.
-      It has no comment thread: the seats' notes and the human's desk-check
+      It has no comment thread: the seats' notes and the developer's desk-check
       notes are written in the file. Its front matter holds only what cannot be
       observed or derived — `difficulty`, and optionally `waits_on` and
       `parent`. An Issue with children is a parent issue; there is no other
@@ -273,7 +274,7 @@ concept_set:
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-recorded
     scope_note: >-
-      A directory, never a field. The human adds Issues to `roadmap` and
+      A directory, never a field. The developer adds Issues to `roadmap` and
       `backlog`; every other move is the supervisor's, and always a `git mv`.
     avoid: [column, status, state]
   - id: work:concept/seat
@@ -292,7 +293,7 @@ concept_set:
       protocol that moves the Issue.
     avoid: [coder, reviewer, agent]
     confusable_with:
-      - work:concept/human
+      - work:concept/developer
       - work:concept/supervisor
   - id: work:concept/supervisor
     pref_label: Supervisor
@@ -324,12 +325,12 @@ concept_set:
   - id: work:concept/desk-check
     pref_label: Desk check
     definition: >-
-      The human's check of a `human` Issue's result, by hand, before it lands on
+      The developer's check of a `developer` Issue's result, by hand, before it lands on
       `main`.
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-doing
     scope_note: >-
-      The one stage that waits for the human. Accepting lands the Issue;
+      The one stage that waits for the developer. Accepting lands the Issue;
       leaving notes in the Issue file and resuming sends it back to the pair.
     avoid: [review, approval]
   - id: work:concept/discipline
@@ -412,8 +413,8 @@ concept_set:
     scope_note: >-
       A Discipline here, not a slogan: each adopted Discipline is applied to this
       repo first, and a schema is instantiated before it is trusted.
-  - id: work:concept/modelling-the-human
-    pref_label: Modelling the Human
+  - id: work:concept/modelling-the-developer
+    pref_label: Modelling the Developer
     definition: >-
       Keeping a Persona of the person the agent works with, in the repo and
       current, as external memory rather than private.

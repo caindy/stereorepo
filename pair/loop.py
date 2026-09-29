@@ -31,7 +31,7 @@ from board import git, git_ok
 from seats import Seat, TurnResult
 
 ROLES = ("primary", "secondary")
-ROUND_CAP = {"easy": 4, "medium": 8, "human": 8, "hard": 4, None: 4}
+ROUND_CAP = {"easy": 4, "medium": 8, "developer": 8, "hard": 4, None: 4}
 DIFF_LIMIT = 40_000
 GATE_TAIL = 6_000
 RESTARTED = (
@@ -128,11 +128,11 @@ class Loop:
     # --- entry points ----------------------------------------------------------
 
     def run(self, once: bool = False) -> str:
-        """Work issues until the backlog empties or the human is needed.
+        """Work issues until the backlog empties or the developer is needed.
 
         A turn cut short by the supervisor dying belongs to its seat: a restart
         gives it back to that seat, and does not mistake its leftovers for the
-        human's edits.
+        developer's edits.
         """
         self.ensure_worktree()
         self.reap()
@@ -158,14 +158,14 @@ class Loop:
             st = None
 
     def accept(self) -> str:
-        """The human passes the desk check: merge what is in the worktree."""
+        """The developer passes the desk check: merge what is in the worktree."""
         self.reap()
         st = self.load()
         if st is None or st.retry != "desk-check":
             self.say("nothing is waiting for a desk check")
             return "none"
         st.paused = st.retry = None
-        changed = self.absorb_human(st)
+        changed = self.absorb_developer(st)
         outcome = self.merge(st, force_gate=changed)
         if outcome:
             return outcome
@@ -175,17 +175,17 @@ class Loop:
         return self.work(st)
 
     def resume(self) -> str:
-        """The human fails the desk check: their notes go back to the pair."""
+        """The developer fails the desk check: their notes go back to the pair."""
         self.reap()
         st = self.load()
         if st is None or st.retry != "desk-check":
             self.say("nothing is waiting for a desk check")
             return "none"
         st.paused = st.retry = None
-        self.absorb_human(st)
+        self.absorb_developer(st)
         self.move(st, "in-progress")
         st.note = (
-            "The human sent this back from the desk check. "
+            "The developer sent this back from the desk check. "
             "Their notes are in the issue file."
         )
         return self.work(st)
@@ -232,12 +232,12 @@ class Loop:
             st.retry = st.paused = None
             while True:
                 if self.stop_requested:
-                    self.pause(st, "stopped by the human", retry=None)
+                    self.pause(st, "stopped by the developer", retry=None)
                     return "stopped"
                 role = st.next_role
                 restarted = st.in_turn == role
                 if not restarted:
-                    self.absorb_human(st)
+                    self.absorb_developer(st)
                 st.in_turn = role
                 self.save(st)
                 message = self.message(st, role)
@@ -333,8 +333,8 @@ class Loop:
             st.sessions[role] = result.session_id
         return result
 
-    def absorb_human(self, st: State) -> bool:
-        """Commit edits the human made in the worktree between turns, as a turn of their own."""
+    def absorb_developer(self, st: State) -> bool:
+        """Commit edits the developer made in the worktree between turns, as a turn of their own."""
         dirty = bool(git(self.wt, "status", "--porcelain"))
         moved = git(self.wt, "rev-parse", "HEAD") != st.head
         if not (dirty or moved):
@@ -346,17 +346,17 @@ class Loop:
                 "commit",
                 "-q",
                 "-m",
-                f"human: edits on {st.slug}",
+                f"developer: edits on {st.slug}",
                 "-m",
-                "Seat: human",
+                "Seat: developer",
             )
         st.head = git(self.wt, "rev-parse", "HEAD")
         st.approvals = []
         st.note = (
             st.note
-            + "\n\nThe human changed things since the last turn; see the changes below."
+            + "\n\nThe developer changed things since the last turn; see the changes below."
         ).strip()
-        self.say("absorbed the human's edits")
+        self.say("absorbed the developer's edits")
         self.save(st)
         return True
 
@@ -459,7 +459,7 @@ class Loop:
             if issue.difficulty is None:
                 return (
                     "set `difficulty:` in the front matter "
-                    "to easy, medium, hard or human."
+                    "to easy, medium, hard or developer."
                 )
             if issue.difficulty == "hard" and not board.children(self.wt, st.slug):
                 return (
@@ -497,7 +497,7 @@ class Loop:
         if st.stage == "todo":
             self.move(st, "in-progress")
             return None
-        if st.stage == "in-progress" and issue.difficulty == "human":
+        if st.stage == "in-progress" and issue.difficulty == "developer":
             self.move(st, "desk-check")
             return self.pause(
                 st,
@@ -559,7 +559,7 @@ class Loop:
         return True
 
     def merge(self, st: State, force_gate: bool = False) -> str | None:
-        """Squash the branch onto `main` and fast-forward the human's checkout."""
+        """Squash the branch onto `main` and fast-forward the developer's checkout."""
         for _ in range(3):
             moved = self.rebase(st)
             if moved is None:
@@ -620,7 +620,7 @@ class Loop:
         return st.head
 
     def land(self, st: State, sha: str) -> bool:
-        """Fast-forward `main` in the human's checkout; refuse rather than overwrite."""
+        """Fast-forward `main` in the developer's checkout; refuse rather than overwrite."""
         branch = git(self.repo, "symbolic-ref", "--short", "-q", "HEAD", check=False)
         if branch != self.main:
             self.pause(

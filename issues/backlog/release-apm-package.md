@@ -6,7 +6,7 @@ Actions workflow on a `v*` tag: it ran the gate, `just apm validate` and
 removed every workflow, since the pair loop gates each Issue locally before it
 lands, so nothing now cuts a release.
 
-Add a `just` recipe that does the same from the human's checkout: refuse on a
+Add a `just` recipe that does the same from the developer's checkout: refuse on a
 dirty tree or a `main` that is not the remote's, run the three checks, tag, and
 create the release. It invokes a tool under `.meta/`, like every recipe.
 

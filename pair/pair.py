@@ -113,7 +113,7 @@ def main() -> int:
     run = sub.add_parser(
         "run",
         parents=[seats],
-        help="work issues until the backlog is empty or the human is needed",
+        help="work issues until the backlog is empty or the developer is needed",
     )
     run.add_argument("--once", action="store_true", help="stop after one issue")
     run.add_argument(

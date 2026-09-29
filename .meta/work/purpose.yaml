@@ -30,7 +30,7 @@ enums:
   Difficulty:
     description: >-
       How an Issue is carried to `main`. Set when the Issue is groomed, by the
-      seats or by the human; never a verdict on the work.
+      seats or by the developer; never a verdict on the work.
     permissible_values:
       easy:
         description: Done in one piece, with few turns.
@@ -41,9 +41,9 @@ enums:
           Too big for one piece. The seats split it into child Issues in the
           backlog, each naming this one as its parent, and it lands as done
           once the children are written.
-      human:
+      developer:
         description: >-
-          Its result needs the human's desk check before it lands on `main`.
+          Its result needs the developer's desk check before it lands on `main`.
 
 slots:
 
@@ -87,7 +87,7 @@ classes:
       One unit of work, as one Markdown file on the board. It has no number:
       its slug is its id. It has no status, labels or assignee: its stage is the
       directory it sits in. It has no comment thread: the seats' notes and the
-      human's desk-check notes are written in the file.
+      developer's desk-check notes are written in the file.
     slots:
       - difficulty
       - waits_on

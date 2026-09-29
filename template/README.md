@@ -2,7 +2,7 @@
 
 __PORTFOLIO_DESCRIPTION__
 
-One Bounded Context, one Ubiquitous Language, built by one human and a pair of agents.
+One Bounded Context, one Ubiquitous Language, built by one developer and a pair of agents.
 
 ## Products
 

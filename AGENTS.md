@@ -1,13 +1,13 @@
 # stereorepo
 
-A scaffold for building software products with **one human and a pair of
+A scaffold for building software products with **one developer and a pair of
 agents**. The end state is a repository you clone to start a new product repo.
 
 `.meta/` holds the tools and ideas that make sense of the structure and that
 specialize a fresh clone into a new portfolio. Everything outside `.meta/` is product
 material.
 
-Judge any proposal by whether it still works with one human and agents. A
+Judge any proposal by whether it still works with one developer and agents. A
 process that assumes several people — hand-offs, review rotas, team ceremonies —
 is a poor fit here.
 
@@ -46,7 +46,7 @@ observe. There are no pull requests.
   assertion, not the file.
 - Use the vocabulary from the ontology of work in preference to synonyms: an
   *Issue*, not a ticket or story; a *seat*, not a coder or reviewer; the
-  *human*, not the user or the owner.
+  *developer*, not the user or the owner.
 - When a question that demanded an answer is settled, write it as
   `.meta/assertions/decisions/DR-nnn.yaml`, where the number is the highest number the record holds plus one,
   re-render, and commit it with the change.

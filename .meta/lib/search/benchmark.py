@@ -50,12 +50,12 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
             ["work:portfolio/stereorepo", "work:discipline/specialization"],
         ),
         (
-            "which issues wait for the human to check them by hand",
-            ["work:concept/desk-check", "work:concept/human"],
+            "which issues wait for the developer to check them by hand",
+            ["work:concept/desk-check", "work:concept/developer"],
         ),
         (
-            "what is the difference between a seat and the human",
-            ["work:concept/seat", "work:concept/human"],
+            "what is the difference between a seat and the developer",
+            ["work:concept/seat", "work:concept/developer"],
         ),
         (
             "where do things noticed but not done go",

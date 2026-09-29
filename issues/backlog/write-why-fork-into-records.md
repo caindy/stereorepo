@@ -14,7 +14,7 @@ delete it.
   pull requests; no agent at the top; the rule for choosing terms (section 10).
   Record the alternatives section 5 rejected as the alternatives they are.
 - Wiki pages, under `wiki/stereorepo/`, for the concepts the ontology added:
-  Issue, Board, Stage, Human, Seat, Supervisor, Quiet turn and Desk check. The
+  Issue, Board, Stage, Developer, Seat, Supervisor, Quiet turn and Desk check. The
   booktutor spike's findings (`docs/PAIR_LOOP_SPIKE.md` in caindy/booktutor)
   belong in the Seat and Supervisor pages as evidence.
 - The meta-harness survey (section 6) and the cockpit requirements (section 7)

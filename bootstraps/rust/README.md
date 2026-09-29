@@ -21,7 +21,7 @@ how it is satisfied in Rust and which step of the gate holds it there.
 | Written Decisions | [`written-decisions.md`](written-decisions.md) | nothing here — the portfolio's gate, and it says why |
 
 The other Disciplines bind the Portfolio rather than a Project — Progressive
-Disclosure, Ubiquitous Language, Dogfooding, Modelling the Human,
+Disclosure, Ubiquitous Language, Dogfooding, Modelling the Developer,
 Journaling — so a Bootstrap has nothing to implement for them.
 
 Three Articles bind the gate itself rather than being implemented by it: A5 —

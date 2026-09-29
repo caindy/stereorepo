@@ -8,7 +8,7 @@ repository, one Bounded Context, one Ubiquitous Language, holding however many
 Products and Projects.
 
 The premise it is built on: judge any way of working by whether it still holds
-with one human and agents. A process that assumes several people — hand-offs,
+with one developer and agents. A process that assumes several people — hand-offs,
 review rotas, ceremonies — is a poor fit. Work reaches `main` through the pair
 loop: two agent seats take one issue at a time from the board in `issues/`,
 taking turns in one worktree, and a deterministic program moves the issue along

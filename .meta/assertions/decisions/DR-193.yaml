@@ -59,7 +59,7 @@ decisions:
     rationale: |-
       Mechanical auto-formatters solve human team coordination problems by standardizing
       visual appearance. In a repository designed for a team of one and autonomous agent
-      fleets, the human manages intent and invariants rather than line-by-line formatting.
+      fleets, the developer manages intent and invariants rather than line-by-line formatting.
 
       Exploding compact, table-like structures into vertical cascades harms LLMs by inflating
       context token consumption and forcing vital reasoning out of context windows. By

@@ -4,14 +4,14 @@
 # said and done in building this repo. A departure from the canon, marked per
 # DR-016.
 #
-# Maintained under the Modelling the Human Discipline: kept current as the work
+# Maintained under the Modelling the Developer Discipline: kept current as the work
 # reveals things, grounded in something observable, and marked where it is
 # inference. Everything below should be corrected by its subject rather than
 # defended by its author.
 
 personas:
-  - id: work:persona/the-human
-    name: The Human
+  - id: work:persona/the-developer
+    name: The Developer
     persona_kind: PRIMARY
     description: >-
       Christopher, building software products alone with agents holding the
