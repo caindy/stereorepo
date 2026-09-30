@@ -80,11 +80,11 @@ def justfile() -> str:
             "pair-status:",
             "    uv run --quiet --script pair/pair.py status",
             "",
-            "# pass the desk check on the issue waiting in worktrees/pair, and land it",
+            "# pass the desk check and land it (with a Flight's slug: move it to done/)",
             "pair-accept *args:",
             "    uv run --quiet --script pair/pair.py accept {{args}}",
             "",
-            "# fail the desk check: the pair picks up the notes in the issue file",
+            "# fail the desk check: the pair picks up your notes (a Flight's slug: to backlog/)",
             "pair-resume *args:",
             "    uv run --quiet --script pair/pair.py resume {{args}}",
         ]

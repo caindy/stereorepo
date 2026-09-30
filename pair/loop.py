@@ -27,7 +27,14 @@ while any child is outside `issues/done/`. Once the last child lands, the loop
 takes the Flight through a Flight check, a stage of its own whose file stays in
 `backlog/`: the seats check its "Done when" on `main`, and either write each gap
 as a new child, which lands and leaves the Flight waiting, or write a
-`## Desk-check brief` into the Flight file, which retires it to `done/`.
+`## Desk-check brief` into the Flight file, which lands it in `desk-check/`.
+
+A Flight's desk check does not hold the loop, since its parts are already on
+`main`. The developer answers it in their own checkout while the loop works on:
+`accept <slug>` moves it to `done/`, and `resume <slug>` takes the
+`## Desk-check notes` they wrote after its latest brief back to `backlog/`.
+There the Flight is ripe again, and its next check owes children: one per note,
+listed in a `## Desk-check children` section, which marks the notes answered.
 """
 
 from __future__ import annotations
@@ -54,6 +61,8 @@ GROOMING = "grooming"
 FLIGHT_CHECK = "flight-check"
 """The stage of a Flight whose children have all landed. Its file stays in `backlog/`."""
 BRIEF = "Desk-check brief"
+NOTES = "Desk-check notes"
+CHILDREN = "Desk-check children"
 DIFF_LIMIT = 40_000
 GATE_TAIL = 6_000
 RESTARTED = (
@@ -230,8 +239,13 @@ class Loop:
         )
         return "paused" if st is None else self.work(st)
 
-    def accept(self) -> str:
-        """The developer passes the desk check: merge what is in the worktree."""
+    def accept(self, slug: str | None = None) -> str:
+        """The developer passes the desk check: merge what is in the worktree.
+
+        With `slug`, the desk check of that Flight instead, on `main`.
+        """
+        if slug is not None:
+            return self.accept_flight(slug)
         self.reap()
         st = self.load()
         if st is None or st.retry != "desk-check":
@@ -247,8 +261,13 @@ class Loop:
         st.note = failure
         return self.work(st)
 
-    def resume(self) -> str:
-        """The developer fails the desk check: their notes go back to the pair."""
+    def resume(self, slug: str | None = None) -> str:
+        """The developer fails the desk check: their notes go back to the pair.
+
+        With `slug`, the desk check of that Flight instead, on `main`.
+        """
+        if slug is not None:
+            return self.resume_flight(slug)
         self.reap()
         st = self.load()
         if st is None or st.retry != "desk-check":
@@ -262,6 +281,80 @@ class Loop:
             "Their notes are in the issue file."
         )
         return self.work(st)
+
+    # --- the desk check of a Flight --------------------------------------------
+
+    def flight_at_desk(self, slug: str) -> Path | None:
+        """The Flight's file in the developer's checkout, if it waits for its desk check.
+
+        The file must sit in `desk-check/` on `main`, with the checkout on `main`,
+        since the answer is committed there. Otherwise say why and return None.
+        """
+        branch = git(self.repo, "symbolic-ref", "--short", "-q", "HEAD", check=False)
+        if branch != self.main:
+            self.say(
+                f"your checkout is on {branch or 'a detached HEAD'}, not {self.main}; "
+                "switch back, then run again"
+            )
+            return None
+        if board.at_ref(self.repo, self.main, "desk-check", slug) is None or not (
+            board.children(self.repo, self.main, slug)
+        ):
+            self.say(f"no Flight named {slug} is waiting for a desk check")
+            return None
+        return self.repo / board.ISSUES / "desk-check" / f"{slug}.md"
+
+    def accept_flight(self, slug: str) -> str:
+        """Call the Flight delivered: move it to `done/` in one commit on `main`."""
+        if self.flight_at_desk(slug) is None:
+            return "none"
+        paths = self.commit_move(slug, "done", f"Accept {slug} at its desk check")
+        self.say(f"accepted {slug} ({paths})")
+        return "accepted"
+
+    def resume_flight(self, slug: str) -> str:
+        """Send the Flight back with the developer's notes, to be checked again.
+
+        The notes, uncommitted or not, go in the same commit that moves the file
+        to `backlog/` and puts its slug first in `ORDER`, so the loop takes it up
+        next.
+        """
+        path = self.flight_at_desk(slug)
+        if path is None:
+            return "none"
+        issue = board.parse(path.read_text())[1]
+        if board.last_of(issue, (BRIEF, NOTES, CHILDREN)) != NOTES or not (
+            board.bullets(board.last_section(issue, NOTES))
+        ):
+            self.say(
+                f"write your notes in {path.relative_to(self.repo)} under a "
+                f"`## {NOTES}` heading after its latest brief, one bullet per note"
+            )
+            return "none"
+        if git(self.repo, "status", "--porcelain", "--", board.ORDER):
+            self.say(f"{board.ORDER} has uncommitted edits; commit or discard them first")
+            return "none"
+        order = self.repo / board.ORDER
+        text = order.read_text() if order.is_file() else f"{board.MARKER}\n"
+        order.write_text(f"{slug}\n" + board.without(text, slug))
+        paths = self.commit_move(
+            slug, "backlog", f"Send {slug} back from its desk check", board.ORDER
+        )
+        self.say(f"sent {slug} back to backlog/ with your notes ({paths})")
+        return "resumed"
+
+    def commit_move(self, slug: str, to: str, subject: str, *also: str) -> str:
+        """Move a Flight out of `desk-check/` on `main` and commit only that.
+
+        The developer's other work in their checkout, staged or not, stays out.
+        """
+        old = f"{board.ISSUES}/desk-check/{slug}.md"
+        new = f"{board.ISSUES}/{to}/{slug}.md"
+        git(self.repo, "mv", old, new)
+        git(self.repo, "add", new, *also)
+        git(self.repo, "commit", "-q", "-m", subject, "-m", "Seat: developer",
+            "--", old, new, *also)
+        return git(self.repo, "rev-parse", "--short", "HEAD")
 
     # --- the worktree ----------------------------------------------------------
 
@@ -591,7 +684,9 @@ class Loop:
 
         A child counts only if the check wrote it, not if it moved one back to
         `backlog/`; a brief counts only if the Flight file holds one more than
-        it did when the check began, since each round's brief stays in it.
+        it did when the check began, since each round's brief stays in it. A
+        Flight whose file ended in desk-check notes when the check began owes
+        children and no brief (`owed_children`).
         """
         if self.touches_code():
             return "the Flight check changes nothing outside issues/; undo those changes."
@@ -604,6 +699,12 @@ class Loop:
             if stage == "backlog" and slug not in before
         ]
         was = board.at_ref(self.wt, st.base, "backlog", st.slug)
+        if was and board.last_of(was.body, (BRIEF, NOTES, CHILDREN)) == NOTES:
+            missing = self.owed_children(st, issue, was, gaps)
+            if missing:
+                return missing
+            ok, out = self.gate(self.wt)
+            return None if ok else f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```"
         briefs = board.sections(issue.body, BRIEF)
         if not gaps and briefs <= (board.sections(was.body, BRIEF) if was else 0):
             return (
@@ -614,6 +715,40 @@ class Loop:
             )
         ok, out = self.gate(self.wt)
         return None if ok else f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```"
+
+    def owed_children(
+        self, st: State, issue: board.Issue, was: board.Issue, gaps: list[str]
+    ) -> str | None:
+        """What a Flight check answering desk-check notes still lacks.
+
+        It writes a child for each note, lists them in one new children
+        section at the end of the Flight file, and writes no brief. The
+        children section marks the notes answered, so the check after those
+        children land owes nothing.
+        """
+        ask = (
+            f"the developer's `## {NOTES}` in {issue.path} are unanswered: write "
+            "each note as a new file in issues/backlog/ with "
+            f"`parent: {st.slug}` in its front matter, then add a `## {CHILDREN}` "
+            "section at the end of the Flight file listing each new slug as a "
+            "bullet, and write no brief."
+        )
+        if board.sections(issue.body, BRIEF) > board.sections(was.body, BRIEF):
+            return f"{ask} This check wrote a brief; take it out."
+        if (
+            not gaps
+            or board.sections(issue.body, CHILDREN)
+            != board.sections(was.body, CHILDREN) + 1
+            or board.last_of(issue.body, (BRIEF, NOTES, CHILDREN)) != CHILDREN
+        ):
+            return ask
+        listed = board.bullets(board.last_section(issue.body, CHILDREN))
+        if sorted(listed) != sorted(gaps):
+            return (
+                f"the `## {CHILDREN}` section lists {', '.join(listed) or 'nothing'}, "
+                f"but the new children are {', '.join(sorted(gaps))}; make them match."
+            )
+        return None
 
     def advance(self, st: State, issue: board.Issue | None) -> str | None:
         if (
@@ -711,8 +846,9 @@ class Loop:
                     self.save(st)
                     return None
             force_gate = False
-            if self.retires(st):
-                self.move(st, "done")
+            to = self.retirement(st)
+            if to is not None:
+                self.move(st, to)
             sha = self.squash(st)
             if not git_ok(self.repo, "merge-base", "--is-ancestor", self.main, sha):
                 continue
@@ -733,22 +869,31 @@ class Loop:
             st, "main kept moving while landing; run again", retry="merge"
         )
 
-    def retires(self, st: State) -> bool:
-        """Whether landing moves the issue to `done/`.
+    def retirement(self, st: State) -> str | None:
+        """The stage landing moves the issue to, or None if it stays where it is.
 
         A Flight with a child outside `done/` stays in `backlog/`: a hard issue
-        just split, or a Flight check that wrote a gap. It is read from the
-        tree, so a merge retried after a pause decides the same way.
+        just split, or a Flight check that wrote a gap. A Flight that passes
+        its check goes to `desk-check/`, and every other issue to `done/`. The
+        answer is read from the tree and the stage, so a merge that goes round
+        again, or is retried after a pause, decides the same way. A Flight
+        already moved to `desk-check/` has children, which tells it apart from
+        a `developer` issue, which `accept` merges from there to `done/`.
         """
-        return st.stage not in ("done", GROOMING) and not board.waiting(
-            self.wt, "HEAD", st.slug
-        )
+        if st.stage in ("done", GROOMING) or board.waiting(self.wt, "HEAD", st.slug):
+            return None
+        if st.stage == FLIGHT_CHECK:
+            return "desk-check"
+        if st.stage == "desk-check" and board.children(self.wt, "HEAD", st.slug):
+            return None
+        return "done"
 
     def squash(self, st: State) -> str:
         """Commit the rebased branch onto `main` as one commit.
 
         The same commit drops the slug from `ORDER` when the issue lands in
-        `done/`; a Flight left waiting keeps its place. No earlier commit on the
+        `done/`, or a Flight in `desk-check/`; a Flight left waiting keeps its
+        place. No earlier commit on the
         branch touches `ORDER`, so a reordering on `main` while the issue runs
         rebases cleanly. A grooming pass has no issue, and so no slug to drop.
         """
@@ -761,7 +906,7 @@ class Loop:
             head = [issue.title, f"Issue: {issue.path}"]
         git(self.wt, "reset", "-q", "--soft", self.main)
         order = self.wt / board.ORDER
-        retired = board.locations(self.wt, st.slug) == ["done"]
+        retired = board.locations(self.wt, st.slug) in (["done"], ["desk-check"])
         if order.is_file() and not grooming and retired:
             text = order.read_text()
             if board.without(text, st.slug) != text:

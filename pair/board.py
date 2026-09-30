@@ -121,6 +121,20 @@ def section(body: str, name: str) -> str | None:
     return None
 
 
+def last_section(body: str, name: str) -> str:
+    """The text under the last heading or bold lead named `name`, or "" if absent."""
+    lines = body.splitlines()
+    starts = [
+        i
+        for i, line in enumerate(lines)
+        if (head := _HEADING.match(line.strip()))
+        and head["name"].strip().lower() == name.lower()
+    ]
+    if not starts:
+        return ""
+    return section("\n".join(lines[starts[-1] :]), name) or ""
+
+
 def _level(line: str) -> int:
     """A heading's level (1-6); a bold lead ranks below every heading (7)."""
     stripped = line.strip()
@@ -136,6 +150,27 @@ def sections(body: str, name: str) -> int:
         if head and head["name"].strip().lower() == name.lower():
             count += 1
     return count
+
+
+def last_of(body: str, names: tuple[str, ...]) -> str | None:
+    """Which of `names` the last heading or bold lead among them is named, or None."""
+    wanted = {name.lower(): name for name in names}
+    last = None
+    for line in body.splitlines():
+        head = _HEADING.match(line.strip())
+        if head and head["name"].strip().lower() in wanted:
+            last = wanted[head["name"].strip().lower()]
+    return last
+
+
+def bullets(text: str) -> list[str]:
+    """The top-level bullet items of a Markdown block, stripped of their markers
+    and of backticks."""
+    return [
+        line[2:].strip().strip("`")
+        for line in text.splitlines()
+        if line.startswith(("- ", "* "))
+    ]
 
 
 def needs_elaboration(body: str) -> bool:

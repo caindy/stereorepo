@@ -10,8 +10,11 @@ stays wherever this file is, outside that repository's tree (see README.md):
     uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py groom [--rerank] [--push] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py status
-    uv run --script <stereorepo>/pair/pair.py accept
-    uv run --script <stereorepo>/pair/pair.py resume
+    uv run --script <stereorepo>/pair/pair.py accept [SLUG]
+    uv run --script <stereorepo>/pair/pair.py resume [SLUG]
+
+With SLUG, `accept` and `resume` answer the desk check of that Flight on
+`main`, in your checkout, and run alongside a running loop.
 
 In stereorepo itself, `just pair`, `just groom`, `just pair-status`,
 `just pair-accept` and `just pair-resume` run the same.
@@ -134,23 +137,26 @@ def main() -> int:
         "--push", action="store_true", help="push main to origin after the pass lands"
     )
     sub.add_parser("status", help="the board on main and the issue underway")
-    sub.add_parser("accept", parents=[seats], help="pass the desk check and merge")
-    sub.add_parser(
+    accept = sub.add_parser(
+        "accept", parents=[seats], help="pass the desk check and merge"
+    )
+    resume = sub.add_parser(
         "resume",
         parents=[seats],
         help="fail the desk check; the pair picks up your notes",
     )
+    for desk in (accept, resume):
+        desk.add_argument(
+            "slug",
+            nargs="?",
+            help="a Flight in issues/desk-check/, answered on main without the loop",
+        )
     args = parser.parse_args()
 
     repo = repo_root()
     if args.command == "status":
         print(status(repo))
         return 0
-
-    lock = hold_lock(repo)
-    if lock is None:
-        print("another pair process is running in this repository")
-        return 1
 
     model = getattr(args, "model", None)
     system = {
@@ -169,6 +175,17 @@ def main() -> int:
         say=lambda message: print(message, flush=True),
         round_cap=args.round_cap,
     )
+
+    flight = getattr(args, "slug", None)
+    if flight:
+        answer = loop.accept if args.command == "accept" else loop.resume
+        print(f"pair: {answer(flight)}")
+        return 0
+
+    lock = hold_lock(repo)
+    if lock is None:
+        print("another pair process is running in this repository")
+        return 1
 
     def stop(_sig: int, _frame: object) -> None:
         if loop.stop_requested:

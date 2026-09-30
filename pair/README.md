@@ -32,10 +32,10 @@ the seat left uncommitted, with a `Seat:` trailer.
    | Stage | Requirement | Next |
    |---|---|---|
    | `backlog/` | `difficulty` is set; a `hard` Issue has children | `todo/`; for `hard`, landing the children, with the parent left in `backlog/` as a Flight |
-   | Flight check (file stays in `backlog/`) | a new child for each gap, or a new `## Desk-check brief` section, and nothing outside `issues/` changed | landing; the Flight goes to `done/` unless a gap left it waiting |
+   | Flight check (file stays in `backlog/`) | a new child for each gap, or a new `## Desk-check brief` section, and nothing outside `issues/` changed; after desk-check notes, a child for each note listed in one new `## Desk-check children` section, and no brief | landing; the Flight goes to `desk-check/` unless a child left it waiting |
    | `todo/` | a `## The plan` section | `in-progress/` |
    | `in-progress/` | code outside `issues/` changed, and `just gate` passes after a rebase onto `main` | `desk-check/` for `developer`, otherwise landing |
-   | `desk-check/` | `just pair-accept` | landing; `just pair-resume` sends it back to `in-progress/` |
+   | `desk-check/` | `just pair-accept` | landing; `just pair-resume` sends it back to `in-progress/`. A Flight here holds nothing: see below |
 
    If the requirement does not hold, acceptance is cleared and the next turn is
    told what is missing, with the gate's output where the gate failed.
@@ -54,7 +54,28 @@ any of its children is outside `done/`. Once the last one lands, the loop takes
 the Flight through the Flight check (`prompts/stage-flight-check.md`) instead of
 its backlog stage: the seats check its "Done when" end to end on `main`, and
 either write each gap as a new child, which puts the Flight back to waiting, or
-write a desk-check brief into the Flight file, which retires it.
+write a desk-check brief into the Flight file, which lands it in `desk-check/`
+and out of `ORDER`.
+
+A Flight's desk check does not hold the loop, because its parts are already on
+`main`; the loop goes on to the next ripe Issue. The developer answers it in
+their own checkout, on `main`, while the loop runs:
+
+- `just pair-accept <slug>` moves the Flight to `done/` in one commit.
+- To send it back, write a `## Desk-check notes` section at the end of the
+  Flight file, one top-level bullet per note, then run
+  `just pair-resume <slug>`. One commit carries the notes, the move to
+  `backlog/` and the slug put first in `ORDER`. The Flight is then ripe, and
+  its next Flight check writes each note as a child and lists their slugs in a
+  `## Desk-check children` section, which marks the notes answered. Once those
+  children land, the check after them writes a new brief, and the Flight comes
+  back to `desk-check/`. Each round's brief, notes and children stay in the
+  file.
+
+Both commit only the Flight file and `ORDER`, and refuse, changing nothing, a
+slug that is not a Flight in `desk-check/`, a checkout off `main`, and a resume
+with no notes after the latest brief. A commit that lands on `main` in the
+moment the loop is landing makes the loop pause; run it again.
 
 A seat that crashes is restarted once from its session id. A supervisor that
 is killed restarts the turn being worked on the same session.
@@ -103,10 +124,11 @@ a pass is, saying to finish it with `just groom`.
 | steer an Issue underway | edit files in `worktrees/pair` between turns; the next seat sees the change |
 | take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` with the id `just pair-status` prints; `just pair` again afterwards |
 | desk check | test in `worktrees/pair`, then `just pair-accept`, or write notes in the Issue file and `just pair-resume` |
+| desk-check a Flight | read its brief in `issues/desk-check/<slug>.md`, then `just pair-accept <slug>`, or write `## Desk-check notes` in it and `just pair-resume <slug>` |
 
 In a portfolio, run the same commands through the script, from the portfolio's
 root: `uv run --script <stereorepo>/pair/pair.py run`, `groom`, `status`,
-`accept` or `resume`.
+`accept` or `resume`, each with a Flight's slug where it has one.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
 `state.json` is the Issue or grooming pass underway, `turns.jsonl` has one

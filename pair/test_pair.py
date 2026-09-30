@@ -569,6 +569,28 @@ def order(text: str) -> Action:
 
 
 BRIEF = "\n## Desk-check brief\n\nDelivered; see it in a.txt.\n"
+NOTES = "\n## Desk-check notes\n\n- make it red\n- make it loud\n"
+CHILDREN = "\n## Desk-check children\n\n- big-red\n- `big-loud`\n"
+
+
+def child(slug: str) -> Action:
+    return write(
+        f"issues/backlog/{slug}.md",
+        f"---\ndifficulty: easy\nparent: big\n---\n# {slug}\n",
+    )
+
+
+def unappend(slug: str, text: str) -> Action:
+    """Take the last copy of `text` out of the issue, as `append` put it there."""
+
+    def act(cwd: Path) -> None:
+        issue = board.read(cwd, slug)
+        assert issue is not None
+        path = cwd / issue.path
+        before, _, after = path.read_text().rpartition(text)
+        path.write_text(before + after)
+
+    return act
 
 
 class FlightCheckTest(unittest.TestCase):
@@ -583,15 +605,145 @@ class FlightCheckTest(unittest.TestCase):
         sh(self.b.repo, "add", "-A")
         sh(self.b.repo, "commit", "-q", "-m", "order")
 
-    def test_a_brief_retires_the_flight(self) -> None:
+    def test_a_brief_lands_the_flight_at_its_desk_check_and_the_loop_goes_on(
+        self,
+    ) -> None:
         b = self.b
-        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
-        self.assertEqual(b.loop.run(once=True), "landed")
+        b.issue("backlog", "next", "Next", difficulty="easy")
+        b.script(
+            ("primary", append("big", BRIEF)),
+            ("secondary", quiet),
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("next", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "x")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(), "empty")
         first = b.sent[0][1]
         self.assertIn("Check the Flight issues/backlog/big.md", first)
-        self.assertTrue(b.on_main("issues/done/big.md"))
+        self.assertTrue(b.on_main("issues/desk-check/big.md"))
         self.assertFalse(b.on_main("issues/backlog/big.md"))
+        self.assertTrue(b.on_main("issues/done/next.md"))
         self.assertEqual(sh(b.repo, "show", f"main:{board.ORDER}"), "# groomed below")
+        self.assertIsNone(b.loop.load())
+
+    def test_a_flight_paused_while_landing_still_lands_at_its_desk_check(
+        self,
+    ) -> None:
+        b = self.b
+
+        def developer_switches_branch(_cwd: Path) -> None:
+            sh(b.repo, "checkout", "-q", "-b", "side")
+
+        b.script(
+            ("primary", both(append("big", BRIEF), developer_switches_branch)),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "paused")
+        self.assertEqual((b.state().stage, b.state().retry), ("desk-check", "merge"))
+        sh(b.repo, "checkout", "-q", "main")
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertTrue(b.on_main("issues/desk-check/big.md"))
+        self.assertFalse(b.on_main("issues/done/big.md"))
+
+    def test_accept_with_a_slug_moves_the_flight_to_done(self) -> None:
+        b = self.b
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        b.loop.run(once=True)
+        self.assertEqual(b.loop.accept("big"), "accepted")
+        self.assertTrue(b.on_main("issues/done/big.md"))
+        self.assertFalse(b.on_main("issues/desk-check/big.md"))
+        self.assertEqual(sh(b.repo, "status", "--porcelain"), "")
+
+    def test_notes_come_back_as_children_and_the_flight_returns_to_its_desk_check(
+        self,
+    ) -> None:
+        b = self.b
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        b.loop.run(once=True)
+        flight = b.repo / "issues/desk-check/big.md"
+        flight.write_text(flight.read_text() + NOTES)
+        self.assertEqual(b.loop.resume("big"), "resumed")
+        self.assertTrue(b.on_main("issues/backlog/big.md"))
+        self.assertIn("make it loud", sh(b.repo, "show", "main:issues/backlog/big.md"))
+        self.assertEqual(
+            sh(b.repo, "show", f"main:{board.ORDER}"), "big\n# groomed below"
+        )
+        self.assertEqual(sh(b.repo, "status", "--porcelain"), "")
+        b.script(
+            ("primary", append("big", BRIEF)),
+            ("secondary", quiet),
+            ("primary", both(unappend("big", BRIEF), child("big-red"), child("big-loud"))),
+            ("secondary", quiet),
+            ("primary", append("big", CHILDREN)),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertIn("ends in a `## Desk-check notes` section", b.sent[-6][1])
+        self.assertIn("This check wrote a brief", b.sent[-4][1])
+        self.assertIn("## Desk-check children", b.sent[-2][1])
+        self.assertTrue(b.on_main("issues/backlog/big.md"))
+        self.assertTrue(b.on_main("issues/backlog/big-red.md"))
+        for slug in ("big-red", "big-loud"):
+            sh(b.repo, "mv", f"issues/backlog/{slug}.md", f"issues/done/{slug}.md")
+        sh(b.repo, "commit", "-q", "-m", "children land")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "big")
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertNotIn("Desk-check notes` in", b.sent[-2][1])
+        self.assertTrue(b.on_main("issues/desk-check/big.md"))
+        body = sh(b.repo, "show", "main:issues/desk-check/big.md")
+        self.assertEqual(
+            [board.sections(body, name) for name in (
+                "Desk-check brief", "Desk-check notes", "Desk-check children"
+            )],
+            [2, 1, 1],
+        )
+
+    def test_a_children_section_must_list_the_new_children(self) -> None:
+        b = self.b
+        b.issue("backlog", "big", "Big" + BRIEF + NOTES, difficulty="hard")
+        b.stop_when_empty = True
+        b.script(
+            ("primary", both(child("big-red"), append("big", CHILDREN))),
+            ("secondary", quiet),
+            ("primary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "stopped")
+        self.assertIn("new children are big-red; make them match", b.sent[-1][1])
+
+    def test_the_flight_desk_check_leaves_an_issue_underway_alone(self) -> None:
+        b = self.b
+        sh(b.repo, "mv", "issues/backlog/big.md", "issues/desk-check/big.md")
+        sh(b.repo, "commit", "-q", "-m", "at the desk")
+        b.loop.save(State(slug="other", stage="desk-check", retry="desk-check"))
+        held = b.loop.state_file.read_text()
+        flight = b.repo / "issues/desk-check/big.md"
+        flight.write_text(flight.read_text() + NOTES)
+        self.assertEqual(b.loop.resume("big"), "resumed")
+        self.assertEqual(b.loop.state_file.read_text(), held)
+        sh(b.repo, "mv", "issues/backlog/big.md", "issues/desk-check/big.md")
+        sh(b.repo, "commit", "-q", "-m", "back at the desk")
+        self.assertEqual(b.loop.accept("big"), "accepted")
+        self.assertEqual(b.loop.state_file.read_text(), held)
+
+    def test_the_flight_desk_check_refuses_what_it_cannot_answer(self) -> None:
+        b = self.b
+        self.assertEqual(b.loop.accept("big"), "none")
+        self.assertEqual(b.loop.resume("nothing"), "none")
+        sh(b.repo, "mv", "issues/backlog/big.md", "issues/desk-check/big.md")
+        sh(b.repo, "commit", "-q", "-m", "at the desk")
+        head = sh(b.repo, "rev-parse", "HEAD")
+        self.assertEqual(b.loop.resume("big"), "none")
+        flight = b.repo / "issues/desk-check/big.md"
+        at_desk = flight.read_text()
+        flight.write_text(at_desk + "\n## Desk-check notes\n\nno bullets here\n")
+        self.assertEqual(b.loop.resume("big"), "none")
+        flight.write_text(at_desk + NOTES + BRIEF)
+        self.assertEqual(b.loop.resume("big"), "none")
+        self.assertEqual(sh(b.repo, "rev-parse", "HEAD"), head)
 
     def test_a_gap_lands_as_a_child_and_the_flight_waits(self) -> None:
         b = self.b
@@ -657,7 +809,7 @@ class FlightCheckTest(unittest.TestCase):
             ("secondary", quiet),
         )
         self.assertEqual(b.loop.run(once=True), "landed")
-        self.assertTrue(b.on_main("issues/done/big.md"))
+        self.assertTrue(b.on_main("issues/desk-check/big.md"))
         self.assertFalse(b.on_main("issues/todo/big.md"))
 
 
@@ -1090,6 +1242,17 @@ class BoardTest(unittest.TestCase):
         sh(b.repo, "commit", "-q", "-m", "order")
         base = sh(b.repo, "rev-parse", "HEAD")
         self.assertEqual(board.grooming_faults(b.repo, b.repo, base, ("big",), False), [])
+
+    def test_last_of_and_last_section_read_the_latest_round(self) -> None:
+        body = "# F\n\n## Desk-check brief\n\none\n\n## Desk-check notes\n\n- a\n"
+        names = ("Desk-check brief", "Desk-check notes")
+        self.assertEqual(board.last_of(body, names), "Desk-check notes")
+        self.assertIsNone(board.last_of("# F\n", names))
+        later = body + "\n## Desk-check notes\n\n- `b`\n  more\n- c\n"
+        self.assertEqual(
+            board.bullets(board.last_section(later, "Desk-check notes")), ["b", "c"]
+        )
+        self.assertEqual(board.last_section(body, "Desk-check children"), "")
 
     def test_without_drops_only_the_slug(self) -> None:
         text = "a\n# a\n# groomed below\nab\na\n"
