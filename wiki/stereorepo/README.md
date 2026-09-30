@@ -14,6 +14,8 @@ underlying tooling and gate mechanisms.
   maintainer exposition, encyclopedic pages, and Bounded Context documentation.
 - **[[externalized-memory|Externalized Memory]]** — Why what a session would
   remember is compiled into artifacts rather than held in the agent.
+- **[[flight|Flight]]** — An Issue with children, whose delivered value the
+  developer desk-checks once, after its parts have landed.
 - **[[ubiquitous-language|Ubiquitous Language]]** — How terms are defined,
   bounded, and checked to prevent semantic collision across agents and the developer.
 

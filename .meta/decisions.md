@@ -160,6 +160,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-272](assertions/decisions/DR-272.yaml) | Reserve the root verb surface for operator flags and identifiers by scoping search to skills | Adopted |
 | [DR-279](assertions/decisions/DR-279.yaml) | The term corpus holds prose alone, code fences and backtick spans excluded | Adopted |
 | [DR-297](assertions/decisions/DR-297.yaml) | A decision number below 297 that the record does not hold is outmoded | Adopted |
+| [DR-298](assertions/decisions/DR-298.yaml) | The developer desk-checks a Flight once, after its parts have landed | Adopted |
 
 ## Holes
 
@@ -192,7 +193,7 @@ and the query a reader in a file actually has.
 | [`.meta/assertions/imported/authority.yaml`](assertions/imported/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml) |
 | [`.meta/assertions/imported/charter.yaml`](assertions/imported/charter.yaml) | [DR-228](assertions/decisions/DR-228.yaml), [DR-297](assertions/decisions/DR-297.yaml) |
 | [`.meta/assertions/imported/disciplines.yaml`](assertions/imported/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-196](assertions/decisions/DR-196.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-229](assertions/decisions/DR-229.yaml), [DR-270](assertions/decisions/DR-270.yaml) |
-| [`.meta/assertions/imported/vocabulary.yaml`](assertions/imported/vocabulary.yaml) | [DR-182](assertions/decisions/DR-182.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-228](assertions/decisions/DR-228.yaml) |
+| [`.meta/assertions/imported/vocabulary.yaml`](assertions/imported/vocabulary.yaml) | [DR-182](assertions/decisions/DR-182.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-298](assertions/decisions/DR-298.yaml) |
 | [`.meta/assertions/structure.yaml`](assertions/structure.yaml) | [DR-210](assertions/decisions/DR-210.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-223](assertions/decisions/DR-223.yaml) |
 | [`.meta/assertions/vocabulary.yaml`](assertions/vocabulary.yaml) | [DR-035](assertions/decisions/DR-035.yaml) |
 | [`.meta/bootstrap.py`](bootstrap.py) | [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml) |
@@ -289,7 +290,7 @@ and the query a reader in a file actually has.
 | [`.meta/work/decisions.yaml`](work/decisions.yaml) | [DR-049](assertions/decisions/DR-049.yaml), [DR-065](assertions/decisions/DR-065.yaml), [DR-081](assertions/decisions/DR-081.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-227](assertions/decisions/DR-227.yaml) |
 | [`.meta/work/disciplines.yaml`](work/disciplines.yaml) | [DR-025](assertions/decisions/DR-025.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-270](assertions/decisions/DR-270.yaml) |
 | [`.meta/work/personas.yaml`](work/personas.yaml) | [DR-019](assertions/decisions/DR-019.yaml), [DR-020](assertions/decisions/DR-020.yaml), [DR-021](assertions/decisions/DR-021.yaml), [DR-200](assertions/decisions/DR-200.yaml) |
-| [`.meta/work/purpose.yaml`](work/purpose.yaml) | [DR-031](assertions/decisions/DR-031.yaml), [DR-039](assertions/decisions/DR-039.yaml), [DR-084](assertions/decisions/DR-084.yaml) |
+| [`.meta/work/purpose.yaml`](work/purpose.yaml) | [DR-031](assertions/decisions/DR-031.yaml), [DR-039](assertions/decisions/DR-039.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-298](assertions/decisions/DR-298.yaml) |
 | [`.meta/work/structure.yaml`](work/structure.yaml) | [DR-027](assertions/decisions/DR-027.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-144](assertions/decisions/DR-144.yaml), [DR-152](assertions/decisions/DR-152.yaml) |
 | [`.meta/work_ontology.yaml`](work_ontology.yaml) | [DR-002](assertions/decisions/DR-002.yaml), [DR-023](assertions/decisions/DR-023.yaml) |
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-198](assertions/decisions/DR-198.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml), [DR-297](assertions/decisions/DR-297.yaml) |
@@ -310,6 +311,7 @@ and the query a reader in a file actually has.
 | [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
 | [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-262](assertions/decisions/DR-262.yaml) |
 | [`justfile`](../justfile) | [DR-106](assertions/decisions/DR-106.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-234](assertions/decisions/DR-234.yaml), [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml) |
+| [`pair/README.md`](../pair/README.md) | [DR-298](assertions/decisions/DR-298.yaml) |
 | [`stakeholders/README.md`](../stakeholders/README.md) | [DR-041](assertions/decisions/DR-041.yaml) |
 | [`template/.meta/README.md`](../template/.meta/README.md) | [DR-183](assertions/decisions/DR-183.yaml) |
 | [`template/AGENTS.md`](../template/AGENTS.md) | [DR-183](assertions/decisions/DR-183.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml) |
@@ -317,5 +319,6 @@ and the query a reader in a file actually has.
 | [`wiki/stereorepo/README.md`](../wiki/stereorepo/README.md) | [DR-184](assertions/decisions/DR-184.yaml), [DR-185](assertions/decisions/DR-185.yaml) |
 | [`wiki/stereorepo/client-repo.md`](../wiki/stereorepo/client-repo.md) | [DR-206](assertions/decisions/DR-206.yaml) |
 | [`wiki/stereorepo/concept.md`](../wiki/stereorepo/concept.md) | [DR-195](assertions/decisions/DR-195.yaml) |
+| [`wiki/stereorepo/flight.md`](../wiki/stereorepo/flight.md) | [DR-298](assertions/decisions/DR-298.yaml) |
 | [`wiki/stereorepo/knowledge-management.md`](../wiki/stereorepo/knowledge-management.md) | [DR-185](assertions/decisions/DR-185.yaml), [DR-196](assertions/decisions/DR-196.yaml), [DR-259](assertions/decisions/DR-259.yaml) |
 | [`wiki/stereorepo/ubiquitous-language.md`](../wiki/stereorepo/ubiquitous-language.md) | [DR-185](assertions/decisions/DR-185.yaml) |

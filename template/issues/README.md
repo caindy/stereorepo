@@ -10,7 +10,7 @@ authoritative one.
 | `backlog/` | ready to work, in the running order `backlog/ORDER` gives; the queue | the developer, or a session working with the developer; the pair loop, when it sends an Issue back |
 | `todo/` | groomed, with a difficulty, and waiting for a plan | the supervisor |
 | `in-progress/` | planned, and being implemented | the supervisor |
-| `desk-check/` | a `developer` Issue whose result waits for the developer's check | the supervisor |
+| `desk-check/` | a `developer` Issue whose result waits for the developer's check, or a Flight whose parts have landed | the supervisor |
 | `done/` | landed on `main` | the supervisor |
 
 ## Writing an Issue
@@ -23,7 +23,7 @@ observed or derived, and all of it is optional:
 ---
 difficulty: medium      # easy, medium, hard or developer; the pair sets it if you do not
 waits_on: [other-slug]  # Issues that must be done first
-parent: parent-slug     # the Issue this one was split from
+parent: flight-slug     # the Flight this Issue is a part of
 ---
 
 # What is wanted, as a title
@@ -41,3 +41,12 @@ While an Issue is underway its file on `main` stays in `backlog/`; its
 progress exists only on its branch, named for its slug, and the commit that lands it
 moves it to `done/`. Seats never move Issue files. The pair loop's `status` shows the
 board and the Issue underway.
+
+An Issue that other Issues name in `parent:` is a Flight: one unit of value,
+and how the developer will know it has been delivered. Its children are its
+parts, and each lands on its own. The Flight waits in `backlog/` until the
+last one is in `done/`, then the pair checks its "Done when" end to end on
+`main` in the Flight check, and either writes each gap as a new child or moves
+the Flight to `desk-check/`. There the developer checks it once, without
+holding the loop, and accepting moves it to `done/`.
+The pair loop's README gives the mechanics.

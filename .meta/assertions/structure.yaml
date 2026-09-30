@@ -682,6 +682,9 @@ artifacts:
   - id: work:artifact/wiki-stereorepo-client-repo
     name: wiki/stereorepo/client-repo.md
     path: wiki/stereorepo/client-repo.md
+  - id: work:artifact/wiki-stereorepo-flight
+    name: wiki/stereorepo/flight.md
+    path: wiki/stereorepo/flight.md
   - id: work:artifact/meta-wikisplain
     name: .meta/wikisplain.py
     path: .meta/wikisplain.py

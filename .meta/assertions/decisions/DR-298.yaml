@@ -1,0 +1,54 @@
+decisions:
+  - id: work:decision/298
+    name: "DR-298 · The developer desk-checks a Flight once, after its parts have landed"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/meta-work-purpose
+      - work:artifact/pair-readme
+      - work:artifact/wiki-stereorepo-flight
+    context: >-
+      A `hard` Issue is split into parts, each small enough for the pair to
+      land in one piece. The value the developer asked for is the whole, not a
+      part: a part can pass the gate and still leave the whole undelivered. The
+      developer's attention is the scarcest thing in the repository, so the
+      question was where it is spent. An Issue with children was named only
+      for its shape, as the parent of its parts, and not for what it is for.
+    alternatives:
+      - name: A desk check for each part, before it lands
+        chosen: false
+        reason: >-
+          Each check holds the loop until the developer answers, and the
+          developer checks a fragment whose value cannot yet be seen. Checking
+          every part costs the developer the most attention and tells them the
+          least.
+      - name: No desk check; a Flight is done when its last part lands
+        chosen: false
+        reason: >-
+          Nothing then checks the whole. A gap between the parts, or between
+          the parts and the value asked for, reaches `done/` unseen.
+      - name: One desk check for each Flight, on `main`, after its parts land
+        chosen: true
+        reason: >-
+          The developer checks the delivered value once, where it runs. The
+          parts are already on `main`, so the check does not hold the loop, and
+          the Flight check has already closed the gaps the seats could see.
+    consequences:
+      - >-
+        An Issue with children is a Flight (`work:concept/flight`), and the
+        name that described it by its shape leaves the vocabulary. `parent:`
+        stays the front-matter key.
+      - >-
+        The Desk check concept covers a Flight as well as a `developer` Issue.
+        A Flight's desk check comes after its parts have landed, and does not
+        hold the loop.
+      - >-
+        A Flight is not a Sprint, which ends on a date, and not a tracker's
+        Milestone, which holds nothing of its own.
+    falsifier: >-
+      Flights whose desk-check notes keep naming a defect in one part that a
+      check of that part alone would have caught, so that the rounds of notes
+      cost the developer more than checking the parts would have.
+    rationale: |-
+      The unit of value is the unit worth the developer's attention, and the
+      parts are the pair's to land.

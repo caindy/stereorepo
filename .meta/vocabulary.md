@@ -54,7 +54,7 @@ _Who does the work, and how it moves from the backlog to main._
 | **Seat** | One of the two long-lived harness sessions that take an Issue from the backlog to `main` in turns, in one shared worktree. | coder, reviewer, agent |
 | **Supervisor** | The deterministic program that runs the seats and moves an Issue between stages from what it can observe: where the Issue file is, the working tree, and the gate's exit code. | orchestrator, captain, lead |
 | **Quiet turn** | A seat's turn that changes nothing, by which the seat accepts the state the other left. | approval, verdict, sign-off |
-| **Desk check** | The developer's check of a `developer` Issue's result, by hand, before it lands on `main`. | review, approval |
+| **Desk check** | The developer's check, by hand, of a `developer` Issue's result before it lands on `main`, or of a Flight after its parts have landed there. | review, approval |
 | **Skill (stereorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 
 #### What the work is for
@@ -86,6 +86,7 @@ _The kinds of thing written down, and which of them is authoritative._
 |---|---|---|
 | **Concept** | The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language (stereorepo's DR-184, stereorepo's DR-190, stereorepo's DR-195). | wiki article, term, entity |
 | **Issue** | One unit of work, as one Markdown file on the board, whose filename slug is its identifier. | ticket, story, challenge, epic, task |
+| **Flight** | An Issue with children, holding one unit of value and how the developer will know it has been delivered; its children are its parts, and while they are worked the Flight is in flight. | Sprint, Milestone, epic |
 | **Board** | A repository's set of Issue files, kept in `issues/` at its root, in which the directory holding an Issue file is that Issue's stage. | kanban, tracker |
 | **Stage** | Where an Issue is on its way to `main`: `backlog`, `todo`, `in-progress`, `desk-check` or `done`, in that order, each a directory of the board; `roadmap` stands beside them, holding what the developer intends and may never do. | column, status, state |
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
@@ -127,9 +128,11 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Persona goal.** Standing rather than a bounded commitment. What the work in hand is for is an Issue's to say, not a Persona goal's.
 
-**Developer.** The common word, narrowed twice. To one person: a repository has exactly one developer, and a process that needs two is a poor fit. And to a person: the seats write code too, but a seat is never the developer, and neither is any agent acting for the developer, however it is labelled. The `developer` difficulty names the Issues that wait for this person's desk check.
+**Developer.** The common word, narrowed twice. To one person: a repository has exactly one developer, and a process that needs two is a poor fit. And to a person: the seats write code too, but a seat is never the developer, and neither is any agent acting for the developer, however it is labelled. The `developer` difficulty names the Issues that wait for this person's desk check, and every Flight waits for it too.
 
-**Issue.** The common word, narrowed. An Issue has no number: its slug is its id. It has no status, labels or assignee: its stage is the directory it sits in. It has no comment thread: the seats' notes and the developer's desk-check notes are written in the file. Its front matter holds only what cannot be observed or derived — `difficulty`, and optionally `waits_on` and `parent`. An Issue with children is a parent issue; there is no other type.
+**Issue.** The common word, narrowed. An Issue has no number: its slug is its id. It has no status, labels or assignee: its stage is the directory it sits in. It has no comment thread: the seats' notes and the developer's desk-check notes are written in the file. Its front matter holds only what cannot be observed or derived — `difficulty`, and optionally `waits_on` and `parent`. An Issue with children is a Flight; there is no other type.
+
+**Flight.** An Issue that other Issues name in `parent:`, whether it was split by grooming or written as one. It waits in `backlog/` while its parts land on `main` one by one, then passes the Flight check and waits in `desk-check/` for the developer, who checks the delivered value once, on `main`, rather than each part. Not a time-box: a Sprint ends on a date, a Flight when its value is delivered. Not a tracker's Milestone: a Flight is itself an Issue on the board, and says how its delivery will be known.
 
 **Board.** One per repository, and the board on `main` is authoritative. Not GitHub Issues or Projects, not a status field, and not a kanban view: a view of the board is a projection of it and holds no state of its own.
 
@@ -141,7 +144,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Quiet turn.** Agreement is observed, never declared: when both seats have accepted the same state, by making it or by leaving it alone, the stage advances if its requirement holds.
 
-**Desk check.** The one stage that waits for the developer. Accepting lands the Issue; leaving notes in the Issue file and resuming sends it back to the pair.
+**Desk check.** The one stage that waits for the developer. A `developer` Issue's desk check holds the loop: accepting lands it, and leaving notes in the Issue file and resuming sends it back to the pair. A Flight's desk check does not hold the loop, because its parts are already on `main`: accepting moves it to `done/`, and leaving notes and resuming returns it to `backlog/`, where its next Flight check writes each note as a child.
 
 **Discipline.** Not a Capability, and not a characterisation such as a communication style.
 
@@ -214,6 +217,7 @@ more often a collision than a gap.
 | **Project** | Issue, Product |
 | **Developer** | Seat |
 | **Issue** | Project |
+| **Flight** | Issue |
 | **Seat** | Developer, Supervisor |
 | **Supervisor** | Seat |
 | **Evidence** | Citation |

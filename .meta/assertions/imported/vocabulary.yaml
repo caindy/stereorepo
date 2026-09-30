@@ -231,7 +231,7 @@ concept_set:
       person: the seats write code too, but a seat is never the developer, and
       neither is any agent acting for the developer, however it is labelled.
       The `developer` difficulty names the Issues that wait for this person's
-      desk check.
+      desk check, and every Flight waits for it too.
     avoid: [solo, user, owner, operator]
     confusable_with:
       - work:concept/seat
@@ -248,11 +248,31 @@ concept_set:
       It has no comment thread: the seats' notes and the developer's desk-check
       notes are written in the file. Its front matter holds only what cannot be
       observed or derived — `difficulty`, and optionally `waits_on` and
-      `parent`. An Issue with children is a parent issue; there is no other
+      `parent`. An Issue with children is a Flight; there is no other
       type.
     avoid: [ticket, story, challenge, epic, task]
     confusable_with:
       - work:concept/project
+  - id: work:concept/flight
+    pref_label: Flight
+    definition: >-
+      An Issue with children, holding one unit of value and how the developer
+      will know it has been delivered; its children are its parts, and while
+      they are worked the Flight is in flight.
+    in_scheme: work:scheme/stereorepo
+    broader: work:concept/g-recorded
+    scope_note: >-
+      An Issue that other Issues name in `parent:`, whether it was split by
+      grooming or written as one. It waits in `backlog/` while its parts land
+      on `main` one by one, then passes the Flight check and waits in
+      `desk-check/` for the developer, who checks the delivered value once,
+      on `main`, rather than each part. Not a time-box: a Sprint ends on a
+      date, a Flight when its value is delivered. Not a tracker's Milestone:
+      a Flight is itself an Issue on the board, and says how its delivery
+      will be known.
+    avoid: [Sprint, Milestone, epic]
+    confusable_with:
+      - work:concept/issue
   - id: work:concept/board
     pref_label: Board
     definition: >-
@@ -330,13 +350,17 @@ concept_set:
   - id: work:concept/desk-check
     pref_label: Desk check
     definition: >-
-      The developer's check of a `developer` Issue's result, by hand, before it lands on
-      `main`.
+      The developer's check, by hand, of a `developer` Issue's result before it
+      lands on `main`, or of a Flight after its parts have landed there.
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-doing
     scope_note: >-
-      The one stage that waits for the developer. Accepting lands the Issue;
-      leaving notes in the Issue file and resuming sends it back to the pair.
+      The one stage that waits for the developer. A `developer` Issue's desk
+      check holds the loop: accepting lands it, and leaving notes in the Issue
+      file and resuming sends it back to the pair. A Flight's desk check does
+      not hold the loop, because its parts are already on `main`: accepting
+      moves it to `done/`, and leaving notes and resuming returns it to
+      `backlog/`, where its next Flight check writes each note as a child.
     avoid: [review, approval]
   - id: work:concept/discipline
     pref_label: Discipline
