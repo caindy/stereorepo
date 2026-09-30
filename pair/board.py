@@ -128,6 +128,16 @@ def _level(line: str) -> int:
     return hashes if hashes else 7
 
 
+def sections(body: str, name: str) -> int:
+    """How many headings or bold leads are named `name`."""
+    count = 0
+    for line in body.splitlines():
+        head = _HEADING.match(line.strip())
+        if head and head["name"].strip().lower() == name.lower():
+            count += 1
+    return count
+
+
 def needs_elaboration(body: str) -> bool:
     """Whether a seat or the loop has sent this issue back for elaboration."""
     return section(body, "Needs elaboration") is not None
@@ -203,11 +213,13 @@ def next_ripe(repo: Path, ref: str, skip: frozenset[str] = frozenset()) -> str |
     """The first backlog item at `ref`, in running order, that is ripe.
 
     The running order is the slugs `ORDER` names, then every other backlog
-    slug in filename order. An item is ripe when its `waits_on` are all done
-    and it has no `Needs elaboration` section, which marks a send-back the
-    developer has yet to answer.
+    slug in filename order. An item is ripe when its `waits_on` are all done,
+    every Issue naming it in `parent:` is done, and it has no `Needs
+    elaboration` section, which marks a send-back the developer has yet to
+    answer.
     """
     done = set(listed(repo, ref, "done"))
+    kin = families(repo, ref)
     backlog = listed(repo, ref, "backlog")
     named = [s for s in dict.fromkeys(order(repo, ref)) if s in backlog]
     for slug in named + [s for s in backlog if s not in named]:
@@ -217,6 +229,7 @@ def next_ripe(repo: Path, ref: str, skip: frozenset[str] = frozenset()) -> str |
         if (
             issue
             and not needs_elaboration(issue.body)
+            and all(stage == "done" for stage in kin.get(slug, {}).values())
             and all(
                 w.split(":")[-1] in done for w in as_list(issue.front.get("waits_on"))
             )
@@ -268,7 +281,9 @@ def grooming_faults(
     Issues the pass took up: each, and each backlog file the pass wrote, needs a
     `difficulty` unless the pass parked it with a `Needs elaboration` section.
     Without `rerank`, the Issues already ranked below the marker keep their
-    relative order. An empty list means the pass is finished.
+    relative order. An empty list means the pass is finished. A `hard`
+    Issue's children are read at the tree's `HEAD`, so the loop commits a turn
+    before it asks.
     """
     faults = []
     backlog = sorted(
@@ -285,7 +300,7 @@ def grooming_faults(
             faults.append(
                 f"{issue.path} needs `difficulty:` set to easy, medium, hard or developer."
             )
-        elif issue.difficulty == "hard" and not children(tree, slug):
+        elif issue.difficulty == "hard" and not children(tree, "HEAD", slug):
             faults.append(
                 f"{issue.path} is hard, so split it: write each part as a new file "
                 f"in issues/backlog/ with `parent: {slug}` in its front matter."
@@ -341,11 +356,36 @@ def grooming_faults(
     return faults
 
 
-def children(tree: Path, parent: str) -> list[str]:
-    """Backlog files in a working tree that name `parent` as their parent."""
-    found = []
-    for path in sorted((tree / ISSUES / "backlog").glob("*.md")):
-        front, _ = parse(path.read_text())
-        if str(front.get("parent", "")) == parent:
-            found.append(path.stem)
+def families(repo: Path, ref: str) -> dict[str, dict[str, str]]:
+    """Every Issue at `ref` that names a parent, grouped by that parent.
+
+    Each parent maps to its children and the stage each sits in. A roadmap
+    file is no one's child. `git grep` finds the candidate files, so the cost
+    does not grow with the files that name no parent.
+    """
+    hits = git(repo, "grep", "-l", "-E", "^parent:", ref, "--", f"{ISSUES}/", check=False)
+    found: dict[str, dict[str, str]] = {}
+    for hit in hits.splitlines():
+        path = Path(hit.removeprefix(f"{ref}:"))
+        stage = path.parent.name
+        if stage not in STAGES or stage == "roadmap" or path.suffix != ".md":
+            continue
+        issue = at_ref(repo, ref, stage, path.stem)
+        parent = issue and issue.front.get("parent")
+        if parent:
+            found.setdefault(str(parent), {})[path.stem] = stage
     return found
+
+
+def children(repo: Path, ref: str, parent: str) -> dict[str, str]:
+    """The Issues at `ref` that name `parent` as their parent, each with its stage.
+
+    An Issue with children is a Flight. A worktree's state is read at `HEAD`,
+    which holds every turn once the loop has settled it.
+    """
+    return families(repo, ref).get(parent, {})
+
+
+def waiting(repo: Path, ref: str, parent: str) -> bool:
+    """Whether a Flight at `ref` has a child that has not landed in `done/`."""
+    return any(stage != "done" for stage in children(repo, ref, parent).values())

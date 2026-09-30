@@ -31,7 +31,8 @@ the seat left uncommitted, with a `Seat:` trailer.
 
    | Stage | Requirement | Next |
    |---|---|---|
-   | `backlog/` | `difficulty` is set | `todo/`; for `hard`, the child Issues land in `backlog/` and the parent goes to `done/` |
+   | `backlog/` | `difficulty` is set; a `hard` Issue has children | `todo/`; for `hard`, landing the children, with the parent left in `backlog/` as a Flight |
+   | Flight check (file stays in `backlog/`) | a new child for each gap, or a new `## Desk-check brief` section, and nothing outside `issues/` changed | landing; the Flight goes to `done/` unless a gap left it waiting |
    | `todo/` | a `## The plan` section | `in-progress/` |
    | `in-progress/` | code outside `issues/` changed, and `just gate` passes after a rebase onto `main` | `desk-check/` for `developer`, otherwise landing |
    | `desk-check/` | `just pair-accept` | landing; `just pair-resume` sends it back to `in-progress/` |
@@ -45,7 +46,15 @@ the seat left uncommitted, with a `Seat:` trailer.
 4. **Landing.** The loop rebases the branch onto `main`, squashes it into one
    commit that includes the move to `done/`, and fast-forwards `main` in the
    developer's checkout with `--ff-only`, which refuses rather than overwrite local
-   edits.
+   edits. A Flight that still has a child outside `done/` lands without the
+   move, and keeps its place in `ORDER`.
+
+An Issue that other Issues name in `parent:` is a Flight. It is not ripe while
+any of its children is outside `done/`. Once the last one lands, the loop takes
+the Flight through the Flight check (`prompts/stage-flight-check.md`) instead of
+its backlog stage: the seats check its "Done when" end to end on `main`, and
+either write each gap as a new child, which puts the Flight back to waiting, or
+write a desk-check brief into the Flight file, which retires it.
 
 A seat that crashes is restarted once from its session id. A supervisor that
 is killed restarts the turn being worked on the same session.
@@ -73,8 +82,8 @@ each Issue it took up, and each part it wrote, has a `difficulty`, that each
 such `hard` Issue has children, that `ORDER` names every Issue the developer
 has not placed, that without `--rerank` the Issues already ranked keep their
 relative order, that nothing was deleted, and that `just gate` passes. The loop
-then moves each split `hard` Issue to `done/` and lands the pass as one commit,
-`Groom the backlog`. A `Needs elaboration` section written in a pass parks that
+then lands the pass as one commit, `Groom the backlog`; each split `hard` Issue
+stays in `backlog/` and in `ORDER` as a Flight. A `Needs elaboration` section written in a pass parks that
 Issue and does not end the pass. A pass that runs past its round cap pauses,
 and `just groom` gives it another. With nothing to groom and nothing to place,
 `just groom` says so and exits.

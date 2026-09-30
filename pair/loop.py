@@ -20,6 +20,14 @@ turns on its own branch, `pair/grooming`, with no issue file. It ends when
 both seats accept a backlog where each of those issues has a difficulty and
 `issues/backlog/ORDER` places it without moving the rest, and lands as one
 commit. An issue no pass has groomed is groomed by its own backlog stage.
+
+An issue with children, which name it in `parent:`, is a Flight. Splitting a
+`hard` issue makes one, and the Flight stays in `issues/backlog/`, not ripe,
+while any child is outside `issues/done/`. Once the last child lands, the loop
+takes the Flight through a Flight check, a stage of its own whose file stays in
+`backlog/`: the seats check its "Done when" on `main`, and either write each gap
+as a new child, which lands and leaves the Flight waiting, or write a
+`## Desk-check brief` into the Flight file, which retires it to `done/`.
 """
 
 from __future__ import annotations
@@ -43,6 +51,9 @@ ROLES = ("primary", "secondary")
 ROUND_CAP = {"easy": 4, "medium": 8, "developer": 8, "hard": 4, None: 4}
 GROOMING = "grooming"
 """The slug and the stage of a grooming pass, which has no issue file."""
+FLIGHT_CHECK = "flight-check"
+"""The stage of a Flight whose children have all landed. Its file stays in `backlog/`."""
+BRIEF = "Desk-check brief"
 DIFF_LIMIT = 40_000
 GATE_TAIL = 6_000
 RESTARTED = (
@@ -79,6 +90,11 @@ class State:
 
 def other(role: str) -> str:
     return ROLES[1 - ROLES.index(role)]
+
+
+def home(stage: str) -> str:
+    """The directory under `issues/` that holds an issue in `stage`."""
+    return "backlog" if stage == FLIGHT_CHECK else stage
 
 
 class Loop:
@@ -162,7 +178,10 @@ class Loop:
                 if slug is None:
                     self.say("backlog is empty (or nothing in it is ripe)")
                     return "empty"
-                st = self.start(State(slug=slug))
+                flight = board.children(self.repo, self.main, slug)
+                st = self.start(
+                    State(slug=slug, stage=FLIGHT_CHECK if flight else "backlog")
+                )
                 if st is None:
                     return "paused"
             elif st.retry == "desk-check":
@@ -419,19 +438,20 @@ class Loop:
     def settle(self, st: State, role: str) -> bool:
         """Put the issue file back, commit leftovers, and say if the turn was quiet."""
         where = board.locations(self.wt, st.slug)
-        if st.stage != GROOMING and where != [st.stage]:
-            home = self.wt / board.ISSUES / st.stage / f"{st.slug}.md"
+        at = home(st.stage)
+        if st.stage != GROOMING and where != [at]:
+            keep = self.wt / board.ISSUES / at / f"{st.slug}.md"
             for stage in where:
-                if stage == st.stage:
+                if stage == at:
                     continue
                 stray = self.wt / board.ISSUES / stage / f"{st.slug}.md"
-                if home.exists():
+                if keep.exists():
                     stray.unlink()
                 else:
-                    home.parent.mkdir(parents=True, exist_ok=True)
-                    stray.rename(home)
+                    keep.parent.mkdir(parents=True, exist_ok=True)
+                    stray.rename(keep)
             self.say(
-                f"moved {st.slug}.md back to {st.stage}/ after the {role} seat moved it"
+                f"moved {st.slug}.md back to {at}/ after the {role} seat moved it"
             )
         if git(self.wt, "status", "--porcelain"):
             git(self.wt, "add", "-A")
@@ -536,13 +556,17 @@ class Loop:
                     "set `difficulty:` in the front matter "
                     "to easy, medium, hard or developer."
                 )
-            if issue.difficulty == "hard" and not board.children(self.wt, st.slug):
+            if issue.difficulty == "hard" and not board.children(
+                self.wt, "HEAD", st.slug
+            ):
                 return (
                     "it is hard, so split it: write each part as a new file "
                     "in issues/backlog/ "
                     f"with `parent: {st.slug}` in its front matter."
                 )
             return None
+        if st.stage == FLIGHT_CHECK:
+            return self.flight_checked(st, issue)
         if st.stage == "todo":
             return (
                 None
@@ -562,12 +586,41 @@ class Loop:
             )
         return None
 
+    def flight_checked(self, st: State, issue: board.Issue) -> str | None:
+        """What a Flight check still lacks: a new child for a gap, or a new brief.
+
+        A child counts only if the check wrote it, not if it moved one back to
+        `backlog/`; a brief counts only if the Flight file holds one more than
+        it did when the check began, since each round's brief stays in it.
+        """
+        if self.touches_code():
+            return "the Flight check changes nothing outside issues/; undo those changes."
+        before: set[str] = set()
+        for stage in board.STAGES:
+            before.update(board.listed(self.wt, st.base, stage))
+        gaps = [
+            slug
+            for slug, stage in board.children(self.wt, "HEAD", st.slug).items()
+            if stage == "backlog" and slug not in before
+        ]
+        was = board.at_ref(self.wt, st.base, "backlog", st.slug)
+        briefs = board.sections(issue.body, BRIEF)
+        if not gaps and briefs <= (board.sections(was.body, BRIEF) if was else 0):
+            return (
+                "check the Flight's \"Done when\" on main, then either write each gap "
+                "as a new file in issues/backlog/ with "
+                f"`parent: {st.slug}` in its front matter, or add a "
+                f"`## {BRIEF}` section to {issue.path}."
+            )
+        ok, out = self.gate(self.wt)
+        return None if ok else f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```"
+
     def advance(self, st: State, issue: board.Issue | None) -> str | None:
-        if issue is None:
-            self.retire_hard(st)
-            return self.merge(st)
-        if st.stage == "backlog" and issue.difficulty == "hard":
-            self.move(st, "done")
+        if (
+            issue is None
+            or st.stage == FLIGHT_CHECK
+            or (st.stage == "backlog" and issue.difficulty == "hard")
+        ):
             return self.merge(st)
         if st.stage == "backlog":
             self.move(st, "todo")
@@ -585,53 +638,12 @@ class Loop:
             )
         return self.merge(st)
 
-    def retire_hard(self, st: State) -> None:
-        """Move each hard backlog issue a grooming pass split to `done/`, and out of `ORDER`.
-
-        A hard issue with no children is left alone: the pass did not split it,
-        and its own backlog stage will.
-        """
-        backlog = self.wt / board.ISSUES / "backlog"
-        hard = sorted(
-            path.stem
-            for path in backlog.glob("*.md")
-            if board.parse(path.read_text())[0].get("difficulty") == "hard"
-            and board.children(self.wt, path.stem)
-        )
-        if not hard:
-            return
-        order = self.wt / board.ORDER
-        text = order.read_text() if order.is_file() else ""
-        (self.wt / board.ISSUES / "done").mkdir(parents=True, exist_ok=True)
-        for slug in hard:
-            git(
-                self.wt,
-                "mv",
-                f"{board.ISSUES}/backlog/{slug}.md",
-                f"{board.ISSUES}/done/{slug}.md",
-            )
-            text = board.without(text, slug)
-        if order.is_file():
-            order.write_text(text)
-            git(self.wt, "add", board.ORDER)
-        git(
-            self.wt,
-            "commit",
-            "-q",
-            "-m",
-            f"grooming: {', '.join(hard)} split, to done",
-            "-m",
-            "Seat: loop",
-        )
-        st.head = git(self.wt, "rev-parse", "HEAD")
-        self.save(st)
-
     def move(self, st: State, to: str) -> None:
         (self.wt / board.ISSUES / to).mkdir(parents=True, exist_ok=True)
         git(
             self.wt,
             "mv",
-            f"{board.ISSUES}/{st.stage}/{st.slug}.md",
+            f"{board.ISSUES}/{home(st.stage)}/{st.slug}.md",
             f"{board.ISSUES}/{to}/{st.slug}.md",
         )
         git(
@@ -699,7 +711,7 @@ class Loop:
                     self.save(st)
                     return None
             force_gate = False
-            if st.stage not in ("done", GROOMING):
+            if self.retires(st):
                 self.move(st, "done")
             sha = self.squash(st)
             if not git_ok(self.repo, "merge-base", "--is-ancestor", self.main, sha):
@@ -721,10 +733,22 @@ class Loop:
             st, "main kept moving while landing; run again", retry="merge"
         )
 
+    def retires(self, st: State) -> bool:
+        """Whether landing moves the issue to `done/`.
+
+        A Flight with a child outside `done/` stays in `backlog/`: a hard issue
+        just split, or a Flight check that wrote a gap. It is read from the
+        tree, so a merge retried after a pause decides the same way.
+        """
+        return st.stage not in ("done", GROOMING) and not board.waiting(
+            self.wt, "HEAD", st.slug
+        )
+
     def squash(self, st: State) -> str:
         """Commit the rebased branch onto `main` as one commit.
 
-        The same commit drops the slug from `ORDER`. No earlier commit on the
+        The same commit drops the slug from `ORDER` when the issue lands in
+        `done/`; a Flight left waiting keeps its place. No earlier commit on the
         branch touches `ORDER`, so a reordering on `main` while the issue runs
         rebases cleanly. A grooming pass has no issue, and so no slug to drop.
         """
@@ -737,7 +761,8 @@ class Loop:
             head = [issue.title, f"Issue: {issue.path}"]
         git(self.wt, "reset", "-q", "--soft", self.main)
         order = self.wt / board.ORDER
-        if order.is_file() and not grooming:
+        retired = board.locations(self.wt, st.slug) == ["done"]
+        if order.is_file() and not grooming and retired:
             text = order.read_text()
             if board.without(text, st.slug) != text:
                 order.write_text(board.without(text, st.slug))
@@ -830,7 +855,7 @@ class Loop:
         path = (
             f"{board.ISSUES}/backlog/"
             if st.stage == GROOMING
-            else f"{board.ISSUES}/{st.stage}/{st.slug}.md"
+            else f"{board.ISSUES}/{home(st.stage)}/{st.slug}.md"
         )
         fields = {"path": path, "slug": st.slug}
         if st.stage == GROOMING:
@@ -876,6 +901,8 @@ def status(repo: Path, main: str = "main") -> str:
         what = (
             "grooming pass"
             if st["stage"] == GROOMING
+            else f"{st['slug']} in its Flight check"
+            if st["stage"] == FLIGHT_CHECK
             else f"{st['slug']} in {st['stage']}/"
         )
         lines.append(

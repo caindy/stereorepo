@@ -1,5 +1,6 @@
 ---
 difficulty: hard
+waits_on: [flight-desk-check, flight-deliver, pair-flight-option, flight-vocabulary]
 ---
 
 # Land a parent Issue as a Flight, and desk-check the Flight
