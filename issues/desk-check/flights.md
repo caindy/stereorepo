@@ -151,3 +151,34 @@ sections. `just pair-status` shows the board. The Flight concept is at
 ## Desk-check children
 
 - `flight-check-first`
+
+## Desk-check brief
+
+**Delivered.** The desk-check note is done. Its one child,
+`flight-check-first`, landed at `8c4cfa6`, and it is in `issues/done/` with
+the six first-round parts. A ripe Flight is now taken before any ripe Issue
+without children, so a plain `just pair` checks a Flight and moves it to the
+desk check as soon as its last part lands. Among ripe Flights, the running
+order still decides. A Flight that has a part outside `done/`, a
+`Needs elaboration` section, or a `waits_on` that is not done is not ripe, so
+it is not taken early. `skip` and `within` work as before, so
+`just pair --flight <slug>` still keeps to one Flight. `just pair --once`
+counts the Flight check as its one unit of work. "Done when" was checked again
+on `main` at `8c4cfa6`, and every item still holds. `just gate` passes,
+including 68 pair tests.
+
+**Where to see it.** `next_ripe` in `pair/board.py` and its docstring. The
+test is `test_a_ripe_flight_goes_first` in `pair/test_pair.py`. The running
+order is described in `pair/README.md` (the Flight section),
+`issues/backlog/README.md` and the `pair/loop.py` module docstring.
+
+**Worth trying.**
+
+- Run `just pair-accept flights` to close this Flight. The round trip ran on a
+  real Flight: `pair-resume`, then a check that wrote the note's child, then
+  the child landing, then this check.
+- This round did not test the new ordering on a real Flight, because
+  `just pair-resume` had already put `flights` first in `ORDER`. To see it,
+  write a two-child Flight by hand. Rank it below a ripe Issue in `ORDER`, or
+  leave it out of `ORDER`. Let its children land, then check that
+  `just pair --once` takes the Flight check before the other Issue.
