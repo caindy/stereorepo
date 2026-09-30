@@ -57,6 +57,16 @@ either write each gap as a new child, which puts the Flight back to waiting, or
 write a desk-check brief into the Flight file, which lands it in `desk-check/`
 and out of `ORDER`.
 
+The loop leaves how a product is built and deployed to the repository's
+`justfile`, and runs two recipes where it defines them. `just setup` provisions
+a fresh `worktrees/pair`, so the gate tests the branch in its own environment.
+`just deliver` runs in the worktree just before a Flight goes to `desk-check/`,
+and delivers what `main` holds, for example a redeployment to a UAT
+environment, so the developer desk-checks the Flight where it runs. A passing
+delivery adds a `Delivered by` line after the brief. A failing one pauses the
+loop with the tail of its output and leaves the Flight where it was; running
+the loop again delivers again. Each desk-check round delivers once.
+
 A Flight's desk check does not hold the loop, because its parts are already on
 `main`; the loop goes on to the next ripe Issue. The developer answers it in
 their own checkout, on `main`, while the loop runs:

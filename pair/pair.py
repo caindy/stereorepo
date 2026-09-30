@@ -69,18 +69,37 @@ def gate(tree: Path) -> tuple[bool, str]:
     return done.returncode == 0, done.stdout + done.stderr
 
 
+def recipes(tree: Path) -> list[str]:
+    """The names of the recipes the `justfile` in `tree` defines."""
+    return subprocess.run(
+        ["just", "--summary"], cwd=tree, capture_output=True, text=True
+    ).stdout.split()
+
+
 def provision(tree: Path) -> None:
     """Run `just setup` in a fresh worktree, where the repository defines one.
 
     A worktree gets its own environment rather than the main checkout's, so
     the gate tests the branch and not what happens to be installed beside it.
     """
-    recipes = subprocess.run(
-        ["just", "--summary"], cwd=tree, capture_output=True, text=True
-    ).stdout.split()
-    if "setup" in recipes:
+    if "setup" in recipes(tree):
         print("provisioning worktrees/pair (just setup) ...", flush=True)
         subprocess.run(["just", "setup"], cwd=tree, check=True)
+
+
+def deliver(tree: Path) -> tuple[bool, str] | None:
+    """`just deliver` in the worktree, or `None` where the repository defines none.
+
+    Delivery is the repository's business, such as a redeployment to a UAT
+    environment; the loop knows only whether the recipe passed. The output is
+    captured, so the line printed first is what the terminal shows while a
+    slow delivery runs.
+    """
+    if "deliver" not in recipes(tree):
+        return None
+    print("delivering from worktrees/pair (just deliver) ...", flush=True)
+    done = subprocess.run(["just", "deliver"], cwd=tree, capture_output=True, text=True)
+    return done.returncode == 0, done.stdout + done.stderr
 
 
 def hold_lock(repo: Path) -> IO[str] | None:
@@ -172,6 +191,7 @@ def main() -> int:
         prompts=PROMPTS,
         push=getattr(args, "push", False),
         provision=provision,
+        deliver=deliver,
         say=lambda message: print(message, flush=True),
         round_cap=args.round_cap,
     )

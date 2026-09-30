@@ -65,6 +65,8 @@ NOTES = "Desk-check notes"
 CHILDREN = "Desk-check children"
 DIFF_LIMIT = 40_000
 GATE_TAIL = 6_000
+DELIVER_TAIL = 2_000
+"""Less than `GATE_TAIL`: a failed delivery's tail goes into a pause reason, which is also notified."""
 RESTARTED = (
     "(Your session was restarted after an interruption. The working tree is as you "
     "left it; check `git status` and carry on.)\n\n"
@@ -72,6 +74,7 @@ RESTARTED = (
 
 SeatFactory = Callable[[str, Path, "str | None"], Seat]
 Gate = Callable[[Path], "tuple[bool, str]"]
+Deliver = Callable[[Path], "tuple[bool, str] | None"]
 
 
 @dataclass
@@ -120,6 +123,7 @@ class Loop:
         main: str = "main",
         push: bool = False,
         provision: Callable[[Path], None] | None = None,
+        deliver: Deliver | None = None,
         say: Callable[[str], None] = print,
         round_cap: int | None = None,
     ) -> None:
@@ -133,6 +137,7 @@ class Loop:
         self.main = main
         self.push = push
         self.provision = provision
+        self.deliver = deliver
         self.say = say
         self.round_cap = round_cap
         self.seat_command = "claude"
@@ -847,6 +852,9 @@ class Loop:
                     return None
             force_gate = False
             to = self.retirement(st)
+            if to == "desk-check" and st.stage == FLIGHT_CHECK:
+                if not self.deliver_flight(st):
+                    return "paused"
             if to is not None:
                 self.move(st, to)
             sha = self.squash(st)
@@ -887,6 +895,37 @@ class Loop:
         if st.stage == "desk-check" and board.children(self.wt, "HEAD", st.slug):
             return None
         return "done"
+
+    def deliver_flight(self, st: State) -> bool:
+        """Run `just deliver` for a Flight about to go to `desk-check/`.
+
+        Where the repository defines the recipe and it passes, a line recording
+        it is appended to the Flight file, which ends in the brief, and staged
+        so `move` commits it. Where it fails, the loop pauses with
+        `retry: merge`, before `move`, so a rerun delivers again. Once `move`
+        has run, `retirement` no longer answers `desk-check`, so another pass
+        through `merge` does not deliver twice.
+        """
+        result = self.deliver(self.wt) if self.deliver else None
+        if result is None:
+            return True
+        ok, out = result
+        if not ok:
+            self.pause(
+                st,
+                "`just deliver` fails, so the Flight stays out of desk-check/; "
+                f"fix it, then run again:\n```\n{out[-DELIVER_TAIL:]}\n```",
+                retry="merge",
+            )
+            return False
+        flight = f"{board.ISSUES}/{home(st.stage)}/{st.slug}.md"
+        path = self.wt / flight
+        sha = git(self.wt, "rev-parse", "--short", self.main)
+        line = f"Delivered by `just deliver` from {self.main} at {sha}."
+        path.write_text(path.read_text().rstrip() + f"\n\n{line}\n")
+        git(self.wt, "add", flight)
+        self.say(f"{st.slug}: delivered")
+        return True
 
     def squash(self, st: State) -> str:
         """Commit the rebased branch onto `main` as one commit.

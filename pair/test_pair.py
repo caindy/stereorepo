@@ -126,6 +126,8 @@ class Bench:
         self.opened: list[tuple[str, str | None]] = []
         self.gates: list[bool] = []
         self.gate_runs = 0
+        self.delivers: list[tuple[bool, str]] = []
+        self.deliver_runs = 0
         self.stop_when_empty = False
         self.developer_between: dict[int, Action] = {}
         self.notes: list[str] = []
@@ -147,12 +149,18 @@ class Bench:
             ok = self.gates.pop(0) if self.gates else True
             return ok, "" if ok else "FAILED: test_widget"
 
+        def deliver(_tree: Path) -> tuple[bool, str] | None:
+            """A repository with no `deliver` recipe, unless a test queues results."""
+            self.deliver_runs += 1
+            return self.delivers.pop(0) if self.delivers else None
+
         self.loop = TestLoop(
             self.repo,
             factory,
             gate,
             self.notes.append,
             prompts=PROMPTS,
+            deliver=deliver,
             say=lambda _m: None,
         )
 
@@ -571,6 +579,8 @@ def order(text: str) -> Action:
 BRIEF = "\n## Desk-check brief\n\nDelivered; see it in a.txt.\n"
 NOTES = "\n## Desk-check notes\n\n- make it red\n- make it loud\n"
 CHILDREN = "\n## Desk-check children\n\n- big-red\n- `big-loud`\n"
+FLIGHT = "issues/desk-check/big.md"
+"""Where `FlightCheckTest`'s Flight lands once it passes its check."""
 
 
 def child(slug: str) -> Action:
@@ -628,6 +638,8 @@ class FlightCheckTest(unittest.TestCase):
         self.assertTrue(b.on_main("issues/done/next.md"))
         self.assertEqual(sh(b.repo, "show", f"main:{board.ORDER}"), "# groomed below")
         self.assertIsNone(b.loop.load())
+        self.assertEqual(b.deliver_runs, 1)
+        self.assertNotIn("Delivered by", sh(b.repo, "show", f"main:{FLIGHT}"))
 
     def test_a_flight_paused_while_landing_still_lands_at_its_desk_check(
         self,
@@ -647,6 +659,52 @@ class FlightCheckTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertTrue(b.on_main("issues/desk-check/big.md"))
         self.assertFalse(b.on_main("issues/done/big.md"))
+
+    def test_a_passing_delivery_is_recorded_in_the_brief(self) -> None:
+        b = self.b
+        b.delivers = [(True, "deployed")]
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        text = sh(b.repo, "show", f"main:{FLIGHT}")
+        sha = sh(b.repo, "rev-parse", "--short", "main~1")
+        self.assertTrue(
+            text.endswith(f"Delivered by `just deliver` from main at {sha}."), text
+        )
+        self.assertEqual(sh(b.repo, "status", "--porcelain"), "")
+
+    def test_a_failing_delivery_pauses_before_the_desk_check(self) -> None:
+        b = self.b
+        b.delivers = [(False, "UAT refused the deploy")]
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        before = sh(b.repo, "rev-parse", "main")
+        self.assertEqual(b.loop.run(once=True), "paused")
+        st = b.state()
+        self.assertEqual(st.retry, "merge")
+        self.assertIn("UAT refused the deploy", st.paused or "")
+        self.assertEqual(sh(b.repo, "rev-parse", "main"), before)
+        self.assertTrue(b.on_main("issues/backlog/big.md"))
+        self.assertIn("big", sh(b.repo, "show", f"main:{board.ORDER}"))
+        b.delivers = [(True, "deployed")]
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertTrue(b.on_main(FLIGHT))
+        self.assertEqual(b.deliver_runs, 2)
+
+    def test_a_landing_retried_after_delivery_does_not_deliver_again(self) -> None:
+        b = self.b
+        b.delivers = [(True, "deployed"), (True, "deployed")]
+
+        def developer_switches_branch(_cwd: Path) -> None:
+            sh(b.repo, "checkout", "-q", "-b", "side")
+
+        b.script(
+            ("primary", both(append("big", BRIEF), developer_switches_branch)),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "paused")
+        sh(b.repo, "checkout", "-q", "main")
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.deliver_runs, 1)
+        self.assertEqual(sh(b.repo, "show", f"main:{FLIGHT}").count("Delivered by"), 1)
 
     def test_accept_with_a_slug_moves_the_flight_to_done(self) -> None:
         b = self.b
@@ -764,6 +822,7 @@ class FlightCheckTest(unittest.TestCase):
             sh(b.repo, "show", f"main:{board.ORDER}"), "big\n# groomed below"
         )
         self.assertEqual(board.next_ripe(b.repo, "main"), "big-gap")
+        self.assertEqual(b.deliver_runs, 0)
 
     def test_a_check_that_changes_nothing_is_not_accepted(self) -> None:
         b = self.b
