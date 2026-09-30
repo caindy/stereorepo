@@ -106,11 +106,12 @@ def board_front_matter(views: Sequence[Any],
 ORDER = "backlog/ORDER"
 """The backlog's running order, relative to the board: one slug per line, `#` lines aside."""
 
-ORDERABLE = ("backlog", "todo", "in-progress", "desk-check")
+ORDERABLE = ("backlog", "underway", "todo", "in-progress", "desk-check")
 """The stages a slug in `ORDER` may name an Issue in: the backlog, or on its way from it.
 
-An Issue underway keeps its line on its own branch until the squash that lands
-it removes the line, so its own gate must still find it."""
+An Issue underway keeps its line until the squash that lands it removes the
+line: in `underway/` on `main`, and in a later stage on its own branch, where its
+own gate must still find it."""
 
 
 def _parent(path: pathlib.Path) -> str | None:

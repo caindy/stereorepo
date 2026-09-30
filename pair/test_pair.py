@@ -222,10 +222,11 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertTrue(b.on_main("issues/done/fix-typo.md"))
         self.assertFalse(b.on_main("issues/backlog/fix-typo.md"))
+        self.assertFalse(b.on_main("issues/underway/fix-typo.md"))
         self.assertEqual((b.repo / "a.txt").read_text(), "fixed\n")
         log = sh(b.repo, "log", "--format=%s", "main")
-        self.assertEqual(log.splitlines()[0], "Fix the typo")
-        self.assertEqual(len(log.splitlines()), 3)
+        self.assertEqual(log.splitlines()[:2], ["Fix the typo", "Start fix-typo"])
+        self.assertEqual(len(log.splitlines()), 4)
         self.assertIn("Seat: primary", sh(b.repo, "log", "-1", "--format=%B", "main"))
         self.assertEqual(b.opened, [("primary", None), ("secondary", None)])
         self.assertFalse((b.repo / ".pair" / "state.json").exists())
@@ -309,12 +310,13 @@ class LoopTest(unittest.TestCase):
         b.issue("backlog", "gone", "Gone")
 
         def delete(cwd: Path) -> None:
-            (cwd / "issues/backlog/gone.md").unlink()
+            (cwd / "issues/underway/gone.md").unlink()
 
         b.script(("primary", delete))
         self.assertEqual(b.loop.run(once=True), "kicked")
         text = sh(b.repo, "show", "main:issues/backlog/gone.md")
         self.assertTrue(board.needs_elaboration(text))
+        self.assertFalse(b.on_main("issues/underway/gone.md"))
         self.assertIsNone(board.next_ripe(b.repo, "main"))
 
     def test_round_cap_sends_the_issue_back_with_a_reason(self) -> None:
@@ -349,12 +351,12 @@ class LoopTest(unittest.TestCase):
 
         def move(cwd: Path) -> None:
             front("x", difficulty="easy")(cwd)
-            (cwd / "issues/backlog/x.md").rename(cwd / "issues/todo/x.md")
+            (cwd / "issues/underway/x.md").rename(cwd / "issues/todo/x.md")
 
         b.stop_when_empty = True
         b.script(("primary", move))
         b.loop.run()
-        self.assertEqual(board.locations(b.loop.wt, "x"), ["backlog"])
+        self.assertEqual(board.locations(b.loop.wt, "x"), ["underway"])
         self.assertEqual(b.issue_in_worktree("x").difficulty, "easy")
 
     def test_a_human_edit_between_turns_resets_agreement(self) -> None:
@@ -445,6 +447,61 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertEqual((b.repo / "a.txt").read_text(), "branch")
 
+    def test_starting_an_issue_moves_it_to_underway_on_main_once(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertTrue(b.on_main("issues/underway/x.md"))
+        self.assertFalse(b.on_main("issues/backlog/x.md"))
+        self.assertEqual(sh(b.repo, "log", "-1", "--format=%s", "main"), "Start x")
+        self.assertEqual(b.state().base, sh(b.repo, "rev-parse", "main"))
+        self.assertIn("underway       1  x\n", status(b.repo))
+        self.assertIn("underway: x in underway/, its backlog stage", status(b.repo))
+        b.stop_when_empty = False
+        b.loop.stop_requested = False
+        b.script(*easy_turns("x")[1:])
+        self.assertEqual(b.loop.run(once=True), "landed")
+        log = sh(b.repo, "log", "--format=%s", "main").splitlines()
+        self.assertEqual(log.count("Start x"), 1)
+        self.assertTrue(b.on_main("issues/done/x.md"))
+        self.assertFalse(b.on_main("issues/underway/x.md"))
+
+    def test_a_refused_fast_forward_at_the_start_leaves_the_issue_in_backlog(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        in_the_way = b.repo / "issues/underway/x.md"
+        in_the_way.write_text("mine\n")
+        before = sh(b.repo, "rev-parse", "main")
+        self.assertEqual(b.loop.run(), "paused")
+        self.assertEqual(sh(b.repo, "rev-parse", "main"), before)
+        self.assertTrue(b.on_main("issues/backlog/x.md"))
+        self.assertIsNone(b.loop.load())
+        self.assertEqual(b.sent, [])
+        self.assertTrue(b.notes)
+        in_the_way.unlink()
+        b.script(*easy_turns("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertTrue(b.on_main("issues/done/x.md"))
+
+    def test_an_issue_left_underway_without_its_state_is_taken_up_again(self) -> None:
+        b = self.b
+        b.issue("backlog", "a", "A", difficulty="easy")
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.loop.ensure_worktree()
+        self.assertIsNotNone(b.loop.start(State(slug="x")))
+        b.loop.clear()
+        b.script(*easy_turns("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertIn("Groom issues/underway/x.md", b.sent[0][1])
+        log = sh(b.repo, "log", "--format=%s", "main").splitlines()
+        self.assertEqual(log.count("Start x"), 1)
+        self.assertTrue(b.on_main("issues/done/x.md"))
+        self.assertTrue(b.on_main("issues/backlog/a.md"))
+
     def test_a_human_issue_waits_for_the_desk_check(self) -> None:
         b = self.b
         b.issue("backlog", "h", "Developer", difficulty="developer")
@@ -513,9 +570,47 @@ class LoopTest(unittest.TestCase):
         )
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertTrue(b.on_main("issues/backlog/big.md"))
+        self.assertFalse(b.on_main("issues/underway/big.md"))
         self.assertFalse(b.on_main("issues/done/big.md"))
         self.assertEqual(sh(b.repo, "show", f"main:{board.ORDER}"), "big")
         self.assertEqual(board.next_ripe(b.repo, "main"), "big-1-parse")
+
+    def test_a_failing_gate_after_a_split_goes_back_pauses_the_landing(self) -> None:
+        b = self.b
+        b.issue("backlog", "big", "Big")
+        b.script(
+            (
+                "primary",
+                both(
+                    front("big", difficulty="hard"),
+                    child("big-1"),
+                    write("a.txt", "split\n"),
+                ),
+            ),
+            ("secondary", quiet),
+        )
+        squash = b.loop.squash
+        moved: list[bool] = []
+
+        def main_moves_once(st: State) -> str:
+            sha = squash(st)
+            if not moved:
+                moved.append(True)
+                (b.repo / "elsewhere.txt").write_text("x\n")
+                sh(b.repo, "add", "elsewhere.txt")
+                sh(b.repo, "commit", "-q", "-m", "elsewhere")
+            return sha
+
+        b.loop.squash = main_moves_once  # type: ignore[method-assign]
+        b.gates = [False]
+        self.assertEqual(b.loop.run(once=True), "paused")
+        self.assertEqual(b.state().retry, "merge")
+        self.assertEqual(len(b.sent), 2)
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(len(b.sent), 2)
+        self.assertTrue(b.on_main("issues/backlog/big.md"))
+        self.assertFalse(b.on_main("issues/underway/big.md"))
+        self.assertEqual((b.repo / "a.txt").read_text(), "split\n")
 
     def test_backlog_added_on_main_mid_issue_lands_alongside(self) -> None:
         b = self.b
@@ -632,9 +727,10 @@ class FlightCheckTest(unittest.TestCase):
         )
         self.assertEqual(b.loop.run(), "empty")
         first = b.sent[0][1]
-        self.assertIn("Check the Flight issues/backlog/big.md", first)
+        self.assertIn("Check the Flight issues/underway/big.md", first)
         self.assertTrue(b.on_main("issues/desk-check/big.md"))
         self.assertFalse(b.on_main("issues/backlog/big.md"))
+        self.assertFalse(b.on_main("issues/underway/big.md"))
         self.assertTrue(b.on_main("issues/done/next.md"))
         self.assertEqual(sh(b.repo, "show", f"main:{board.ORDER}"), "# groomed below")
         self.assertIsNone(b.loop.load())
@@ -681,8 +777,9 @@ class FlightCheckTest(unittest.TestCase):
         st = b.state()
         self.assertEqual(st.retry, "merge")
         self.assertIn("UAT refused the deploy", st.paused or "")
-        self.assertEqual(sh(b.repo, "rev-parse", "main"), before)
-        self.assertTrue(b.on_main("issues/backlog/big.md"))
+        self.assertEqual(sh(b.repo, "rev-parse", "main~1"), before)
+        self.assertEqual(sh(b.repo, "log", "-1", "--format=%s", "main"), "Start big")
+        self.assertTrue(b.on_main("issues/underway/big.md"))
         self.assertIn("big", sh(b.repo, "show", f"main:{board.ORDER}"))
         b.delivers = [(True, "deployed")]
         self.assertEqual(b.loop.run(once=True), "landed")
@@ -847,12 +944,24 @@ class FlightCheckTest(unittest.TestCase):
         )
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertTrue(b.on_main("issues/backlog/big.md"))
+        self.assertFalse(b.on_main("issues/underway/big.md"))
         self.assertTrue(b.on_main("issues/backlog/big-gap.md"))
         self.assertEqual(
             sh(b.repo, "show", f"main:{board.ORDER}"), "big\n# groomed below"
         )
         self.assertEqual(board.next_ripe(b.repo, "main"), "big-gap")
         self.assertEqual(b.deliver_runs, 0)
+
+    def test_a_flight_check_left_underway_is_resumed_by_its_flight(self) -> None:
+        b = self.b
+        b.loop.ensure_worktree()
+        self.assertIsNotNone(b.loop.start(State(slug="big", stage="flight-check")))
+        b.loop.clear()
+        self.assertTrue(b.on_main("issues/underway/big.md"))
+        b.script(*flight_check_turns("big"))
+        self.assertEqual(b.loop.run(flight="big"), "desk-check")
+        self.assertTrue(b.on_main(FLIGHT))
+        self.assertFalse(b.on_main("issues/underway/big.md"))
 
     def test_a_check_that_changes_nothing_is_not_accepted(self) -> None:
         b = self.b
@@ -887,11 +996,11 @@ class FlightCheckTest(unittest.TestCase):
         self.assertIn("not finished yet", b.sent[2][1])
         self.assertIn("underway: big in its Flight check", status(b.repo))
 
-    def test_a_seat_that_moves_the_flight_file_is_put_back_in_backlog(self) -> None:
+    def test_a_seat_that_moves_the_flight_file_is_put_back_in_underway(self) -> None:
         b = self.b
 
         def to_todo(cwd: Path) -> None:
-            sh(cwd, "mv", "issues/backlog/big.md", "issues/todo/big.md")
+            sh(cwd, "mv", "issues/underway/big.md", "issues/todo/big.md")
 
         b.script(
             ("primary", both(append("big", BRIEF), to_todo)),
@@ -1014,7 +1123,7 @@ class GroomingTest(unittest.TestCase):
         b.stop_when_empty = True
         b.script(("primary", front("a", difficulty="easy")))
         self.assertEqual(b.loop.run(once=True), "stopped")
-        self.assertTrue(b.sent[0][1].startswith("Groom issues/backlog/a.md."))
+        self.assertTrue(b.sent[0][1].startswith("Groom issues/underway/a.md."))
         self.assertEqual(b.state().stage, "backlog")
 
     def test_a_pass_takes_up_only_the_issues_not_groomed(self) -> None:
@@ -1431,7 +1540,7 @@ class BoardTest(unittest.TestCase):
         self.addCleanup(b.close)
         b.issue("backlog", "big", "Big", difficulty="hard")
         self.assertEqual(board.next_ripe(b.repo, "main"), "big")
-        for stage in ("backlog", "todo", "desk-check"):
+        for stage in ("backlog", "underway", "todo", "desk-check"):
             b.issue(stage, "part", "Part", parent="big", waits_on="[z]")
             self.assertIsNone(board.next_ripe(b.repo, "main"), stage)
             sh(b.repo, "rm", "-q", f"issues/{stage}/part.md")
@@ -1584,6 +1693,25 @@ class BoardTest(unittest.TestCase):
         self.assertIn("its Flight's line: part.", faults())
         (b.repo / board.ORDER).write_text("# groomed below\nbig\na\n")
         self.assertEqual(faults(), "")
+
+    def test_grooming_faults_let_the_issue_underway_keep_its_line(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A", difficulty="easy")
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("underway", "u", "U", difficulty="easy")
+        b.issue("underway", "part", "Part", difficulty="easy", parent="big")
+        self.order_is(b, "u\n# groomed below\nbig\nu\na\n")
+        base = sh(b.repo, "rev-parse", "HEAD")
+
+        def faults() -> str:
+            return "\n".join(board.grooming_faults(b.repo, b.repo, base, (), False))
+
+        self.assertEqual(faults(), "")
+        (b.repo / board.ORDER).write_text("u\n# groomed below\nbig\na\n")
+        self.assertEqual(faults(), "")
+        (b.repo / board.ORDER).write_text("u\n# groomed below\nbig\npart\na\n")
+        self.assertIn("its Flight's line: part.", faults())
 
     def test_grooming_faults_read_the_parts_a_pass_just_wrote(self) -> None:
         b = Bench()

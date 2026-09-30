@@ -5,7 +5,13 @@ The pair loop carries one Issue at a time from `issues/backlog/` on `main` to
 take turns in one worktree, `worktrees/pair`, on a branch named `pair/<slug>`.
 A deterministic supervisor, `loop.py`, decides every transition from what it can
 observe: where the Issue file sits, whether a turn changed anything, and the
-exit code of `just gate`. The seats are never told a protocol exists. A seat
+exit code of `just gate`. The seats are never told a protocol exists.
+Starting an Issue moves its file from `issues/backlog/` to `issues/underway/` in
+a commit of its own on `main`, fast-forwarded into the developer's checkout
+before the first turn, and the branch starts from that commit. If the
+fast-forward is refused, the loop pauses and the Issue stays in `backlog/`. A
+supervisor restarted without its state takes up the Issue it finds in
+`underway/`, rather than moving another. A seat
 loads the repository's own settings, `CLAUDE.md` and skills, and nothing from
 the developer's machine (`CONTEXT` in `seats.py`), so its context is the
 repository's and a fresh session re-uses most of the cached prompt.
@@ -31,8 +37,8 @@ the seat left uncommitted, with a `Seat:` trailer.
 
    | Stage | Requirement | Next |
    |---|---|---|
-   | `backlog/` | `difficulty` is set; a `hard` Issue has children | `todo/`; for `hard`, landing the children, with the parent left in `backlog/` as a Flight |
-   | Flight check (file stays in `backlog/`) | a new child for each gap, or a new `## Desk-check brief` section, and nothing outside `issues/` changed; after desk-check notes, a child for each note listed in one new `## Desk-check children` section, and no brief | landing; the Flight goes to `desk-check/` unless a child left it waiting |
+   | backlog (file in `underway/`) | `difficulty` is set; a `hard` Issue has children | `todo/`; for `hard`, landing the children, with the parent moved back to `backlog/` as a Flight |
+   | Flight check (file in `underway/`) | a new child for each gap, or a new `## Desk-check brief` section, and nothing outside `issues/` changed; after desk-check notes, a child for each note listed in one new `## Desk-check children` section, and no brief | landing; the Flight goes to `desk-check/` unless a child left it waiting |
    | `todo/` | a `## The plan` section | `in-progress/` |
    | `in-progress/` | code outside `issues/` changed, and `just gate` passes after a rebase onto `main` | `desk-check/` for `developer`, otherwise landing |
    | `desk-check/` | `just pair-accept` | landing; `just pair-resume` sends it back to `in-progress/`. A Flight here holds nothing: see below |
@@ -46,8 +52,8 @@ the seat left uncommitted, with a `Seat:` trailer.
 4. **Landing.** The loop rebases the branch onto `main`, squashes it into one
    commit that includes the move to `done/`, and fast-forwards `main` in the
    developer's checkout with `--ff-only`, which refuses rather than overwrite local
-   edits. A Flight that still has a child outside `done/` lands without the
-   move, and keeps its place in `ORDER`.
+   edits. A Flight that still has a child outside `done/` lands back in
+   `backlog/` instead, and keeps its place in `ORDER`.
 
 An Issue that other Issues name in `parent:` is a Flight. It is not ripe while
 any of its children is outside `done/`. Once the last one lands, the loop takes
@@ -111,7 +117,7 @@ the Flight reaches `desk-check/`. Children written during the run, by a split
 or a Flight check, join it. It also stops where `just pair` would, for a pause
 or a `developer` Issue's desk check, and when nothing in the Flight is ripe,
 naming any Flight below it that waits on its desk check. It refuses a slug
-that is not a Flight in `backlog/`, a Flight already in `desk-check/`, and a
+that is not a Flight in `backlog/` or `underway/`, a Flight already in `desk-check/`, and a
 run while an Issue outside the Flight is underway.
 
 A seat that crashes is restarted once from its session id. A supervisor that

@@ -8,6 +8,7 @@ authoritative one.
 |---|---|---|
 | [`roadmap/`](roadmap/) | the developer's coarse, speculative intentions, which may never be done; no agent moves an Issue in or out | the developer |
 | [`backlog/`](backlog/) | ready to work, in the running order `backlog/ORDER` gives, which ranks Flights and standalone Issues, a Flight's parts running at its line; the queue | the developer, or a session working with the developer; the pair loop, when it sends an Issue back |
+| [`underway/`](underway/) | the one Issue the pair loop is working, from its start until it lands: in its backlog stage or its Flight check on its branch, and in any stage on `main` | the supervisor, when it starts an Issue |
 | [`todo/`](todo/) | groomed, with a difficulty, and waiting for a plan | the supervisor |
 | [`in-progress/`](in-progress/) | planned, and being implemented | the supervisor |
 | [`desk-check/`](desk-check/) | a `developer` Issue whose result waits for the developer's check, or a Flight whose parts have landed | the supervisor |
@@ -44,16 +45,22 @@ declare, a difficulty outside its values, or a `waits_on` or `parent` naming no
 Issue on the board fails the gate rather than leaving the Issue silently
 ungroomed.
 
-While an Issue is underway its file on `main` stays in `backlog/`; its
-progress exists only on its branch, `pair/<slug>`, and the commit that lands it
-moves it to `done/`. Seats never move Issue files. `just pair-status` shows the
-board and the Issue underway.
+When the pair loop starts an Issue, it moves the file from `backlog/` to
+`underway/` on `main` in a commit of its own, so the board shows what is being
+worked and nothing that edits the backlog can edit it. Its progress through the
+later stages exists only on its branch, `pair/<slug>`, and the commit that lands
+it moves it out of `underway/`: to `done/`, to `desk-check/` for a Flight that
+passes its check, or back to `backlog/` for a Flight left waiting on its
+children. A send-back moves it from `underway/` to `backlog/` in a commit of its
+own, without the branch's work. Seats never move Issue files. `just pair-status`
+shows the board and the Issue underway.
 
 An Issue that other Issues name in `parent:` is a Flight: one unit of value,
 and how the developer will know it has been delivered. Its children are its
 parts, and each lands on its own. The Flight waits in `backlog/` until the
 last one is in `done/`, then the pair checks its "Done when" end to end on
-`main` in the Flight check, and either writes each gap as a new child or moves
-the Flight to `desk-check/`. There the developer checks it once, without
-holding the loop, and accepting moves it to `done/`.
+`main` in the Flight check, with the Flight in `underway/`, and either writes
+each gap as a new child or moves the Flight to `desk-check/`. There the
+developer checks it once, without holding the loop, and accepting moves it to
+`done/`.
 The loop's mechanics are in [`pair/README.md`](../pair/README.md).

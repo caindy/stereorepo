@@ -288,7 +288,7 @@ concept_set:
   - id: work:concept/stage
     pref_label: Stage
     definition: >-
-      Where an Issue is on its way to `main`: `backlog`, `todo`,
+      Where an Issue is on its way to `main`: `backlog`, `underway`, `todo`,
       `in-progress`, `desk-check` or `done`, in that order, each a directory of
       the board; `roadmap` stands beside them, holding what the developer
       intends and may never do.
@@ -300,7 +300,9 @@ concept_set:
       or a seat adds new Issues to `backlog`. Every
       other move is the supervisor's: a `git mv`, or, for a send-back, the
       file rewritten into `backlog` on `main` with a `Needs elaboration`
-      section.
+      section. On `main`, the Issue being worked sits in `underway` from the
+      moment the supervisor starts it until the commit that lands it; the
+      later stages it passes through exist only on its branch.
     avoid: [column, status, state]
   - id: work:concept/seat
     pref_label: Seat

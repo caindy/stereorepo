@@ -65,21 +65,21 @@ def board_front_matter_probes(views: Sequence[Any]) -> list[str]:
     return problems
 
 
-ORDER = ("# the developer's\nkept\n\nunderway\n# groomed below\nlanded\nnowhere\n"
+ORDER = ("# the developer's\nkept\n\nunderway\nbranched\n# groomed below\nlanded\nnowhere\n"
          "part\nleftover\n")
-"""An `ORDER` naming one backlog Issue, one underway, one landed, one nowhere, a part of
-a Flight in the backlog and a part of a landed Flight, with a comment, a blank line
-and the marker between them."""
+"""An `ORDER` naming one backlog Issue, one underway on `main`, one further on along its
+branch, one landed, one nowhere, a part of a Flight in the backlog and a part of a landed
+Flight, with a comment, a blank line and the marker between them."""
 
-ORDER_STAGES = {"kept": "backlog", "underway": "in-progress", "landed": "done",
-                "part": "backlog", "leftover": "backlog"}
+ORDER_STAGES = {"kept": "backlog", "underway": "underway", "branched": "in-progress",
+                "landed": "done", "part": "backlog", "leftover": "backlog"}
 """Where each slug `ORDER` names has its Issue file, by slug; `nowhere` has none."""
 
 ORDER_PARENTS = {"part": "kept", "leftover": "landed"}
 """The `parent` each slug's Issue names, by slug: `part` is a part of a Flight in the
 backlog, and `leftover` of one that landed, which leaves it standing alone."""
 
-ORDER_REPORTED = {"landed": 6, "nowhere": 7, "part": 8}
+ORDER_REPORTED = {"landed": 7, "nowhere": 8, "part": 9}
 """The slugs `board order` must report, against the line each sits on."""
 
 

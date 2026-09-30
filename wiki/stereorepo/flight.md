@@ -29,9 +29,10 @@ A Flight waits in `backlog/` while its parts land on `main`, each as its own
 Issue. The running order in `issues/backlog/ORDER` ranks the Flight, not its
 parts: the loop takes the parts where the Flight's line stands, in the order
 their `waits_on` gives, and a part has no line of its own
-(stereorepo's DR-299). Once the last part is in `done/`, the pair takes the
-Flight through the Flight check: the seats check its "Done when" end to end on
-`main`, and either write each gap as a new part or write a desk-check brief.
+(stereorepo's DR-299). Once the last part is in `done/`, the pair moves the
+Flight to `underway/` and takes it through the Flight check: the seats check its "Done when" end to end on
+`main`, and either write each gap as a new part, which sends the Flight back to
+`backlog/` to wait for it, or write a desk-check brief.
 With a brief, the Flight moves to `desk-check/`, and the developer
 [[desk-check|desk-checks]] the delivered value once, instead of desk-checking
 each part.

@@ -14,7 +14,9 @@ whether the gate passes) and decides what happens next:
 - Otherwise the other seat takes the next turn.
 
 The loop takes the next issue in running order as it stands, a ripe Flight
-first. Grooming is a separate command: a pass takes up the backlog issues that
+first, and starts it by moving its file from `issues/backlog/` to
+`issues/underway/` in a commit of its own on `main`, so the board there shows
+what is being worked. Landing moves it on out of `underway/`. Grooming is a separate command: a pass takes up the backlog issues that
 are not groomed (no valid difficulty, and no `Needs elaboration` section) and
 runs the same turns on its own branch, `pair/grooming`, with no issue file. It
 ends when both seats accept a backlog where each of those issues has a
@@ -23,11 +25,11 @@ lands as one commit. An issue no pass has groomed is groomed by its own backlog
 stage.
 
 An issue with children, which name it in `parent:`, is a Flight. Splitting a
-`hard` issue makes one, and the Flight stays in `issues/backlog/`, not ripe,
-while any child is outside `issues/done/`. Once the last child lands, the loop
-takes the Flight through a Flight check, a stage of its own whose file stays in
-`backlog/`: the seats check its "Done when" on `main`, and either write each gap
-as a new child, which lands and leaves the Flight waiting, or write a
+`hard` issue makes one, and the Flight lands back in `issues/backlog/`, not
+ripe while any child is outside `issues/done/`. Once the last child lands, the
+loop takes the Flight through a Flight check, a stage of its own whose file
+sits in `underway/`: the seats check its "Done when" on `main`, and either write each gap
+as a new child, which lands and leaves the Flight waiting in `backlog/`, or write a
 `## Desk-check brief` into the Flight file, which lands it in `desk-check/`.
 
 A Flight's desk check does not hold the loop, since its parts are already on
@@ -60,7 +62,7 @@ ROUND_CAP = {"easy": 4, "medium": 8, "developer": 8, "hard": 4, None: 4}
 GROOMING = "grooming"
 """The slug and the stage of a grooming pass, which has no issue file."""
 FLIGHT_CHECK = "flight-check"
-"""The stage of a Flight whose children have all landed. Its file stays in `backlog/`."""
+"""The stage of a Flight whose children have all landed. Its file sits in `underway/`."""
 BRIEF = "Desk-check brief"
 NOTES = "Desk-check notes"
 CHILDREN = "Desk-check children"
@@ -106,8 +108,13 @@ def other(role: str) -> str:
 
 
 def home(stage: str) -> str:
-    """The directory under `issues/` that holds an issue in `stage`."""
-    return "backlog" if stage == FLIGHT_CHECK else stage
+    """The directory under `issues/` that holds an issue in `stage`.
+
+    An issue in its backlog stage or its Flight check sits in `underway/`, on
+    `main` as on its branch, so the board shows what is being worked and
+    nothing that edits the backlog can edit it.
+    """
+    return "underway" if stage in ("backlog", FLIGHT_CHECK) else stage
 
 
 class Loop:
@@ -187,7 +194,7 @@ class Loop:
         """
         self.ensure_worktree()
         self.reap()
-        st = self.load()
+        st = self.load() or self.adopt()
         if st is not None and st.stage == GROOMING:
             self.say("a grooming pass is underway; finish it with `just groom`")
             return "grooming"
@@ -212,6 +219,10 @@ class Loop:
                 )
                 if st is None:
                     return "paused"
+            elif not st.base:
+                st = self.start(st)
+                if st is None:
+                    return "paused"
             elif st.retry == "desk-check":
                 self.say(
                     f"{st.slug} is waiting for your desk check: "
@@ -229,6 +240,21 @@ class Loop:
                 return "desk-check"
             st = None
 
+    def adopt(self) -> State | None:
+        """An unstarted state for the issue in `underway/` on `main`, if there is one.
+
+        A supervisor that died after landing an issue's move to `underway/`, but
+        before saving its state, leaves the file there and no state. The issue
+        can only be in its backlog stage or its Flight check then, since the
+        later stages live on its branch alone.
+        """
+        underway = board.listed(self.repo, self.main, "underway")
+        if not underway:
+            return None
+        slug = underway[0]
+        kids = board.children(self.repo, self.main, slug)
+        return State(slug=slug, stage=FLIGHT_CHECK if kids else "backlog")
+
     def flight_refusal(self, flight: str, st: State | None) -> str | None:
         """Why `run` cannot work `flight` from here, or None when it can."""
         if flight in board.listed(self.repo, self.main, "desk-check"):
@@ -236,9 +262,11 @@ class Loop:
                 f"{flight} is waiting for your desk check: "
                 f"`just pair-accept {flight}` or `just pair-resume {flight}`"
             )
-        backlog = board.listed(self.repo, self.main, "backlog")
-        if flight not in backlog or not board.children(self.repo, self.main, flight):
-            return f"{flight} is not a Flight in issues/backlog/"
+        queued = board.listed(self.repo, self.main, "backlog") + board.listed(
+            self.repo, self.main, "underway"
+        )
+        if flight not in queued or not board.children(self.repo, self.main, flight):
+            return f"{flight} is not a Flight in issues/backlog/ or issues/underway/"
         below = board.descendants(self.repo, self.main, flight)
         if st is not None and st.slug != flight and st.slug not in below:
             finish = (
@@ -438,7 +466,14 @@ class Loop:
                 self.provision(self.wt)
 
     def start(self, st: State) -> State | None:
-        """Branch `pair/<slug>` from `main` for an issue or a grooming pass."""
+        """Branch `pair/<slug>` from `main` for an issue or a grooming pass.
+
+        An issue's file first moves from `backlog/` to `underway/` in a commit
+        of its own on `main`, landed in the developer's checkout before the
+        branch starts from it. If that landing is refused, the issue stays in
+        `backlog/` and nothing is started. A file already in `underway/` is
+        not moved again.
+        """
         if git(self.wt, "status", "--porcelain"):
             self.pause(
                 st,
@@ -448,6 +483,10 @@ class Loop:
             )
             self.clear()
             return None
+        if st.stage != GROOMING and not self.move_underway(st):
+            git(self.wt, "checkout", "-q", "--detach", "--force", self.main)
+            self.clear()
+            return None
         git(self.wt, "checkout", "-q", "-B", f"pair/{st.slug}", self.main)
         for role in ROLES:
             (self.dir / f"{role}.session").unlink(missing_ok=True)
@@ -455,6 +494,25 @@ class Loop:
         self.save(st)
         self.say(f"started {st.slug}")
         return st
+
+    def move_underway(self, st: State) -> bool:
+        """Land the move of the issue's file from `backlog/` to `underway/` on `main`.
+
+        False when the developer's checkout refuses the fast-forward; the loop
+        is then paused.
+        """
+        if board.at_ref(self.repo, self.main, "underway", st.slug):
+            return True
+        git(self.wt, "checkout", "-q", "--detach", "--force", self.main)
+        (self.wt / board.ISSUES / "underway").mkdir(parents=True, exist_ok=True)
+        git(
+            self.wt,
+            "mv",
+            f"{board.ISSUES}/backlog/{st.slug}.md",
+            f"{board.ISSUES}/underway/{st.slug}.md",
+        )
+        git(self.wt, "commit", "-q", "-m", f"Start {st.slug}", "-m", "Seat: loop")
+        return self.land(st, git(self.wt, "rev-parse", "HEAD"), retry=None)
 
     # --- the turn loop ---------------------------------------------------------
 
@@ -770,7 +828,7 @@ class Loop:
             for slug, stage in board.children(self.wt, "HEAD", st.slug).items()
             if stage == "backlog" and slug not in before
         ]
-        was = board.at_ref(self.wt, st.base, "backlog", st.slug)
+        was = board.at_ref(self.wt, st.base, home(st.stage), st.slug)
         if was and board.last_of(was.body, (BRIEF, NOTES, CHILDREN)) == NOTES:
             missing = self.owed_children(st, issue, was, gaps)
             if missing:
@@ -905,7 +963,10 @@ class Loop:
             if (moved or force_gate) and self.touches_code():
                 ok, out = self.gate(self.wt)
                 if not ok:
-                    if st.stage == "done":
+                    if st.stage == "done" or (
+                        st.stage != GROOMING
+                        and not board.at_ref(self.wt, "HEAD", home(st.stage), st.slug)
+                    ):
                         return self.pause(
                             st,
                             "main moved and the gate now fails on the squashed issue",
@@ -947,16 +1008,19 @@ class Loop:
     def retirement(self, st: State) -> str | None:
         """The stage landing moves the issue to, or None if it stays where it is.
 
-        A Flight with a child outside `done/` stays in `backlog/`: a hard issue
-        just split, or a Flight check that wrote a gap. A Flight that passes
+        A Flight with a child outside `done/` goes back from `underway/` to
+        `backlog/`: a hard issue just split, or a Flight check that wrote a gap.
+        Once it is there, it stays. A Flight that passes
         its check goes to `desk-check/`, and every other issue to `done/`. The
         answer is read from the tree and the stage, so a merge that goes round
         again, or is retried after a pause, decides the same way. A Flight
         already moved to `desk-check/` has children, which tells it apart from
         a `developer` issue, which `accept` merges from there to `done/`.
         """
-        if st.stage in ("done", GROOMING) or board.waiting(self.wt, "HEAD", st.slug):
+        if st.stage in ("done", GROOMING):
             return None
+        if board.waiting(self.wt, "HEAD", st.slug):
+            return "backlog" if board.locations(self.wt, st.slug) == ["underway"] else None
         if st.stage == FLIGHT_CHECK:
             return "desk-check"
         if st.stage == "desk-check" and board.children(self.wt, "HEAD", st.slug):
@@ -1035,15 +1099,18 @@ class Loop:
         self.say(f"groomed the backlog ({sha[:8]})")
         return "groomed"
 
-    def land(self, st: State, sha: str) -> bool:
-        """Fast-forward `main` in the developer's checkout; refuse rather than overwrite."""
+    def land(self, st: State, sha: str, retry: str | None = "merge") -> bool:
+        """Fast-forward `main` in the developer's checkout; refuse rather than overwrite.
+
+        A refusal pauses the loop with `retry`.
+        """
         branch = git(self.repo, "symbolic-ref", "--short", "-q", "HEAD", check=False)
         if branch != self.main:
             self.pause(
                 st,
                 f"your checkout is on {branch or 'a detached HEAD'}, not {self.main}; "
                 f"switch back, then run again",
-                retry="merge",
+                retry=retry,
             )
             return False
         done = git_ok(self.repo, "merge", "--ff-only", "-q", sha)
@@ -1052,7 +1119,7 @@ class Loop:
                 st,
                 f"could not fast-forward {self.main} in your checkout to {sha[:8]} "
                 f"(local edits in the way?); clear them, then run again",
-                retry="merge",
+                retry=retry,
             )
         return done
 
@@ -1140,7 +1207,7 @@ class Loop:
 def status(repo: Path, main: str = "main") -> str:
     """A plain-text view of the board on `main` and the issue underway."""
     lines = []
-    for stage in ("roadmap", "backlog", "done"):
+    for stage in ("roadmap", "backlog", "underway", "done"):
         slugs = board.listed(repo, main, stage)
         lines.append(
             f"{stage:12} {len(slugs):3}  {', '.join(slugs[:6])}"
@@ -1154,6 +1221,8 @@ def status(repo: Path, main: str = "main") -> str:
             if st["stage"] == GROOMING
             else f"{st['slug']} in its Flight check"
             if st["stage"] == FLIGHT_CHECK
+            else f"{st['slug']} in underway/, its backlog stage"
+            if st["stage"] == "backlog"
             else f"{st['slug']} in {st['stage']}/"
         )
         lines.append(

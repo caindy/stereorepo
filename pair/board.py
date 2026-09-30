@@ -16,7 +16,7 @@ from typing import Any
 
 import yaml
 
-STAGES = ("roadmap", "backlog", "todo", "in-progress", "desk-check", "done")
+STAGES = ("roadmap", "backlog", "underway", "todo", "in-progress", "desk-check", "done")
 DIFFICULTIES = ("easy", "medium", "hard", "developer")
 ISSUES = "issues"
 ORDER = f"{ISSUES}/backlog/ORDER"
@@ -400,12 +400,19 @@ def grooming_faults(
     parts are read from the tree, since the pass may just have written them.
     An empty list means the pass is finished. A `hard` Issue's children are
     read at the tree's `HEAD`, so the loop commits a turn before it asks.
+    The Issue in `underway/` may keep its line, since its landing drops it, and
+    is never asked for one; a part of a Flight in the backlog has none there either.
     """
     faults = []
     backlog = sorted(
         p.stem for p in (tree / ISSUES / "backlog").glob("*.md") if p.name != "README.md"
     )
     before = listed(repo, ref, "backlog")
+    underway = {
+        p.stem
+        for p in (tree / ISSUES / "underway").glob("*.md")
+        if p.name != "README.md" and str(parse(p.read_text())[0].get("parent")) not in backlog
+    }
     issues = {
         slug: Issue(slug, "backlog", *parse((tree / ISSUES / "backlog" / f"{slug}.md").read_text()))
         for slug in backlog
@@ -466,7 +473,10 @@ def grooming_faults(
     missing = [s for s in wanted if s not in below]
     if missing:
         faults.append(f"rank {', '.join(missing)} below `{MARKER}` in {ORDER}.")
-    extra = sorted({s for s in below if not s.startswith("#") and (s not in wanted or below.count(s) > 1)})
+    extra = sorted({
+        s for s in below
+        if not s.startswith("#") and (s not in wanted and s not in underway or below.count(s) > 1)
+    })
     if extra:
         faults.append(
             f"below `{MARKER}` in {ORDER}, name each Flight and standalone backlog "
