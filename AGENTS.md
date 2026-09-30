@@ -31,9 +31,10 @@ from `issues/backlog/` to `main`, taking turns in one worktree, and a
 deterministic supervisor moves the Issue between stages from what it can
 observe. There are no pull requests.
 
-- To add work, commit a file to `issues/backlog/` (or `issues/roadmap/`, if it
-  is not yet elaborated) on `main`. Its filename slug is its id. Front matter
-  holds only `difficulty`, `waits_on` and `parent`, and all three are optional.
+- To add work, commit a file to `issues/backlog/` on `main`. Its filename slug
+  is its id. Front matter holds only `difficulty`, `waits_on` and `parent`, and
+  all three are optional. A coarse intention that may never be done goes in
+  `issues/roadmap/` instead, where no agent moves it.
 - `just pair` runs the loop; `just pair-status` shows the board and the Issue in
   flight; `just pair-accept` and `just pair-resume` answer a desk check.
 - A seat that finds work outside its Issue writes it as a new file in

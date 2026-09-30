@@ -30,7 +30,7 @@ long: nothing loads it until you are already in the thing it owns.
 | reasoning that keeps recurring across decisions | [`principles.md`](principles.md) |
 | changing or defending a rule | its DR in `assertions/decisions/`, **and** the file that states it |
 | an id you need to resolve — `work:artifact/meta-disciplines`, say | `grep -rn -A2 "id: <the curie>" .meta/assertions/`. Every identified object is declared once, there |
-| what to work on next, or what is intended but unbuilt | the board, `issues/` at the root: `backlog/` is the queue, `roadmap/` what is intended and not yet elaborated |
+| what to work on next, or what is intended but unbuilt | the board, `issues/` at the root: `backlog/` is the queue, `roadmap/` the developer's speculative intentions, which may never be done |
 | primitives compiled for a harness | [`.apm/`](.apm/) — derived from `assertions/` |
 | writing a Decision | [`templates/decision.md`](templates/decision.md) — the form |
 

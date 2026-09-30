@@ -27,9 +27,10 @@ repository: two seats take one Issue at a time from `issues/backlog/` to
 `main`, taking turns in one worktree, and the gate they must pass is `just
 gate`. There are no pull requests.
 
-- To add work, commit a file to `issues/backlog/` (or `issues/roadmap/`, if it
-  is not yet elaborated) on `main`. Its filename slug is its id. Front matter
-  holds only `difficulty`, `waits_on` and `parent`, and all three are optional.
+- To add work, commit a file to `issues/backlog/` on `main`. Its filename slug
+  is its id. Front matter holds only `difficulty`, `waits_on` and `parent`, and
+  all three are optional. A coarse intention that may never be done goes in
+  `issues/roadmap/` instead, where no agent moves it.
 - A seat that finds work outside its Issue writes it as a new file in
   `issues/backlog/` instead of doing it.
 

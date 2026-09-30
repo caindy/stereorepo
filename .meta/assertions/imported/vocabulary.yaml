@@ -268,14 +268,19 @@ concept_set:
   - id: work:concept/stage
     pref_label: Stage
     definition: >-
-      Where an Issue is on its way to `main`: `roadmap`, `backlog`, `todo`,
+      Where an Issue is on its way to `main`: `backlog`, `todo`,
       `in-progress`, `desk-check` or `done`, in that order, each a directory of
-      the board.
+      the board; `roadmap` stands beside them, holding what the developer
+      intends and may never do.
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-recorded
     scope_note: >-
-      A directory, never a field. The developer adds Issues to `roadmap` and
-      `backlog`; every other move is the supervisor's, and always a `git mv`.
+      A directory, never a field. Only the developer adds Issues to
+      `roadmap`, and no agent moves an Issue into or out of it; the developer
+      or a seat adds new Issues to `backlog`. Every
+      other move is the supervisor's: a `git mv`, or, for a send-back, the
+      file rewritten into `backlog` on `main` with a `Needs elaboration`
+      section.
     avoid: [column, status, state]
   - id: work:concept/seat
     pref_label: Seat

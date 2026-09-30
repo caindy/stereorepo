@@ -87,7 +87,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Concept** | The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language (stereorepo's DR-184, stereorepo's DR-190, stereorepo's DR-195). | wiki article, term, entity |
 | **Issue** | One unit of work, as one Markdown file on the board, whose filename slug is its identifier. | ticket, story, challenge, epic, task |
 | **Board** | A repository's set of Issue files, kept in `issues/` at its root, in which the directory holding an Issue file is that Issue's stage. | kanban, tracker |
-| **Stage** | Where an Issue is on its way to `main`: `roadmap`, `backlog`, `todo`, `in-progress`, `desk-check` or `done`, in that order, each a directory of the board. | column, status, state |
+| **Stage** | Where an Issue is on its way to `main`: `backlog`, `todo`, `in-progress`, `desk-check` or `done`, in that order, each a directory of the board; `roadmap` stands beside them, holding what the developer intends and may never do. | column, status, state |
 | **Discipline** | A structured way of working that must be adhered to because it is not an imperative program. | — |
 | **Decision record** | The record of decisions at every level — the Portfolio's, a Product's or a Project's, told apart by which the entry names. One sequence, numbered DR-nnn, newest last. | ADR, architecture decision record |
 | **Article** | One clause of the Charter — a claim that can be held against an artifact and found false, numbered so it can be cited as A1, A2 and so on. | invariant, rule, constraint |
@@ -133,7 +133,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Board.** One per repository, and the board on `main` is authoritative. Not GitHub Issues or Projects, not a status field, and not a kanban view: a view of the board is a projection of it and holds no state of its own.
 
-**Stage.** A directory, never a field. The developer adds Issues to `roadmap` and `backlog`; every other move is the supervisor's, and always a `git mv`.
+**Stage.** A directory, never a field. Only the developer adds Issues to `roadmap`, and no agent moves an Issue into or out of it; the developer or a seat adds new Issues to `backlog`. Every other move is the supervisor's: a `git mv`, or, for a send-back, the file rewritten into `backlog` on `main` with a `Needs elaboration` section.
 
 **Seat.** Coined, because pair programming's driver and navigator divide the typing and here both seats write code. Within a stage the primary seat takes the first turn and the secondary the next; the secondary fixes what it finds rather than describing it. A seat is told the Issue file, what the stage is for, and what changed since its last turn, and nothing about the protocol that moves the Issue.
 
