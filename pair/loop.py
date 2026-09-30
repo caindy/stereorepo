@@ -13,11 +13,13 @@ whether the gate passes) and decides what happens next:
   section, and sits out until the developer answers it.
 - Otherwise the other seat takes the next turn.
 
-Before it takes the next issue, the loop grooms the backlog as a whole if any
-backlog file on `main` is new or changed since the last grooming pass. A pass
-runs the same turns on its own branch, `pair/grooming`, with no issue file:
-it ends when both seats accept a backlog where every issue has a difficulty
-and `issues/backlog/ORDER` ranks it, and lands as one commit.
+The loop takes the next issue in running order as it stands. Grooming is a
+separate command: a pass takes up the backlog issues that are not groomed
+(no valid difficulty, and no `Needs elaboration` section) and runs the same
+turns on its own branch, `pair/grooming`, with no issue file. It ends when
+both seats accept a backlog where each of those issues has a difficulty and
+`issues/backlog/ORDER` places it without moving the rest, and lands as one
+commit. An issue no pass has groomed is groomed by its own backlog stage.
 """
 
 from __future__ import annotations
@@ -71,6 +73,8 @@ class State:
     kick_text: str | None = None
     in_turn: str | None = None
     base: str = ""
+    targets: list[str] = field(default_factory=list)
+    rerank: bool = False
 
 
 def other(role: str) -> str:
@@ -93,7 +97,6 @@ class Loop:
         provision: Callable[[Path], None] | None = None,
         say: Callable[[str], None] = print,
         round_cap: int | None = None,
-        groom: bool = True,
     ) -> None:
         self.repo = repo
         self.wt = repo / "worktrees" / "pair"
@@ -107,7 +110,6 @@ class Loop:
         self.provision = provision
         self.say = say
         self.round_cap = round_cap
-        self.groom = groom
         self.seat_command = "claude"
         self.stop_requested = False
         self.seats: dict[str, Seat] = {}
@@ -130,21 +132,6 @@ class Loop:
     def clear(self) -> None:
         self.state_file.unlink(missing_ok=True)
 
-    @property
-    def groomed_file(self) -> Path:
-        return self.dir / "groomed.json"
-
-    def load_groomed(self) -> dict[str, str] | None:
-        """What the last grooming pass left: each backlog path mapped to its blob id."""
-        if not self.groomed_file.is_file():
-            return None
-        record: dict[str, str] = json.loads(self.groomed_file.read_text())
-        return record
-
-    def save_groomed(self, record: dict[str, str]) -> None:
-        self.dir.mkdir(exist_ok=True)
-        self.groomed_file.write_text(json.dumps(record, indent=1, sort_keys=True))
-
     def pause(self, st: State, reason: str, retry: str | None) -> str:
         st.paused, st.retry = reason, retry
         self.save(st)
@@ -157,8 +144,7 @@ class Loop:
     def run(self, once: bool = False) -> str:
         """Work issues until the backlog empties or the developer is needed.
 
-        A grooming pass comes first whenever the backlog is stale, and does
-        not count as the one issue of a `once` run.
+        It never grooms, and does not start while a grooming pass is in flight.
 
         A turn cut short by the supervisor dying belongs to its seat: a restart
         gives it back to that seat, and does not mistake its leftovers for the
@@ -167,18 +153,16 @@ class Loop:
         self.ensure_worktree()
         self.reap()
         st = self.load()
+        if st is not None and st.stage == GROOMING:
+            self.say("a grooming pass is in flight; finish it with `just groom`")
+            return "grooming"
         while True:
             if st is None:
-                if self.groom and board.stale(
-                    board.backlog_blobs(self.repo, self.main), self.load_groomed()
-                ):
-                    st = self.start(State(slug=GROOMING, stage=GROOMING))
-                else:
-                    slug = board.next_ripe(self.repo, self.main)
-                    if slug is None:
-                        self.say("backlog is empty (or nothing in it is ripe)")
-                        return "empty"
-                    st = self.start(State(slug=slug))
+                slug = board.next_ripe(self.repo, self.main)
+                if slug is None:
+                    self.say("backlog is empty (or nothing in it is ripe)")
+                    return "empty"
+                st = self.start(State(slug=slug))
                 if st is None:
                     return "paused"
             elif st.retry == "desk-check":
@@ -188,9 +172,44 @@ class Loop:
                 )
                 return "desk-check"
             outcome = self.work(st)
-            if outcome in ("paused", "stopped") or (once and outcome != "groomed"):
+            if outcome in ("paused", "stopped") or once:
                 return outcome
             st = None
+
+    def groom(self, rerank: bool = False) -> str:
+        """Groom the backlog issues that are not groomed, and place them in `ORDER`.
+
+        With `rerank`, the pass ranks the whole order below the marker again.
+        A pass in flight resumes with the targets and mode it started with. A
+        pass does not start while an issue is in flight, nor when there is
+        nothing to groom, place or rerank.
+        """
+        self.ensure_worktree()
+        self.reap()
+        st = self.load()
+        if st is not None and st.stage != GROOMING:
+            finish = (
+                "`just pair-accept` or `just pair-resume`"
+                if st.retry == "desk-check"
+                else "`just pair`"
+            )
+            self.say(f"{st.slug} is in flight; finish it with {finish} first")
+            return "busy"
+        if st is not None:
+            if rerank != st.rerank:
+                self.say(
+                    "resuming the grooming pass in flight, "
+                    f"{'with' if st.rerank else 'without'} --rerank as it started"
+                )
+            return self.work(st)
+        targets = board.to_groom(self.repo, self.main)
+        if not (targets or board.unnamed(self.repo, self.main) or rerank):
+            self.say("nothing to groom")
+            return "nothing"
+        st = self.start(
+            State(slug=GROOMING, stage=GROOMING, targets=targets, rerank=rerank)
+        )
+        return "paused" if st is None else self.work(st)
 
     def accept(self) -> str:
         """The developer passes the desk check: merge what is in the worktree."""
@@ -502,7 +521,9 @@ class Loop:
     def requirement(self, st: State, issue: board.Issue | None) -> str | None:
         """What the current stage still lacks, or None when it is finished."""
         if issue is None:
-            faults = board.grooming_faults(self.wt, self.wt, st.base)
+            faults = board.grooming_faults(
+                self.wt, self.wt, st.base, st.targets, st.rerank
+            )
             if faults:
                 return "the backlog is not groomed yet:\n" + "\n".join(
                     f"- {fault}" for fault in faults
@@ -565,12 +586,17 @@ class Loop:
         return self.merge(st)
 
     def retire_hard(self, st: State) -> None:
-        """Move each hard backlog issue a grooming pass split to `done/`, and out of `ORDER`."""
+        """Move each hard backlog issue a grooming pass split to `done/`, and out of `ORDER`.
+
+        A hard issue with no children is left alone: the pass did not split it,
+        and its own backlog stage will.
+        """
         backlog = self.wt / board.ISSUES / "backlog"
         hard = sorted(
             path.stem
             for path in backlog.glob("*.md")
             if board.parse(path.read_text())[0].get("difficulty") == "hard"
+            and board.children(self.wt, path.stem)
         )
         if not hard:
             return
@@ -675,7 +701,6 @@ class Loop:
             force_gate = False
             if st.stage not in ("done", GROOMING):
                 self.move(st, "done")
-            onto = git(self.wt, "rev-parse", self.main)
             sha = self.squash(st)
             if not git_ok(self.repo, "merge-base", "--is-ancestor", self.main, sha):
                 continue
@@ -684,7 +709,7 @@ class Loop:
             if self.push:
                 git(self.repo, "push", "-q", "origin", self.main, check=False)
             if st.stage == GROOMING:
-                return self.groomed(st, onto)
+                return self.groomed()
             title = (board.read(self.wt, st.slug) or board.Issue(st.slug, "done")).title
             git(self.wt, "checkout", "-q", "--detach", self.main)
             git(self.wt, "branch", "-q", "-D", f"pair/{st.slug}", check=False)
@@ -724,27 +749,9 @@ class Loop:
         self.save(st)
         return st.head
 
-    def groomed(self, st: State, onto: str) -> str:
-        """Record the backlog a landed grooming pass leaves, and end the pass.
-
-        `onto` is the `main` the pass was rebased onto. A backlog file that
-        changed there while the pass ran reached the pass only at the rebase,
-        so the seats never groomed it. It is left out of the record, which
-        makes it start the next pass. A pass that changed nothing lands no
-        commit, and still records the backlog.
-        """
-        moved = git(
-            self.repo,
-            "diff",
-            "--name-only",
-            st.base,
-            onto,
-            "--",
-            f"{board.ISSUES}/backlog/",
-        ).splitlines()
+    def groomed(self) -> str:
+        """End a landed grooming pass. A pass that changed nothing lands no commit."""
         sha = git(self.repo, "rev-parse", self.main)
-        blobs = board.backlog_blobs(self.repo, sha)
-        self.save_groomed({p: b for p, b in blobs.items() if p not in moved})
         git(self.wt, "checkout", "-q", "--detach", self.main)
         git(self.wt, "branch", "-q", "-D", f"pair/{GROOMING}", check=False)
         self.clear()
@@ -777,10 +784,8 @@ class Loop:
         """Send the issue back to `issues/backlog/` on `main`, without the code.
 
         The file always carries a `Needs elaboration` section, which keeps
-        `next_ripe` from taking it straight back up. The grooming record takes
-        the file as it is sent back, so a send-back does not start a pass,
-        which could answer the section and take the issue up again, over and
-        over.
+        `next_ripe` from taking it straight back up, and a grooming pass from
+        taking it up.
         """
         if st.kick_text is None:
             issue = board.read(self.wt, st.slug)
@@ -813,11 +818,6 @@ class Loop:
             st.retry = "kickback"
             self.save(st)
             return "paused"
-        record = self.load_groomed()
-        if record is not None:
-            path = str(home.relative_to(self.wt))
-            record[path] = board.backlog_blobs(self.repo, self.main)[path]
-            self.save_groomed(record)
         self.clear()
         self.notify(f"{st.slug} went back to backlog/ for elaboration")
         self.say(f"sent {st.slug} back to backlog/")
@@ -832,7 +832,15 @@ class Loop:
             if st.stage == GROOMING
             else f"{board.ISSUES}/{st.stage}/{st.slug}.md"
         )
-        parts = [template.format(path=path, slug=st.slug).strip()]
+        fields = {"path": path, "slug": st.slug}
+        if st.stage == GROOMING:
+            fields["issues"] = (
+                "\n".join(f"- {board.ISSUES}/backlog/{t}.md" for t in st.targets)
+                or "(none: this pass only ranks)"
+            )
+            ranking = "grooming-rerank" if st.rerank else "grooming-place"
+            fields["ranking"] = (self.prompts / f"{ranking}.md").read_text().strip()
+        parts = [template.format(**fields).strip()]
         if st.note:
             parts.append(st.note)
         since = st.seen.get(role)

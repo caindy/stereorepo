@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import re
 import subprocess
+from collections.abc import Collection
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -224,26 +225,25 @@ def next_ripe(repo: Path, ref: str, skip: frozenset[str] = frozenset()) -> str |
     return None
 
 
-def backlog_blobs(repo: Path, ref: str) -> dict[str, str]:
-    """Each backlog Issue's path at `ref`, mapped to its blob id."""
-    blobs = {}
-    for line in git(repo, "ls-tree", ref, f"{ISSUES}/backlog/", check=False).splitlines():
-        meta, path = line.split("\t", 1)
-        if path.endswith(".md") and Path(path).name != "README.md":
-            blobs[path] = meta.split()[2]
-    return blobs
+def to_groom(repo: Path, ref: str) -> list[str]:
+    """The backlog slugs at `ref` that a grooming pass takes up.
 
-
-def stale(blobs: dict[str, str], record: dict[str, str] | None) -> bool:
-    """Whether the backlog needs a grooming pass: a file is new or changed since `record`.
-
-    A file that only left the backlog does not count. With no record, any
-    backlog file counts, but an empty backlog does not: a fresh board has
-    nothing to groom, and a pass would spend turns only to write `ORDER`.
+    An Issue is groomed when its front matter sets a valid `difficulty` and it
+    has no `Needs elaboration` section. One with such a section waits on the
+    developer instead, so a pass takes up only those with neither.
     """
-    if record is None:
-        return bool(blobs)
-    return any(record.get(path) != blob for path, blob in blobs.items())
+    slugs = []
+    for slug in listed(repo, ref, "backlog"):
+        issue = at_ref(repo, ref, "backlog", slug)
+        if issue and issue.difficulty is None and not needs_elaboration(issue.body):
+            slugs.append(slug)
+    return slugs
+
+
+def unnamed(repo: Path, ref: str) -> list[str]:
+    """The backlog slugs at `ref` that `ORDER` does not name, which a pass places."""
+    named = set(order(repo, ref))
+    return [s for s in listed(repo, ref, "backlog") if s not in named]
 
 
 def split_order(text: str) -> tuple[list[str], list[str] | None]:
@@ -258,19 +258,29 @@ def split_order(text: str) -> tuple[list[str], list[str] | None]:
     return lines[:at], lines[at + 1 :]
 
 
-def grooming_faults(tree: Path, repo: Path, ref: str) -> list[str]:
+def grooming_faults(
+    tree: Path, repo: Path, ref: str, targets: Collection[str], rerank: bool
+) -> list[str]:
     """What a grooming pass in `tree` still lacks, against the board at `ref`.
 
     `ref` is the commit the pass started from, so a change on `main` during the
-    pass never shows here as a fault the seats cannot see. An empty list means
-    the pass is finished.
+    pass never shows here as a fault the seats cannot see. `targets` are the
+    Issues the pass took up: each, and each backlog file the pass wrote, needs a
+    `difficulty` unless the pass parked it with a `Needs elaboration` section.
+    Without `rerank`, the Issues already ranked below the marker keep their
+    relative order. An empty list means the pass is finished.
     """
     faults = []
     backlog = sorted(
         p.stem for p in (tree / ISSUES / "backlog").glob("*.md") if p.name != "README.md"
     )
+    before = listed(repo, ref, "backlog")
     for slug in backlog:
+        if slug not in targets and slug in before:
+            continue
         issue = Issue(slug, "backlog", *parse((tree / ISSUES / "backlog" / f"{slug}.md").read_text()))
+        if needs_elaboration(issue.body):
+            continue
         if issue.difficulty is None:
             faults.append(
                 f"{issue.path} needs `difficulty:` set to easy, medium, hard or developer."
@@ -280,7 +290,7 @@ def grooming_faults(tree: Path, repo: Path, ref: str) -> list[str]:
                 f"{issue.path} is hard, so split it: write each part as a new file "
                 f"in issues/backlog/ with `parent: {slug}` in its front matter."
             )
-    for slug in listed(repo, ref, "backlog"):
+    for slug in before:
         if slug not in backlog:
             faults.append(
                 f"issues/backlog/{slug}.md is gone; put it back. "
@@ -292,7 +302,7 @@ def grooming_faults(tree: Path, repo: Path, ref: str) -> list[str]:
     was = subprocess.run(
         ["git", "show", f"{ref}:{ORDER}"], cwd=repo, capture_output=True, text=True
     )
-    kept = split_order(was.stdout)[0] if was.returncode == 0 else []
+    kept, ranked = split_order(was.stdout) if was.returncode == 0 else ([], None)
     path = tree / ORDER
     above, below = split_order(path.read_text()) if path.is_file() else ([], None)
     if below is None:
@@ -317,6 +327,17 @@ def grooming_faults(tree: Path, repo: Path, ref: str) -> list[str]:
             f"below `{MARKER}` in {ORDER}, name each backlog Issue not placed above it "
             f"exactly once, and nothing else: {', '.join(extra)}."
         )
+    if not rerank and ranked:
+        held = [s for s in ranked if s in backlog and s not in targets]
+        now = [s for s in dict.fromkeys(below) if s in held]
+        was_now = [s for s in held if s in now]
+        if now != was_now:
+            moved = [s for s, t in zip(now, was_now) if s != t]
+            faults.append(
+                f"below `{MARKER}` in {ORDER}, {', '.join(moved)} moved; place the "
+                "Issues you groomed without moving the rest, which ran in this order:\n"
+                + "\n".join(was_now)
+            )
     return faults
 
 

@@ -52,27 +52,43 @@ is killed restarts the turn in flight on the same session.
 
 ## Grooming the backlog
 
-Before it takes the next Issue, the loop compares each `issues/backlog/*.md`
-on `main` with what the last grooming pass left. If any file is new or has
-changed, the pair grooms the whole backlog first, on the branch
-`pair/grooming`, from `prompts/stage-grooming.md`. The seats groom every Issue
-as the backlog stage grooms one, and rank the backlog below the
-`# groomed below` line of `issues/backlog/ORDER`, leaving the developer's lines
-above it alone. The pass takes turns and ends the way a stage does. Its
-requirement is that every backlog Issue has a `difficulty`, every `hard` Issue
-has children, `ORDER` ranks every Issue the developer has not placed, nothing
-was deleted, and `just gate` passes. The loop then moves each `hard` Issue to
-`done/` and lands the pass as one commit, `Groom the backlog`. A
-`Needs elaboration` section written in a pass parks that Issue and does not
-end the pass. A pass that runs past its round cap pauses the loop, and
-`just pair` gives it another round cap. A file that only left the backlog, an
-edit to `ORDER` alone, and the loop's own send-back start no pass.
+`just pair` takes the Issues in the running order as it stands, and never
+grooms. Grooming is a separate command, `just groom`. An Issue is groomed when
+its front matter sets a valid `difficulty` and it has no `Needs elaboration`
+section, so an Issue the developer writes with a `difficulty` counts as groomed,
+and deleting an Issue's `difficulty` asks for it to be groomed again. An Issue
+no pass has groomed is groomed by its own backlog stage when the loop takes it.
+
+`just groom` takes up the backlog Issues on `main` that are not groomed and
+have no `Needs elaboration` section, and runs a pass over them on the branch
+`pair/grooming`, from `prompts/stage-grooming.md`. The seats groom each one as
+the backlog stage grooms one, and place it below the `# groomed below` line of
+`issues/backlog/ORDER` without moving the Issues already there
+(`prompts/grooming-place.md`). `just groom --rerank` ranks the whole order
+below the marker again instead (`prompts/grooming-rerank.md`). Either way the
+developer's lines above the marker stay as they are.
+
+The pass takes turns and ends the way a stage does. Its requirement is that
+each Issue it took up, and each part it wrote, has a `difficulty`, that each
+such `hard` Issue has children, that `ORDER` names every Issue the developer
+has not placed, that without `--rerank` the Issues already ranked keep their
+relative order, that nothing was deleted, and that `just gate` passes. The loop
+then moves each split `hard` Issue to `done/` and lands the pass as one commit,
+`Groom the backlog`. A `Needs elaboration` section written in a pass parks that
+Issue and does not end the pass. A pass that runs past its round cap pauses,
+and `just groom` gives it another. With nothing to groom and nothing to place,
+`just groom` says so and exits.
+
+A pass and an Issue share `worktrees/pair`, so one waits for the other:
+`just groom` refuses while an Issue is in flight, and `just pair` refuses while
+a pass is, saying to finish it with `just groom`.
 
 ## Using it
 
 | To… | Do… |
 |---|---|
 | add work | commit `issues/backlog/<slug>.md` to `main` |
+| groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | watch | `just pair-status`; `tail -f .pair/primary.log .pair/secondary.log` |
 | steer an Issue in flight | edit files in `worktrees/pair` between turns; the next seat sees the change |
@@ -80,13 +96,12 @@ edit to `ORDER` alone, and the loop's own send-back start no pass.
 | desk check | test in `worktrees/pair`, then `just pair-accept`, or write notes in the Issue file and `just pair-resume` |
 
 In a portfolio, run the same commands through the script, from the portfolio's
-root: `uv run --script <stereorepo>/pair/pair.py run`, `status`, `accept` or
-`resume`.
+root: `uv run --script <stereorepo>/pair/pair.py run`, `groom`, `status`,
+`accept` or `resume`.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
-`state.json` is the Issue or grooming pass in flight, `groomed.json` is each
-backlog file's blob id as the last pass left it, `turns.jsonl` has one row per turn with
-tokens and cache reads, and `<seat>.log` and `<seat>.jsonl` are each seat's
+`state.json` is the Issue or grooming pass in flight, `turns.jsonl` has one
+row per turn with tokens and cache reads, and `<seat>.log` and `<seat>.jsonl` are each seat's
 output.
 
 The loop's tests run as the `pair` Project's gate, `just gate pair`, against

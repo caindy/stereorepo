@@ -31,6 +31,11 @@ parent: parent-slug     # the Issue this one was split from
 What is wanted, what is out of scope, and how anyone will know it is done.
 ```
 
+An Issue is groomed once its front matter sets a `difficulty` and it has no
+`Needs elaboration` section. `just groom` grooms each Issue with neither a
+`difficulty` nor such a section, and places it in the running order; an Issue you write with a `difficulty` is taken as
+groomed, and deleting its `difficulty` asks for it to be groomed again.
+
 The front matter is the ontology's `Issue` class (`.meta/work/purpose.yaml`),
 and `just gate meta` holds every Issue file to it: a key the class does not
 declare, a difficulty outside its values, or a `waits_on` or `parent` naming no

@@ -8,12 +8,13 @@ Run from the root of the repository whose board it works; the loop's own code
 stays wherever this file is, outside that repository's tree (see README.md):
 
     uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--model M] [--round-cap N]
+    uv run --script <stereorepo>/pair/pair.py groom [--rerank] [--push] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py status
     uv run --script <stereorepo>/pair/pair.py accept
     uv run --script <stereorepo>/pair/pair.py resume
 
-In stereorepo itself, `just pair`, `just pair-status`, `just pair-accept` and
-`just pair-resume` run the same.
+In stereorepo itself, `just pair`, `just groom`, `just pair-status`,
+`just pair-accept` and `just pair-resume` run the same.
 """
 
 from __future__ import annotations
@@ -119,6 +120,19 @@ def main() -> int:
     run.add_argument(
         "--push", action="store_true", help="push main to origin after each landing"
     )
+    groom = sub.add_parser(
+        "groom",
+        parents=[seats],
+        help="groom the backlog issues that are not groomed, and place them in ORDER",
+    )
+    groom.add_argument(
+        "--rerank",
+        action="store_true",
+        help="rank the whole order below the marker again",
+    )
+    groom.add_argument(
+        "--push", action="store_true", help="push main to origin after the pass lands"
+    )
     sub.add_parser("status", help="the board on main and the issue in flight")
     sub.add_parser("accept", parents=[seats], help="pass the desk check and merge")
     sub.add_parser(
@@ -167,6 +181,8 @@ def main() -> int:
     signal.signal(signal.SIGINT, stop)
     if args.command == "run":
         outcome = loop.run(once=args.once)
+    elif args.command == "groom":
+        outcome = loop.groom(rerank=args.rerank)
     elif args.command == "accept":
         outcome = loop.accept()
     else:

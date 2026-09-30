@@ -35,8 +35,10 @@ observe. There are no pull requests.
   is its id. Front matter holds only `difficulty`, `waits_on` and `parent`, and
   all three are optional. A coarse intention that may never be done goes in
   `issues/roadmap/` instead, where no agent moves it.
-- `just pair` runs the loop; `just pair-status` shows the board and the Issue in
-  flight; `just pair-accept` and `just pair-resume` answer a desk check.
+- `just pair` runs the loop; `just groom` grooms the Issues that have no
+  `difficulty` and places them in the running order; `just pair-status` shows
+  the board and the Issue in flight; `just pair-accept` and `just pair-resume`
+  answer a desk check.
 - A seat that finds work outside its Issue writes it as a new file in
   `issues/backlog/` instead of doing it.
 

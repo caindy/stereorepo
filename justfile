@@ -36,6 +36,10 @@ bootstrap *args:
 pair *args:
     uv run --quiet --script pair/pair.py run {{args}}
 
+# groom the backlog issues with no difficulty, and place them in ORDER (--rerank)
+groom *args:
+    uv run --quiet --script pair/pair.py groom {{args}}
+
 # the board on main, the issue in flight, and the last turns
 pair-status:
     uv run --quiet --script pair/pair.py status

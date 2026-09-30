@@ -46,8 +46,8 @@ SUBCOMMAND = "subcommand"
 TOOL_ROOTS = (".meta/", "pair/")
 """Where a recipe's tool may live: the staging ground, or the scaffold-only pair loop."""
 
-SCAFFOLD_RECIPES = ("test-specialization", "adapt", "pair", "pair-status", "pair-accept",
-                    "pair-resume")
+SCAFFOLD_RECIPES = ("test-specialization", "adapt", "pair", "groom", "pair-status",
+                    "pair-accept", "pair-resume")
 """Recipes rendered only in the scaffold, which a portfolio's surface does not hold."""
 
 IDENTIFIER = "identifier"
@@ -64,6 +64,7 @@ CONTRACT: Contract = {
     "test-specialization": (("args", FLAGS),),
     "adapt": (("args", FLAGS),),
     "pair": (("args", FLAGS),),
+    "groom": (("args", FLAGS),),
     "pair-status": (),
     "pair-accept": (("args", FLAGS),),
     "pair-resume": (("args", FLAGS),),
