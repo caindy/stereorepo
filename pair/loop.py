@@ -379,7 +379,10 @@ class Loop:
 
         The notes, uncommitted or not, go in the same commit that moves the file
         to `backlog/` and puts its slug first in `ORDER`, so the loop takes it up
-        next.
+        next. A Flight that is a part of another in the backlog gets no line, as
+        no part does, and the same commit drops any line naming one of the
+        Flight's own parts, which a pass may have placed while the Flight sat at
+        its desk check.
         """
         path = self.flight_at_desk(slug)
         if path is None:
@@ -398,7 +401,14 @@ class Loop:
             return "none"
         order = self.repo / board.ORDER
         text = order.read_text() if order.is_file() else f"{board.MARKER}\n"
-        order.write_text(f"{slug}\n" + board.without(text, slug))
+        for part in board.descendants(self.repo, self.main, slug):
+            text = board.without(text, part)
+        text = board.without(text, slug)
+        flight = board.at_ref(self.repo, self.main, "desk-check", slug)
+        parent = flight and flight.front.get("parent")
+        if not (parent and str(parent) in board.listed(self.repo, self.main, "backlog")):
+            text = f"{slug}\n" + text
+        order.write_text(text)
         paths = self.commit_move(
             slug, "backlog", f"Send {slug} back from its desk check", board.ORDER
         )

@@ -7,7 +7,7 @@ authoritative one.
 | Stage | What sits there | Who moves an Issue in |
 |---|---|---|
 | `roadmap/` | the developer's coarse, speculative intentions, which may never be done; no agent moves an Issue in or out | the developer |
-| `backlog/` | ready to work, in the running order `backlog/ORDER` gives; the queue | the developer, or a session working with the developer; the pair loop, when it sends an Issue back |
+| `backlog/` | ready to work, in the running order `backlog/ORDER` gives, which ranks Flights and standalone Issues, a Flight's parts running at its line; the queue | the developer, or a session working with the developer; the pair loop, when it sends an Issue back |
 | `todo/` | groomed, with a difficulty, and waiting for a plan | the supervisor |
 | `in-progress/` | planned, and being implemented | the supervisor |
 | `desk-check/` | a `developer` Issue whose result waits for the developer's check, or a Flight whose parts have landed | the supervisor |
@@ -33,8 +33,9 @@ What is wanted, what is out of scope, and how anyone will know it is done.
 
 An Issue is groomed once its front matter sets a `difficulty` and it has no
 `Needs elaboration` section. The pair loop's `groom` grooms each Issue with
-neither a `difficulty` nor such a section, and places it in the running order;
-an Issue you write with a `difficulty` is taken as
+neither a `difficulty` nor such a section, and places it in the running order,
+unless it is a part of a Flight in `backlog/`, which runs at its Flight's line
+instead; an Issue you write with a `difficulty` is taken as
 groomed, and deleting its `difficulty` asks for it to be groomed again.
 
 While an Issue is underway its file on `main` stays in `backlog/`; its

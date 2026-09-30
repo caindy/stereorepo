@@ -1,0 +1,49 @@
+decisions:
+  - id: work:decision/299
+    name: "DR-299 · The running order ranks Flights and standalone Issues, not a Flight's parts"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+      - work:artifact/meta-checks-files-board
+      - work:artifact/wiki-stereorepo-flight
+    context: >-
+      `issues/backlog/ORDER` gave every backlog Issue a line of its own, a
+      Flight's parts included. Ranking a Flight meant placing each part in its
+      `waits_on` order and the Flight after them, and a part left out of
+      `ORDER` ran only after everything listed. The developer decides which
+      unit of value comes next, and a Flight is that unit (DR-298). The
+      question was what a line in `ORDER` stands for.
+    alternatives:
+      - name: A line for every backlog Issue, parts included
+        chosen: false
+        reason: >-
+          The developer ranks fragments whose order the parts' `waits_on`
+          already settles, and a part placed apart from its siblings splits a
+          Flight across the order.
+      - name: A line for each Flight and standalone Issue; parts run at their Flight's line
+        chosen: true
+        reason: >-
+          The developer ranks units of value only. The loop expands a Flight
+          where its line stands, each part after any sibling its `waits_on`
+          names and otherwise in filename order, and then takes the Flight's
+          check.
+    consequences:
+      - >-
+        A part is an Issue whose `parent:` names a Flight in `backlog/`. A part
+        whose Flight is in `desk-check/` or `done/` stands alone and keeps a
+        line.
+      - >-
+        The `board order` gate step and a grooming pass refuse a line naming a
+        part, and `just pair-resume` drops any such line when it returns a
+        Flight to `backlog/`.
+      - >-
+        A Flight whose parts wait on an Issue outside it is passed over until
+        that Issue lands; the Flight's line does not pull the Issue forward.
+    falsifier: >-
+      The developer repeatedly wanting one part of a Flight to run ahead of, or
+      behind, an unrelated Issue, so that ranking by Flight costs them control
+      they need.
+    rationale: |-
+      The developer ranks what they will desk-check; the order inside it is
+      the parts' own.

@@ -59,6 +59,19 @@ and out of `ORDER`. A ripe Flight is taken ahead of the running order, before
 any other ripe Issue, so it is checked as soon as its last child lands; among
 ripe Flights the running order decides.
 
+`ORDER` ranks Flights and standalone Issues, never their parts: the developer
+decides which unit of value comes next, and the parts' `waits_on` already
+settles their order. A part, an Issue whose `parent:` names a Flight in
+`backlog/`, has no line of its own. When the running order reaches a Flight's
+line, the loop takes the Flight's parts, each after any sibling its `waits_on`
+names and otherwise in filename order, a part that is a Flight expanded the
+same way, and then the Flight's check. A Flight whose parts all wait on an
+Issue outside it is passed over, as a waiting Issue is, rather than pulling
+that Issue forward. A part whose Flight has left `backlog/`, for `done/` or a
+desk check, stands alone and keeps a line of its own. An unlisted Flight runs,
+parts and all, where its filename falls among the unlisted slugs. The
+`board order` gate step refuses a line naming a part.
+
 The loop leaves how a product is built and deployed to the repository's
 `justfile`, and runs two recipes where it defines them. `just setup` provisions
 a fresh `worktrees/pair`, so the gate tests the branch in its own environment.
@@ -77,7 +90,9 @@ their own checkout, on `main`, while the loop runs:
 - To send it back, write a `## Desk-check notes` section at the end of the
   Flight file, one top-level bullet per note, then run
   `just pair-resume <slug>`. One commit carries the notes, the move to
-  `backlog/` and the slug put first in `ORDER`. The Flight is then ripe, and
+  `backlog/` and the slug put first in `ORDER`, unless the Flight is itself a
+  part of a Flight in `backlog/`, which gives it no line; the same commit drops
+  any line naming one of its parts. The Flight is then ripe, and
   its next Flight check writes each note as a child and lists their slugs in a
   `## Desk-check children` section, which marks the notes answered. Once those
   children land, the check after them writes a new brief, and the Flight comes
@@ -114,16 +129,18 @@ no pass has groomed is groomed by its own backlog stage when the loop takes it.
 `just groom` takes up the backlog Issues on `main` that are not groomed and
 have no `Needs elaboration` section, and runs a pass over them on the branch
 `pair/grooming`, from `prompts/stage-grooming.md`. The seats groom each one as
-the backlog stage grooms one, and place it below the `# groomed below` line of
-`issues/backlog/ORDER` without moving the Issues already there
-(`prompts/grooming-place.md`). `just groom --rerank` ranks the whole order
+the backlog stage grooms one, and place each Flight and standalone Issue below
+the `# groomed below` line of `issues/backlog/ORDER` without moving the Issues
+already there (`prompts/grooming-place.md`). Splitting a `hard` Issue keeps
+its line, on whichever side of the marker it stood, and that line now stands
+for the Flight; its parts get none. `just groom --rerank` ranks the whole order
 below the marker again instead (`prompts/grooming-rerank.md`). Either way the
 developer's lines above the marker stay as they are.
 
 The pass takes turns and ends the way a stage does. Its requirement is that
 each Issue it took up, and each part it wrote, has a `difficulty`, that each
-such `hard` Issue has children, that `ORDER` names every Issue the developer
-has not placed, that without `--rerank` the Issues already ranked keep their
+such `hard` Issue has children, that `ORDER` names every Flight and standalone
+Issue the developer has not placed and no part, that without `--rerank` the Issues already ranked keep their
 relative order, that nothing was deleted, and that `just gate` passes. The loop
 then lands the pass as one commit, `Groom the backlog`; each split `hard` Issue
 stays in `backlog/` and in `ORDER` as a Flight. A `Needs elaboration` section written in a pass parks that

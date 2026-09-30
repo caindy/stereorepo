@@ -1,6 +1,6 @@
 """Tests for the pair loop: every turn and stopping rule, over a real git repository.
 
-Run: uv run --with pyyaml python -m unittest discover -s tools/pair -p 'test_*.py'
+Run: uv run --with pyyaml python -m unittest discover -s pair -p 'test_*.py'
 """
 
 from __future__ import annotations
@@ -760,6 +760,36 @@ class FlightCheckTest(unittest.TestCase):
             [2, 1, 1],
         )
 
+    def test_resume_drops_the_lines_of_the_flights_parts(self) -> None:
+        b = self.b
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        b.loop.run(once=True)
+        b.issue("backlog", "late", "Late", difficulty="easy", parent="big")
+        (b.repo / board.ORDER).write_text("# groomed below\nlate\n")
+        flight = b.repo / "issues/desk-check/big.md"
+        flight.write_text(flight.read_text() + NOTES)
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "late placed, notes written")
+        self.assertEqual(b.loop.resume("big"), "resumed")
+        self.assertEqual(
+            sh(b.repo, "show", f"main:{board.ORDER}"), "big\n# groomed below"
+        )
+
+    def test_resume_gives_a_nested_flight_no_line(self) -> None:
+        b = self.b
+        b.issue("backlog", "outer", "Outer")
+        b.issue("backlog", "big", "Big", difficulty="hard", parent="outer")
+        (b.repo / board.ORDER).write_text("outer\n# groomed below\n")
+        sh(b.repo, "commit", "-q", "-am", "order")
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        flight = b.repo / "issues/desk-check/big.md"
+        flight.write_text(flight.read_text() + NOTES)
+        self.assertEqual(b.loop.resume("big"), "resumed")
+        self.assertEqual(
+            sh(b.repo, "show", f"main:{board.ORDER}"), "outer\n# groomed below"
+        )
+
     def test_a_children_section_must_list_the_new_children(self) -> None:
         b = self.b
         b.issue("backlog", "big", "Big" + BRIEF + NOTES, difficulty="hard")
@@ -1172,7 +1202,7 @@ class GroomingTest(unittest.TestCase):
                         "---\ndifficulty: easy\nparent: big\nwaits_on: [z]\n---\n"
                         "# One\n",
                     ),
-                    order("big\n# groomed below\nbig-1\na\n"),
+                    order("big\n# groomed below\na\n"),
                 ),
             ),
             ("secondary", quiet),
@@ -1180,9 +1210,42 @@ class GroomingTest(unittest.TestCase):
         self.assertEqual(b.loop.groom(), "groomed")
         self.assertTrue(b.on_main("issues/backlog/big.md"))
         self.assertFalse(b.on_main("issues/done/big.md"))
-        self.assertEqual(self.main_order(), "big\n# groomed below\nbig-1\na")
+        self.assertEqual(self.main_order(), "big\n# groomed below\na")
         log = sh(b.repo, "log", "--format=%s", "main").splitlines()
         self.assertEqual(log[0], "Groom the backlog")
+
+    def test_a_split_below_the_marker_keeps_its_line_and_writes_none_for_parts(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "a", "A", **WAITING)
+        b.issue("backlog", "big", "Big")
+        self.commit_order("# groomed below\nbig\na\n")
+        b.script(
+            (
+                "primary",
+                both(
+                    front("big", difficulty="hard"),
+                    write(
+                        "issues/backlog/big-1.md",
+                        "---\ndifficulty: easy\nparent: big\n---\n# One\n",
+                    ),
+                ),
+            ),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(self.main_order(), "# groomed below\nbig\na")
+        self.assertEqual(board.running_order(b.repo, "main"), ["big-1", "big", "a"])
+
+    def test_parts_left_out_of_order_leave_nothing_to_groom(self) -> None:
+        b = self.b
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("backlog", "part", "Part", difficulty="easy", parent="big")
+        self.commit_order("# groomed below\nbig\n")
+        self.assertEqual(board.unnamed(b.repo, "main"), [])
+        self.assertEqual(b.loop.groom(), "nothing")
+        self.assertEqual(b.sent, [])
 
     def test_a_hard_issue_the_pass_did_not_split_stays_in_backlog(self) -> None:
         b = self.b
@@ -1341,7 +1404,7 @@ class BoardTest(unittest.TestCase):
         self.assertIn("issues/backlog/loose.md needs `difficulty:`", found)
         self.assertIn("issues/backlog/big.md is hard, so split it", found)
         self.assertIn("rank big, loose below", found)
-        self.assertIn("nothing else: a, missing.", found)
+        self.assertIn("its Flight's line: a, missing.", found)
         (b.repo / "issues/backlog/loose.md").unlink()
         (b.repo / "issues/roadmap/r.md").write_text("# R\n")
         (b.repo / "x.txt").write_text("x\n")
@@ -1421,6 +1484,122 @@ class BoardTest(unittest.TestCase):
             "leaf",
         )
         self.assertIsNone(board.next_ripe(b.repo, "main", within=frozenset({"mid"})))
+
+    def order_is(self, b: Bench, text: str) -> None:
+        (b.repo / board.ORDER).write_text(text)
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+
+    def land(self, b: Bench, slug: str) -> None:
+        sh(b.repo, "mv", f"issues/backlog/{slug}.md", f"issues/done/{slug}.md")
+        sh(b.repo, "commit", "-q", "-m", f"land {slug}")
+
+    def test_a_flight_runs_its_parts_at_its_line(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A")
+        b.issue("backlog", "big", "Big")
+        b.issue("backlog", "a-second", "Second", parent="big", waits_on="[b-first]")
+        b.issue("backlog", "b-first", "First", parent="big")
+        self.order_is(b, "big\na\n")
+        self.assertEqual(
+            board.running_order(b.repo, "main"), ["b-first", "a-second", "big", "a"]
+        )
+        self.assertEqual(board.next_ripe(b.repo, "main"), "b-first")
+        self.land(b, "b-first")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "a-second")
+        self.land(b, "a-second")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "big")
+        self.land(b, "big")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "a")
+
+    def test_a_waits_on_cycle_among_parts_falls_back_to_filename_order(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "big", "Big")
+        b.issue("backlog", "p", "P", parent="big", waits_on="[q]")
+        b.issue("backlog", "q", "Q", parent="big", waits_on="[p]")
+        self.assertEqual(board.running_order(b.repo, "main"), ["p", "q", "big"])
+
+    def test_a_flight_whose_parts_wait_outside_it_is_passed_over(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A")
+        b.issue("backlog", "big", "Big")
+        b.issue("backlog", "part", "Part", parent="big", waits_on="[z]")
+        self.order_is(b, "big\na\n")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "a")
+
+    def test_a_nested_flight_runs_at_the_outer_flights_line(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A")
+        b.issue("backlog", "big", "Big")
+        b.issue("backlog", "mid", "Mid", parent="big")
+        b.issue("backlog", "leaf", "Leaf", parent="mid")
+        b.issue("backlog", "side", "Side", parent="big")
+        self.order_is(b, "big\na\n")
+        self.assertEqual(
+            board.running_order(b.repo, "main"), ["leaf", "mid", "side", "big", "a"]
+        )
+        self.assertEqual(board.next_ripe(b.repo, "main"), "leaf")
+
+    def test_a_part_of_a_landed_flight_runs_from_its_own_line(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A")
+        b.issue("done", "old", "Old")
+        b.issue("backlog", "left", "Left", parent="old")
+        self.order_is(b, "left\na\n")
+        self.assertEqual(board.running_order(b.repo, "main"), ["left", "a"])
+        self.assertEqual(board.next_ripe(b.repo, "main"), "left")
+        self.assertEqual(board.unnamed(b.repo, "main"), [])
+
+    def test_an_unlisted_flight_runs_at_its_filename(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        for slug in ("a", "b", "zed"):
+            b.issue("backlog", slug, slug.upper())
+        b.issue("backlog", "zed-part", "Zed part", parent="zed")
+        self.order_is(b, "b\n")
+        self.assertEqual(
+            board.running_order(b.repo, "main"), ["b", "a", "zed-part", "zed"]
+        )
+        self.assertEqual(board.unnamed(b.repo, "main"), ["a", "zed"])
+
+    def test_grooming_faults_refuse_a_line_for_a_part(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A", difficulty="easy")
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("backlog", "part", "Part", difficulty="easy", parent="big")
+        self.order_is(b, "part\n# groomed below\nbig\na\n")
+        base = sh(b.repo, "rev-parse", "HEAD")
+
+        def faults() -> str:
+            return "\n".join(board.grooming_faults(b.repo, b.repo, base, (), False))
+
+        self.assertIn("delete the line for part", faults())
+        (b.repo / board.ORDER).write_text("# groomed below\nbig\npart\na\n")
+        self.assertIn("its Flight's line: part.", faults())
+        (b.repo / board.ORDER).write_text("# groomed below\nbig\na\n")
+        self.assertEqual(faults(), "")
+
+    def test_grooming_faults_read_the_parts_a_pass_just_wrote(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A", difficulty="easy")
+        b.issue("backlog", "big", "Big")
+        self.order_is(b, "# groomed below\na\n")
+        base = sh(b.repo, "rev-parse", "HEAD")
+        (b.repo / "issues/backlog/big.md").write_text("---\ndifficulty: hard\n---\n# Big\n")
+        (b.repo / "issues/backlog/big-1.md").write_text(
+            "---\ndifficulty: easy\nparent: big\n---\n# One\n"
+        )
+        (b.repo / board.ORDER).write_text("# groomed below\nbig\na\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "pass")
+        self.assertEqual(board.grooming_faults(b.repo, b.repo, base, ("big",), False), [])
 
     def test_sections_counts_each_heading_of_a_name(self) -> None:
         body = "# F\n\n## Desk-check brief\n\none\n\n## Desk-check brief\n\ntwo\n"

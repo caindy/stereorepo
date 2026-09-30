@@ -1,6 +1,6 @@
 """`files.board.board_front_matter` against a board holding one Issue per mistake it reports
 and one per shape it accepts, and `files.board.board_order` against an `ORDER` naming one
-slug per stage it must or must not accept.
+slug per stage and per parentage it must or must not accept.
 
 The steps are run by the gate over the repository's own board, which holds no
 mistakes, so a step that reported nothing at all would pass there. Here each is
@@ -65,26 +65,34 @@ def board_front_matter_probes(views: Sequence[Any]) -> list[str]:
     return problems
 
 
-ORDER = "# the developer's\nkept\n\nunderway\n# groomed below\nlanded\nnowhere\n"
-"""An `ORDER` naming one backlog Issue, one underway, one landed and one nowhere,
-with a comment, a blank line and the marker between them."""
+ORDER = ("# the developer's\nkept\n\nunderway\n# groomed below\nlanded\nnowhere\n"
+         "part\nleftover\n")
+"""An `ORDER` naming one backlog Issue, one underway, one landed, one nowhere, a part of
+a Flight in the backlog and a part of a landed Flight, with a comment, a blank line
+and the marker between them."""
 
-ORDER_STAGES = {"kept": "backlog", "underway": "in-progress", "landed": "done"}
+ORDER_STAGES = {"kept": "backlog", "underway": "in-progress", "landed": "done",
+                "part": "backlog", "leftover": "backlog"}
 """Where each slug `ORDER` names has its Issue file, by slug; `nowhere` has none."""
 
-ORDER_REPORTED = {"landed": 6, "nowhere": 7}
+ORDER_PARENTS = {"part": "kept", "leftover": "landed"}
+"""The `parent` each slug's Issue names, by slug: `part` is a part of a Flight in the
+backlog, and `leftover` of one that landed, which leaves it standing alone."""
+
+ORDER_REPORTED = {"landed": 6, "nowhere": 7, "part": 8}
 """The slugs `board order` must report, against the line each sits on."""
 
 
 @check("board order probes")
 def board_order_probes() -> list[str]:
-    """A landed slug and a missing slug are each reported once at their line; nothing else is."""
+    """A landed slug, a missing slug and a part are each reported once at their line; no other."""
     with tempfile.TemporaryDirectory() as tmp:
         root = pathlib.Path(tmp)
         bare = board.board_order(root)
         for slug, stage in ORDER_STAGES.items():
             (root / stage).mkdir(exist_ok=True)
-            (root / stage / f"{slug}.md").write_text(f"# {slug}\n", encoding="utf-8")
+            front = f"---\nparent: {ORDER_PARENTS[slug]}\n---\n" if slug in ORDER_PARENTS else ""
+            (root / stage / f"{slug}.md").write_text(f"{front}# {slug}\n", encoding="utf-8")
         (root / "backlog" / "ORDER").write_text(ORDER, encoding="utf-8")
         outcome = board.board_order(root)
     problems = [] if isinstance(bare, Passed) else ["board order: a board with no ORDER fails"]

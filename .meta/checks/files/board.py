@@ -113,12 +113,25 @@ An Issue underway keeps its line on its own branch until the squash that lands
 it removes the line, so its own gate must still find it."""
 
 
+def _parent(path: pathlib.Path) -> str | None:
+    """The `parent` an Issue file's front matter names, or None where there is none to read."""
+    match = FRONTMATTER.match(path.read_text(encoding="utf-8"))
+    try:
+        front = yaml.safe_load(match["block"]) if match else None
+    except yaml.YAMLError:
+        return None
+    parent = front.get("parent") if isinstance(front, dict) else None
+    return str(parent) if parent else None
+
+
 @check("board order")
 def board_order(root: pathlib.Path | None = None) -> StepOutcome:
-    """Every slug `issues/backlog/ORDER` names is an Issue in the backlog or underway.
+    """Every slug `issues/backlog/ORDER` names is a Flight or standalone Issue, queued or underway.
 
     A line naming an Issue that landed, or no Issue at all, would sit in the
-    running order unread, so each is reported with its line number. Blank lines
+    running order unread, and a part of a Flight in the backlog runs at its
+    Flight's line, so a line of its own would say it runs elsewhere. Each is
+    reported with its line number. Blank lines
     and `#` lines name nothing. A board with no `ORDER` runs in filename order
     and passes. `root` is the seam a probe passes its own board through.
     """
@@ -129,9 +142,15 @@ def board_order(root: pathlib.Path | None = None) -> StepOutcome:
     lines = path.read_text(encoding="utf-8").splitlines()
     named = [(n, line.strip()) for n, line in enumerate(lines, 1)
              if line.strip() and not line.strip().startswith("#")]
-    problems = [f"{_rel(path)}:{n}: {slug!r} names no Issue in {', '.join(ORDERABLE)}"
-                for n, slug in named
-                if not any((board / stage / f"{slug}.md").is_file() for stage in ORDERABLE)]
+    problems = []
+    for n, slug in named:
+        found = next((board / stage / f"{slug}.md" for stage in ORDERABLE
+                      if (board / stage / f"{slug}.md").is_file()), None)
+        if found is None:
+            problems.append(f"{_rel(path)}:{n}: {slug!r} names no Issue in {', '.join(ORDERABLE)}")
+        elif (parent := _parent(found)) and (board / "backlog" / f"{parent}.md").is_file():
+            problems.append(f"{_rel(path)}:{n}: {slug!r} is a part of {parent!r}, a Flight in "
+                            "the backlog, and runs at its Flight's line")
     if problems:
         return Found(problems)
     return Passed(f"{len(named)} slugs")

@@ -244,6 +244,65 @@ def without(text: str, slug: str) -> str:
     )
 
 
+def parts(parent_of: dict[str, str], backlog: Collection[str]) -> set[str]:
+    """The backlog slugs whose parent is also in the backlog: the parts of a Flight there.
+
+    `ORDER` names every other backlog slug, a Flight or a standalone Issue, and
+    a part runs where its Flight's line is. A part whose Flight has left the
+    backlog, for `done/` or a desk check, stands alone until the Flight is back.
+    """
+    return {slug for slug in backlog if parent_of.get(slug) in backlog}
+
+
+def backlog_parents(kin: dict[str, dict[str, str]]) -> dict[str, str]:
+    """Each backlog Issue in `families` that names a parent, mapped to that parent."""
+    return {
+        child: parent
+        for parent, kids in kin.items()
+        for child, stage in kids.items()
+        if stage == "backlog"
+    }
+
+
+def running_order(repo: Path, ref: str) -> list[str]:
+    """Every backlog slug at `ref`, in the order the loop reaches it.
+
+    The top-level slugs, those `ORDER` names first to last and then the rest in
+    filename order, each stand for themselves or for a Flight. A Flight expands
+    in place into its backlog parts, each part after any sibling its
+    `waits_on` names and otherwise in filename order, a part that is a Flight
+    expanded the same way, and then the Flight itself. A `waits_on` cycle among
+    siblings falls back to filename order.
+    """
+    kin = families(repo, ref)
+    backlog = listed(repo, ref, "backlog")
+    inner = parts(backlog_parents(kin), backlog)
+    top = [s for s in dict.fromkeys(order(repo, ref)) if s in backlog and s not in inner]
+    top += [s for s in backlog if s not in top and s not in inner]
+    seen: set[str] = set()
+
+    def expand(slug: str) -> list[str]:
+        seen.add(slug)
+        kids = sorted(
+            c for c, stage in kin.get(slug, {}).items() if stage == "backlog" and c not in seen
+        )
+        waits = {}
+        for kid in kids:
+            issue = at_ref(repo, ref, "backlog", kid)
+            front = issue.front if issue else {}
+            waits[kid] = {w.split(":")[-1] for w in as_list(front.get("waits_on"))}
+        placed: list[str] = []
+        while kids:
+            kid = next(
+                (k for k in kids if not ((waits[k] & set(kids)) - {k})), kids[0]
+            )
+            kids.remove(kid)
+            placed.append(kid)
+        return [x for kid in placed if kid not in seen for x in expand(kid)] + [slug]
+
+    return [x for slug in top for x in expand(slug)]
+
+
 def next_ripe(
     repo: Path,
     ref: str,
@@ -252,8 +311,8 @@ def next_ripe(
 ) -> str | None:
     """The backlog item at `ref` the loop takes next: a ripe Flight, else the first ripe item.
 
-    The running order is the slugs `ORDER` names, then every other backlog
-    slug in filename order. An item is ripe when its `waits_on` are all done,
+    The items are taken in `running_order`, so a Flight's parts run where its
+    line in `ORDER` is. An item is ripe when its `waits_on` are all done,
     every Issue naming it in `parent:` is done, and it has no `Needs
     elaboration` section, which marks a send-back the developer has yet to
     answer. A ripe Flight, one with children, is taken before any other ripe
@@ -263,8 +322,6 @@ def next_ripe(
     """
     done = set(listed(repo, ref, "done"))
     kin = families(repo, ref)
-    backlog = listed(repo, ref, "backlog")
-    named = [s for s in dict.fromkeys(order(repo, ref)) if s in backlog]
 
     def ripe(slug: str) -> bool:
         issue = at_ref(repo, ref, "backlog", slug)
@@ -278,7 +335,7 @@ def next_ripe(
         )
 
     first = None
-    for slug in named + [s for s in backlog if s not in named]:
+    for slug in running_order(repo, ref):
         if slug in skip or (within is not None and slug not in within):
             continue
         if first is not None and slug not in kin:
@@ -306,9 +363,14 @@ def to_groom(repo: Path, ref: str) -> list[str]:
 
 
 def unnamed(repo: Path, ref: str) -> list[str]:
-    """The backlog slugs at `ref` that `ORDER` does not name, which a pass places."""
+    """The top-level backlog slugs at `ref` that `ORDER` does not name, which a pass places.
+
+    A part of a Flight in the backlog runs at its Flight's line and needs none.
+    """
     named = set(order(repo, ref))
-    return [s for s in listed(repo, ref, "backlog") if s not in named]
+    backlog = listed(repo, ref, "backlog")
+    inner = parts(backlog_parents(families(repo, ref)), backlog)
+    return [s for s in backlog if s not in named and s not in inner]
 
 
 def split_order(text: str) -> tuple[list[str], list[str] | None]:
@@ -333,19 +395,29 @@ def grooming_faults(
     Issues the pass took up: each, and each backlog file the pass wrote, needs a
     `difficulty` unless the pass parked it with a `Needs elaboration` section.
     Without `rerank`, the Issues already ranked below the marker keep their
-    relative order. An empty list means the pass is finished. A `hard`
-    Issue's children are read at the tree's `HEAD`, so the loop commits a turn
-    before it asks.
+    relative order. `ORDER` names only Flights and standalone Issues: a part of
+    a Flight in the backlog has no line on either side of the marker, and the
+    parts are read from the tree, since the pass may just have written them.
+    An empty list means the pass is finished. A `hard` Issue's children are
+    read at the tree's `HEAD`, so the loop commits a turn before it asks.
     """
     faults = []
     backlog = sorted(
         p.stem for p in (tree / ISSUES / "backlog").glob("*.md") if p.name != "README.md"
     )
     before = listed(repo, ref, "backlog")
+    issues = {
+        slug: Issue(slug, "backlog", *parse((tree / ISSUES / "backlog" / f"{slug}.md").read_text()))
+        for slug in backlog
+    }
+    inner = parts(
+        {slug: str(i.front["parent"]) for slug, i in issues.items() if i.front.get("parent")},
+        backlog,
+    )
     for slug in backlog:
         if slug not in targets and slug in before:
             continue
-        issue = Issue(slug, "backlog", *parse((tree / ISSUES / "backlog" / f"{slug}.md").read_text()))
+        issue = issues[slug]
         if needs_elaboration(issue.body):
             continue
         if issue.difficulty is None:
@@ -377,25 +449,32 @@ def grooming_faults(
             f"{ORDER} needs the line `{MARKER}`, with the ranking below it."
         )
         return faults
-    if above != kept:
-        shown = "\n".join(kept) or "(nothing)"
+    stale = [s for s in above if s in inner]
+    if stale:
+        faults.append(
+            f"above `{MARKER}` in {ORDER}, delete the line for {', '.join(stale)}: "
+            "a part of a Flight in the backlog runs at its Flight's line and has none."
+        )
+    if [s for s in above if s not in inner] != [s for s in kept if s not in inner]:
+        shown = "\n".join(s for s in kept if s not in inner) or "(nothing)"
         faults.append(
             f"the lines above `{MARKER}` in {ORDER} are the developer's; "
             f"put them back as they were:\n{shown}"
         )
     placed = set(above)
-    wanted = [s for s in backlog if s not in placed]
+    wanted = [s for s in backlog if s not in placed and s not in inner]
     missing = [s for s in wanted if s not in below]
     if missing:
         faults.append(f"rank {', '.join(missing)} below `{MARKER}` in {ORDER}.")
     extra = sorted({s for s in below if not s.startswith("#") and (s not in wanted or below.count(s) > 1)})
     if extra:
         faults.append(
-            f"below `{MARKER}` in {ORDER}, name each backlog Issue not placed above it "
-            f"exactly once, and nothing else: {', '.join(extra)}."
+            f"below `{MARKER}` in {ORDER}, name each Flight and standalone backlog "
+            "Issue not placed above it exactly once, and nothing else; a part of a "
+            f"Flight in the backlog runs at its Flight's line: {', '.join(extra)}."
         )
     if not rerank and ranked:
-        held = [s for s in ranked if s in backlog and s not in targets]
+        held = [s for s in ranked if s in backlog and s not in targets and s not in inner]
         now = [s for s in dict.fromkeys(below) if s in held]
         was_now = [s for s in held if s in now]
         if now != was_now:
