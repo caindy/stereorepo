@@ -147,3 +147,7 @@ sections. `just pair-status` shows the board. The Flight concept is at
   soon as its last part lands, whatever else is ripe. A delivered unit of value
   waiting only for its check gains nothing by waiting behind unrelated Issues.
   `just pair --once` still ends after one unit of work.
+
+## Desk-check children
+
+- `flight-check-first`
