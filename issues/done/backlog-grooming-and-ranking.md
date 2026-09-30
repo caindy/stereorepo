@@ -1,3 +1,7 @@
+---
+difficulty: hard
+---
+
 # Keep the backlog groomed and ranked between Issues
 
 The backlog is work the developer has committed to doing, and a healthy
@@ -47,5 +51,15 @@ done. It is the developer's alone. No agent moves an Issue into or out of it.
   taken, and no pass runs when the backlog is unchanged.
 - The loop takes Issues in the ranked order, keeps the developer's placements
   above the marker, and a sent-back Issue stays in `backlog/`.
-- A gate step fails when the list names a slug that is not in `backlog/`.
+- A gate step fails when the list names a slug that is neither in `backlog/`
+  nor in flight.
 - The pair tests cover each of these, and `just gate` passes.
+
+## Parts
+
+1. `backlog-running-order`: the `ORDER` file and its marker, `next_ripe`
+   following it, send-backs staying in `backlog/`, and the gate step.
+2. `backlog-grooming-pass`: the grooming pass in the loop, which grooms every
+   backlog Issue and writes the ranking. Waits on part 1.
+3. `backlog-and-roadmap-words`: the READMEs and the Stage concept. Waits on
+   both.
