@@ -25,7 +25,8 @@ it holds an Issue, so either waits for the other.
   `ORDER` can conflict with `main` textually. When the rebase conflicts only in
   `ORDER`, the loop rebuilds it from `main`'s `ORDER` with the pass's
   placements inserted where the pass put them, minus any slug no longer in
-  `backlog/`, and carries on.
+  `backlog/`, and carries on. A pass places only Flights and standalone Issues
+  (`rank-flights-not-parts`), and a part's landing drops no line.
 - **A pass and the loop do not work the same Issue.** While a pass is
   underway, `next_ripe` skips the Issues the pass targets (its `skip`
   argument). A pass started while an Issue is underway does not target it,

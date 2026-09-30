@@ -23,12 +23,15 @@ what happens next".
 - **What waits on the developer**, first, one line each with the reason:
   - every Issue in `backlog/` with a `Needs elaboration` section, with the
     section's first line;
-  - every Issue in `desk-check/`;
+  - every Issue in `desk-check/`, a Flight among them with the first line of
+    its latest desk-check brief;
   - a paused loop, with the reason it paused (a seat that failed twice, a
     grooming pass or stage past its round cap, a refused fast-forward).
 - **What happens next:** the Issue being worked, its stage and turn; then the
   running order, in full, marking which Issues are ripe and, for each that is
-  not, what it waits on.
+  not, what it waits on. A Flight is one entry in that order, with its parts
+  beneath it in the order they will run, each marked done, ripe or waiting,
+  and last the Flight's own check.
 - The board's counts per stage, as now.
 
 Nothing new is stored: every line is derived from the board, `ORDER`, and
@@ -37,12 +40,11 @@ Nothing new is stored: every line is derived from the board, `ORDER`, and
 ## Out of scope
 
 - Notifications, and anything across repositories (`cockpit-status-convention`).
-- Flights (`flights`); when they land, a Flight in `desk-check/` is one more
-  line under what waits on the developer.
 
 ## Done when
 
 - Each kind of waiting item above appears under what waits on the developer,
   with its reason, and nothing appears there when nothing waits.
-- The running order is shown in full, with ripe and waiting Issues told apart.
+- The running order is shown in full, with ripe and waiting Issues told apart,
+  and each Flight shown with its parts beneath it.
 - The pair tests cover each case, and `just gate` passes.

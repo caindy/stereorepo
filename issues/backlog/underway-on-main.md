@@ -29,9 +29,10 @@ Issue underway.
   and a Flight whose check wrote a gap as a new child. A send-back
   (`kick_back`) moves it from `underway/` to `backlog/`.
 - `board.STAGES` gains `underway`. `next_ripe`, `to_groom` and `unnamed` do not
-  take it up, since it is not in `backlog/`. `grooming_faults` accepts a slug
-  below the `# groomed below` marker in `ORDER` that names the Issue underway,
-  and does not ask a pass to rank it.
+  take it up, since it is not in `backlog/`. `grooming_faults` accepts a line
+  in `ORDER` that names the Issue underway, or the Flight it is a part of, and
+  does not ask a pass to rank it. A part underway has no line of its own
+  (`rank-flights-not-parts`), and its Flight's line stays where it is.
 - Whatever looks for the Issue being worked in `backlog/` on `main` looks in
   `underway/` instead. In particular `flight_refusal` in `pair/loop.py`
   accepts a Flight whose check is underway, so `just pair --flight <slug>`
@@ -61,6 +62,6 @@ Issue underway.
   Issue in `backlog/`, with nothing left in `underway/` in each case.
 - Restarting the supervisor mid-Issue neither moves the file again nor loses
   it, and `just pair --flight <slug>` resumes a Flight check underway.
-- A grooming pass whose `ORDER` still names the Issue underway has no fault for
-  it.
+- A grooming pass whose `ORDER` still names the Issue underway, or its Flight,
+  has no fault for it.
 - The pair tests cover each of these, and `just gate` passes.
