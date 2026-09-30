@@ -1,3 +1,7 @@
+---
+difficulty: hard
+---
+
 # Land a parent Issue as a Flight, and desk-check the Flight
 
 Serial work is organised in windows of Issues that together deliver one unit
@@ -61,6 +65,14 @@ it, and nothing can run "until this lands".
   it, and the Desk check concept says a Flight's desk check comes after its
   parts have landed. `pair/README.md`'s stage table describes the Flight's
   path.
+
+## Parts
+
+Split by grooming, in landing order: `underway-not-in-flight`,
+`flight-check`, `flight-desk-check`, then `flight-deliver`,
+`pair-flight-option` and `flight-vocabulary`. `flight-check` and
+`flight-desk-check` carry the core; the other parts wait on
+`flight-desk-check`, except `underway-not-in-flight`, which waits on nothing.
 
 ## Out of scope
 

@@ -1,3 +1,7 @@
+---
+difficulty: medium
+---
+
 # `pair-status` lists what waits on the developer
 
 The loop and the grooming pass can say that something needs the developer, but

@@ -1,3 +1,7 @@
+---
+difficulty: medium
+---
+
 # Groom with `just groom`, apart from implementation
 
 The grooming pass runs inside `just pair`: before taking each Issue, the loop
@@ -39,7 +43,11 @@ start from the running order as it stands.
 ## Out of scope
 
 - Running `just groom` on a schedule or automatically.
-- Flights (`flights`).
+- Flights (`flights`). The developer placed this Issue above the marker, so it
+  lands before any part of `flights`, which rank below the marker. Keep
+  `retire_hard` as it is: the pass still retires a `hard` Issue it splits.
+  `flight-check` removes that later. After that change, a split `hard` Issue
+  stays in `backlog/`, and it counts as groomed because it has a `difficulty`.
 
 ## Done when
 
