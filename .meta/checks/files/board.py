@@ -101,3 +101,37 @@ def board_front_matter(views: Sequence[Any],
     if problems:
         return Found(problems)
     return Passed(f"{len(issues)} Issues")
+
+
+ORDER = "backlog/ORDER"
+"""The backlog's running order, relative to the board: one slug per line, `#` lines aside."""
+
+ORDERABLE = ("backlog", "todo", "in-progress", "desk-check")
+"""The stages a slug in `ORDER` may name an Issue in: the backlog, or on its way from it.
+
+An Issue in flight keeps its line on its own branch until the squash that lands
+it removes the line, so its own gate must still find it."""
+
+
+@check("board order")
+def board_order(root: pathlib.Path | None = None) -> StepOutcome:
+    """Every slug `issues/backlog/ORDER` names is an Issue in the backlog or in flight.
+
+    A line naming an Issue that landed, or no Issue at all, would sit in the
+    running order unread, so each is reported with its line number. Blank lines
+    and `#` lines name nothing. A board with no `ORDER` runs in filename order
+    and passes. `root` is the seam a probe passes its own board through.
+    """
+    board = root if root is not None else BOARD
+    path = board / ORDER
+    if not path.is_file():
+        return Passed("no ORDER")
+    lines = path.read_text(encoding="utf-8").splitlines()
+    named = [(n, line.strip()) for n, line in enumerate(lines, 1)
+             if line.strip() and not line.strip().startswith("#")]
+    problems = [f"{_rel(path)}:{n}: {slug!r} names no Issue in {', '.join(ORDERABLE)}"
+                for n, slug in named
+                if not any((board / stage / f"{slug}.md").is_file() for stage in ORDERABLE)]
+    if problems:
+        return Found(problems)
+    return Passed(f"{len(named)} slugs")

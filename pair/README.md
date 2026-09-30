@@ -39,8 +39,9 @@ the seat left uncommitted, with a `Seat:` trailer.
    If the requirement does not hold, acceptance is cleared and the next turn is
    told what is missing, with the gate's output where the gate failed.
 3. **Sending back.** An Issue file that gains a `Needs elaboration` section, or
-   a stage that runs past its round cap, sends the Issue to `issues/roadmap/` on
-   `main`, without its code.
+   a stage that runs past its round cap, sends the Issue to `issues/backlog/` on
+   `main` with that section, without its code. It sits out of the running order
+   until the developer answers the section and removes it.
 4. **Landing.** The loop rebases the branch onto `main`, squashes it into one
    commit that includes the move to `done/`, and fast-forwards `main` in the
    developer's checkout with `--ff-only`, which refuses rather than overwrite local

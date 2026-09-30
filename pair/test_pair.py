@@ -273,7 +273,7 @@ class LoopTest(unittest.TestCase):
         self.assertIn("FAILED: test_widget", b.sent[6][1])
         self.assertEqual(b.gate_runs, 2)
 
-    def test_needs_elaboration_sends_the_issue_to_roadmap_and_drops_the_code(
+    def test_needs_elaboration_sends_the_issue_to_backlog_and_drops_the_code(
         self,
     ) -> None:
         b = self.b
@@ -288,12 +288,26 @@ class LoopTest(unittest.TestCase):
             )
         )
         self.assertEqual(b.loop.run(once=True), "kicked")
-        self.assertTrue(b.on_main("issues/roadmap/vague.md"))
-        self.assertFalse(b.on_main("issues/backlog/vague.md"))
+        self.assertTrue(b.on_main("issues/backlog/vague.md"))
+        self.assertFalse(b.on_main("issues/roadmap/vague.md"))
         self.assertFalse(b.on_main("b.txt"))
         self.assertIn(
-            "Which widget?", sh(b.repo, "show", "main:issues/roadmap/vague.md")
+            "Which widget?", sh(b.repo, "show", "main:issues/backlog/vague.md")
         )
+        self.assertIsNone(board.next_ripe(b.repo, "main"))
+
+    def test_a_vanished_issue_file_goes_back_to_backlog_and_sits_out(self) -> None:
+        b = self.b
+        b.issue("backlog", "gone", "Gone")
+
+        def delete(cwd: Path) -> None:
+            (cwd / "issues/backlog/gone.md").unlink()
+
+        b.script(("primary", delete))
+        self.assertEqual(b.loop.run(once=True), "kicked")
+        text = sh(b.repo, "show", "main:issues/backlog/gone.md")
+        self.assertTrue(board.needs_elaboration(text))
+        self.assertIsNone(board.next_ripe(b.repo, "main"))
 
     def test_round_cap_sends_the_issue_back_with_a_reason(self) -> None:
         b = self.b
@@ -308,7 +322,7 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "kicked")
         self.assertIn(
             "did not settle the backlog stage",
-            sh(b.repo, "show", "main:issues/roadmap/churn.md"),
+            sh(b.repo, "show", "main:issues/backlog/churn.md"),
         )
 
     def test_a_round_cap_override_applies_to_every_difficulty(self) -> None:
@@ -318,7 +332,7 @@ class LoopTest(unittest.TestCase):
         b.script(("primary", write("c.txt", "1")), ("secondary", write("c.txt", "2")))
         self.assertEqual(b.loop.run(once=True), "kicked")
         self.assertIn(
-            "within 2 turns", sh(b.repo, "show", "main:issues/roadmap/short.md")
+            "within 2 turns", sh(b.repo, "show", "main:issues/backlog/short.md")
         )
 
     def test_a_seat_that_moves_the_issue_file_is_quietly_put_back(self) -> None:
@@ -505,6 +519,37 @@ class LoopTest(unittest.TestCase):
         self.assertTrue(b.on_main("issues/done/a-first.md"))
         self.assertEqual(board.next_ripe(b.repo, "main"), "b-second")
 
+    def test_a_landed_issue_leaves_order_and_keeps_a_reordering_made_mid_issue(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "b", "B")
+        b.issue("backlog", "c", "C")
+        b.issue("backlog", "a", "A", difficulty="easy")
+        (b.repo / board.ORDER).write_text("a\n# groomed below\nb\nc\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+
+        def reorder(_cwd: Path) -> None:
+            (b.repo / board.ORDER).write_text("a\n# groomed below\nc\nb\n")
+            sh(b.repo, "commit", "-q", "-am", "reorder")
+
+        b.script(
+            ("primary", append("a", PLAN)),
+            ("secondary", quiet),
+            ("primary", both(write("a.txt", "x"), reorder)),
+            ("secondary", quiet),
+            ("primary", quiet),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertTrue(b.on_main("issues/done/a.md"))
+        self.assertEqual(
+            sh(b.repo, "show", f"main:{board.ORDER}"), "# groomed below\nc\nb"
+        )
+        self.assertEqual(sh(b.repo, "log", "-1", "--format=%s", "main"), "A")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "c")
+
 
 class BoardTest(unittest.TestCase):
     def test_section_reads_headings_and_bold_leads(self) -> None:
@@ -526,6 +571,38 @@ class BoardTest(unittest.TestCase):
         self.assertEqual(board.next_ripe(b.repo, "main"), "b")
         b.issue("done", "z", "Z")
         self.assertEqual(board.next_ripe(b.repo, "main"), "a")
+
+    def test_order_runs_the_backlog(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        for slug in ("a", "b", "c", "d"):
+            b.issue("backlog", slug, slug.upper())
+
+        def order(text: str) -> None:
+            (b.repo / board.ORDER).write_text(text)
+            sh(b.repo, "add", "-A")
+            sh(b.repo, "commit", "-q", "-m", "order")
+
+        self.assertEqual(board.next_ripe(b.repo, "main"), "a")
+        order("# a comment\n\nmissing\nc\n# groomed below\nb\n")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "c")
+        self.assertEqual(
+            board.next_ripe(b.repo, "main", skip=frozenset({"c"})), "b"
+        )
+        self.assertEqual(
+            board.next_ripe(b.repo, "main", skip=frozenset({"c", "b"})), "a"
+        )
+        order("# groomed below\nd\nc\n")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "d")
+        b.issue("backlog", "d", "D", waits_on="[z]")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "c")
+        b.issue("backlog", "c", "C\n\n# Needs elaboration\n\nWhich C?")
+        self.assertEqual(board.next_ripe(b.repo, "main"), "a")
+
+    def test_without_drops_only_the_slug(self) -> None:
+        text = "a\n# a\n# groomed below\nab\na\n"
+        self.assertEqual(board.without(text, "a"), "# a\n# groomed below\nab\n")
+        self.assertEqual(board.without("b\n", "a"), "b\n")
 
 
 class SeatCommandTest(unittest.TestCase):

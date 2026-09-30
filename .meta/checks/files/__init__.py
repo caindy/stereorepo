@@ -30,7 +30,7 @@ from checks.files.conflicts import CONFLICT_MARKER, conflict_markers
 from checks.files.templates import Strict, duplicate_concept_ids, duplicate_keys, surviving_placeholders, template_conventions_agree, template_parses
 from checks.files.markdown import FENCED, LINK, markdown_links
 from checks.files.wiki import FRONTMATTER, LEAD_COPULA, WIKILINK, ubiquitous_language_wiki_parity, wiki_lead_paragraphs, wiki_synonyms_are_not_avoided, wikilinks
-from checks.files.board import board_front_matter
+from checks.files.board import board_front_matter, board_order
 from checks.files.scaffold import SCAFFOLD_ONLY, scaffold_only_paths
 from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, INTERPOLATION, JUSTFILE, RECIPE, SUBCOMMAND, justfile_recipe_shape
 from checks.files.prose import asserts, declared, inherited_prose, rendering, unread_prose
@@ -76,6 +76,7 @@ __all__ = [
     "asserts",
     "board",
     "board_front_matter",
+    "board_order",
     "ceiling",
     "conflict_markers",
     "conflicts",

@@ -6,8 +6,8 @@ authoritative one.
 
 | Stage | What sits there | Who moves an Issue in |
 |---|---|---|
-| `roadmap/` | intended, and not yet elaborated enough to work | the developer; the pair loop, when it sends an Issue back |
-| `backlog/` | ready to work, in filename order; the queue | the developer, or a session working with the developer |
+| `roadmap/` | intended, and not yet elaborated enough to work | the developer |
+| `backlog/` | ready to work, in the running order `backlog/ORDER` gives; the queue | the developer, or a session working with the developer; the pair loop, when it sends an Issue back |
 | `todo/` | groomed, with a difficulty, and waiting for a plan | the supervisor |
 | `in-progress/` | planned, and being implemented | the supervisor |
 | `desk-check/` | a `developer` Issue whose result waits for the developer's check | the supervisor |

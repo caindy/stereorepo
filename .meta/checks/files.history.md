@@ -129,3 +129,14 @@ enum, read off the schema, and resolves `waits_on` and `parent` against the
 slugs on the board, leaving a `<repository>:<slug>` entry unresolved.
 
 Evidence: `.meta/checks/files/board.py::board_front_matter`
+
+### A backlog running order naming Issues that are gone
+
+`issues/backlog/ORDER` gives the pair loop its running order, one slug per
+line. The loop drops a slug in the commit that lands its Issue, but a hand
+edit or a renamed Issue can leave a line naming nothing the loop can take, and
+the loop reads past it without a word. Established: `board_order` reports each
+line naming no Issue in `backlog/`, `todo/`, `in-progress/` or `desk-check/`,
+with its line number, and passes a board with no `ORDER`.
+
+Evidence: `.meta/checks/files/board.py::board_order`

@@ -9,7 +9,8 @@ whether the gate passes) and decides what happens next:
   has accepted the new state. When both seats have accepted the same state
   and the stage's requirement holds, the stage advances.
 - An issue whose file gains a `Needs elaboration` section, or whose stage runs
-  past its round cap, goes back to `issues/roadmap/` on `main`.
+  past its round cap, goes back to `issues/backlog/` on `main` with that
+  section, and sits out until the developer answers it.
 - Otherwise the other seat takes the next turn.
 """
 
@@ -601,9 +602,21 @@ class Loop:
         )
 
     def squash(self, st: State) -> str:
+        """Commit the rebased branch onto `main` as one commit.
+
+        The same commit drops the slug from `ORDER`. No earlier commit on the
+        branch touches `ORDER`, so a reordering on `main` while the issue runs
+        rebases cleanly.
+        """
         issue = board.read(self.wt, st.slug) or board.Issue(st.slug, "done")
         trailers = "\n".join(f"Seat: {r}" for r in (st.seats_used or ["loop"]))
         git(self.wt, "reset", "-q", "--soft", self.main)
+        order = self.wt / board.ORDER
+        if order.is_file():
+            text = order.read_text()
+            if board.without(text, st.slug) != text:
+                order.write_text(board.without(text, st.slug))
+                git(self.wt, "add", board.ORDER)
         git(
             self.wt,
             "commit",
@@ -641,10 +654,16 @@ class Loop:
         return done
 
     def kick_back(self, st: State, reason: str | None) -> str:
-        """Send the issue back to `issues/roadmap/` on `main`, without the code."""
+        """Send the issue back to `issues/backlog/` on `main`, without the code.
+
+        The file always carries a `Needs elaboration` section, which keeps
+        `next_ripe` from taking it straight back up.
+        """
         if st.kick_text is None:
             issue = board.read(self.wt, st.slug)
             text = (self.wt / issue.path).read_text() if issue else f"# {st.slug}\n"
+            if issue is None:
+                reason = reason or "The issue's file was gone from its branch."
             if reason:
                 text = text.rstrip() + f"\n\n# Needs elaboration\n\n{reason}\n"
             st.kick_text = text
@@ -653,7 +672,7 @@ class Loop:
         for stage in board.STAGES:
             if board.at_ref(self.repo, self.main, stage, st.slug):
                 git(self.wt, "rm", "-q", f"{board.ISSUES}/{stage}/{st.slug}.md")
-        home = self.wt / board.ISSUES / "roadmap" / f"{st.slug}.md"
+        home = self.wt / board.ISSUES / "backlog" / f"{st.slug}.md"
         home.parent.mkdir(parents=True, exist_ok=True)
         home.write_text(st.kick_text)
         git(self.wt, "add", str(home.relative_to(self.wt)))
@@ -672,8 +691,8 @@ class Loop:
             self.save(st)
             return "paused"
         self.clear()
-        self.notify(f"{st.slug} went back to roadmap/ for elaboration")
-        self.say(f"sent {st.slug} back to roadmap/")
+        self.notify(f"{st.slug} went back to backlog/ for elaboration")
+        self.say(f"sent {st.slug} back to backlog/")
         return "kicked"
 
     # --- the message -----------------------------------------------------------

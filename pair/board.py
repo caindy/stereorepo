@@ -18,6 +18,8 @@ import yaml
 STAGES = ("roadmap", "backlog", "todo", "in-progress", "desk-check", "done")
 DIFFICULTIES = ("easy", "medium", "hard", "developer")
 ISSUES = "issues"
+ORDER = f"{ISSUES}/backlog/ORDER"
+"""The backlog's running order: one slug per line, the developer's above `# groomed below`."""
 
 _FRONT = re.compile(r"\A---\n(?P<block>.*?)\n---(?:\n|\Z)", re.DOTALL)
 _HEADING = re.compile(r"^(?:#{1,6}\s*|\*\*)(?P<name>[^*\n]+?)\.?(?:\*\*)?\s*$")
@@ -169,15 +171,53 @@ def at_ref(repo: Path, ref: str, stage: str, slug: str) -> Issue | None:
     return Issue(slug, stage, front, body)
 
 
+def order(repo: Path, ref: str) -> list[str]:
+    """The slugs `issues/backlog/ORDER` names at `ref`, first to last.
+
+    The developer's placements sit above the `# groomed below` marker and
+    grooming's ranking below it, so the file's own line order is the running
+    order. Blank lines and `#` lines name nothing; a missing file names nothing.
+    """
+    text = subprocess.run(
+        ["git", "show", f"{ref}:{ORDER}"], cwd=repo, capture_output=True, text=True
+    )
+    if text.returncode != 0:
+        return []
+    return [
+        line.strip()
+        for line in text.stdout.splitlines()
+        if line.strip() and not line.strip().startswith("#")
+    ]
+
+
+def without(text: str, slug: str) -> str:
+    """The text of an `ORDER` file with every line naming `slug` removed."""
+    return "".join(
+        line for line in text.splitlines(keepends=True) if line.strip() != slug
+    )
+
+
 def next_ripe(repo: Path, ref: str, skip: frozenset[str] = frozenset()) -> str | None:
-    """The first backlog item at `ref` whose `waits_on` are all done."""
+    """The first backlog item at `ref`, in running order, that is ripe.
+
+    The running order is the slugs `ORDER` names, then every other backlog
+    slug in filename order. An item is ripe when its `waits_on` are all done
+    and it has no `Needs elaboration` section, which marks a send-back the
+    developer has yet to answer.
+    """
     done = set(listed(repo, ref, "done"))
-    for slug in listed(repo, ref, "backlog"):
+    backlog = listed(repo, ref, "backlog")
+    named = [s for s in dict.fromkeys(order(repo, ref)) if s in backlog]
+    for slug in named + [s for s in backlog if s not in named]:
         if slug in skip:
             continue
         issue = at_ref(repo, ref, "backlog", slug)
-        if issue and all(
-            w.split(":")[-1] in done for w in as_list(issue.front.get("waits_on"))
+        if (
+            issue
+            and not needs_elaboration(issue.body)
+            and all(
+                w.split(":")[-1] in done for w in as_list(issue.front.get("waits_on"))
+            )
         ):
             return slug
     return None
