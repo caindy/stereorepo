@@ -1,0 +1,45 @@
+decisions:
+  - id: work:decision/300
+    name: "DR-300 · A grooming pass runs alongside the loop, each in its own worktree"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+    context: >-
+      `just groom` and `just pair` shared one worktree, one run lock and one
+      state file, so a grooming pass waited for the Issue underway and the
+      Issue for the pass. A pass changes only backlog Issue files and `ORDER`,
+      and the Issue underway sits in `underway/` on `main`, out of a pass's
+      reach. The question was what else a pass and an Issue must share.
+    alternatives:
+      - name: One worktree and one lock, one process at a time
+        chosen: false
+        reason: >-
+          Groomed work is ready only when the loop comes free, so the developer
+          waits on one whichever they start first.
+      - name: A worktree, lock and state for each, landing on whatever the other landed
+        chosen: true
+        reason: >-
+          The two touch disjoint files except `ORDER`, whose edits are
+          insertions and deletions of whole lines that the loop can rebuild
+          from `main`'s without asking anyone.
+    consequences:
+      - >-
+        A pass lives in `worktrees/groom`, `.pair/groom/` and
+        `.pair/groom.lock`; the loop working Issues keeps `worktrees/pair`,
+        `.pair/` and `.pair/run.lock`. Two passes still cannot run at once, nor
+        two Issues.
+      - >-
+        The loop does not start an Issue that a pass underway took up, and a
+        pass keeps only its changes under `issues/backlog/` when it lands.
+      - >-
+        A rebase that conflicts only in `ORDER` rebuilds the file from `main`'s
+        with the branch's placements put back, and a landing refused because
+        the other process landed first is built again on the new `main`.
+    falsifier: >-
+      A pass and an Issue landing at once repeatedly leave `ORDER` in an order
+      the developer has to correct by hand.
+    rationale: |-
+      Grooming changes no code, so it needs no more coordination with the
+      loop than keeping off the Issue underway and landing on a `main` that
+      moves.

@@ -75,11 +75,13 @@ def both(*actions: Action) -> Action:
 class FakeSeat:
     """A seat that plays scripted turns, and records its session as `ClaudeSeat` does."""
 
-    def __init__(self, role: str, cwd: Path, resume: str | None, bench: Bench) -> None:
-        self.role, self.cwd, self.bench = role, cwd, bench
+    def __init__(
+        self, role: str, cwd: Path, resume: str | None, bench: Bench, loop: Loop
+    ) -> None:
+        self.role, self.cwd, self.bench, self.loop = role, cwd, bench, loop
         self.session_id = resume or f"{role}-session"
-        bench.loop.dir.mkdir(exist_ok=True)
-        (bench.loop.dir / f"{role}.session").write_text(f"{self.session_id}\n")
+        loop.dir.mkdir(parents=True, exist_ok=True)
+        (loop.dir / f"{role}.session").write_text(f"{self.session_id}\n")
 
     def send(self, text: str) -> TurnResult:
         self.bench.sent.append((self.role, text))
@@ -92,7 +94,7 @@ class FakeSeat:
             return TurnResult(False, error="boom", session_id=self.session_id)
         action(self.cwd)
         if self.bench.stop_when_empty and not self.bench.turns:
-            self.bench.loop.stop_requested = True
+            self.loop.stop_requested = True
         return TurnResult(
             True, session_id=self.session_id, usage={"cache_read_input_tokens": 1}
         )
@@ -131,6 +133,8 @@ class Bench:
         self.stop_when_empty = False
         self.developer_between: dict[int, Action] = {}
         self.notes: list[str] = []
+        self.before_land: list[Action] = []
+        self.lock_waits = 0
         bench = self
 
         class TestLoop(Loop):
@@ -140,9 +144,22 @@ class Bench:
                     edit(self.wt)
                 return super().absorb_developer(st)
 
-        def factory(role: str, cwd: Path, resume: str | None) -> FakeSeat:
-            self.opened.append((role, resume))
-            return FakeSeat(role, cwd, resume, self)
+            def land(self, st, sha, retry="merge"):  # type: ignore[no-untyped-def]
+                if bench.before_land:
+                    bench.before_land.pop(0)(bench.repo)
+                return super().land(st, sha, retry)
+
+            def wait_for_lock(self) -> None:
+                bench.lock_waits += 1
+                (bench.repo / ".git" / "index.lock").unlink(missing_ok=True)
+
+        def factory(kind: str) -> Callable[[str, Path, str | None], FakeSeat]:
+            def make(role: str, cwd: Path, resume: str | None) -> FakeSeat:
+                self.opened.append((role, resume))
+                loop = self.groomer if kind == "groom" else self.loop
+                return FakeSeat(role, cwd, resume, self, loop)
+
+            return make
 
         def gate(_tree: Path) -> tuple[bool, str]:
             self.gate_runs += 1
@@ -154,19 +171,23 @@ class Bench:
             self.deliver_runs += 1
             return self.delivers.pop(0) if self.delivers else None
 
-        self.loop = TestLoop(
-            self.repo,
-            factory,
-            gate,
-            self.notes.append,
-            prompts=PROMPTS,
-            deliver=deliver,
-            say=lambda _m: None,
+        self.loop, self.groomer = (
+            TestLoop(
+                self.repo,
+                factory(kind),
+                gate,
+                self.notes.append,
+                prompts=PROMPTS,
+                deliver=deliver,
+                say=lambda _m: None,
+                kind=kind,
+            )
+            for kind in ("pair", "groom")
         )
 
-    def state(self) -> State:
-        """The loop's saved state, which a test expects to exist."""
-        st = self.loop.load()
+    def state(self, loop: Loop | None = None) -> State:
+        """A loop's saved state, the Issue loop's by default, which a test expects to exist."""
+        st = (loop or self.loop).load()
         assert st is not None
         return st
 
@@ -516,10 +537,7 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.loop.run(), "paused")
         self.assertEqual(b.loop.run(), "desk-check")
         self.assertFalse(b.on_main("a.txt"))
-        said: list[str] = []
-        b.loop.say = said.append
-        self.assertEqual(b.loop.groom(), "busy")
-        self.assertIn("`just pair-accept` or `just pair-resume`", said[-1])
+        self.assertEqual(b.groomer.groom(), "nothing")
         self.assertEqual(b.loop.accept(), "landed")
         self.assertTrue(b.on_main("issues/done/h.md"))
 
@@ -1140,7 +1158,7 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         prompt = b.sent[0][1]
         self.assertIn("- issues/backlog/a.md", prompt)
         self.assertNotIn("backlog/b.md", prompt)
@@ -1150,16 +1168,16 @@ class GroomingTest(unittest.TestCase):
             sh(b.repo, "log", "-1", "--format=%s", "main"), "Groom the backlog"
         )
         self.assertFalse((b.loop.dir / "groomed.json").exists())
-        self.assertIsNone(b.loop.load())
-        self.assertEqual(b.loop.groom(), "nothing")
+        self.assertIsNone(b.groomer.load())
+        self.assertEqual(b.groomer.groom(), "nothing")
         self.assertEqual(len(b.sent), 2)
 
     def test_nothing_to_groom_sends_no_turn(self) -> None:
         b = self.b
-        self.assertEqual(b.loop.groom(), "nothing")
+        self.assertEqual(b.groomer.groom(), "nothing")
         b.issue("backlog", "a", "A", **WAITING)
         self.commit_order("# groomed below\na\n")
-        self.assertEqual(b.loop.groom(), "nothing")
+        self.assertEqual(b.groomer.groom(), "nothing")
         self.assertEqual(b.sent, [])
 
     def test_a_pass_that_moves_a_ranked_issue_is_held_back(self) -> None:
@@ -1176,13 +1194,13 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "stopped")
-        self.assertIn("b, a moved", b.state().note)
-        self.assertIn("ran in this order:\na\nb", b.state().note)
+        self.assertEqual(b.groomer.groom(), "stopped")
+        self.assertIn("b, a moved", b.state(b.groomer).note)
+        self.assertIn("ran in this order:\na\nb", b.state(b.groomer).note)
         b.stop_when_empty = False
-        b.loop.stop_requested = False
+        b.groomer.stop_requested = False
         b.script(("primary", order("# groomed below\na\nc\nb\n")), ("secondary", quiet))
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertEqual(self.main_order(), "# groomed below\na\nc\nb")
 
     def test_a_target_already_ranked_is_free_to_move(self) -> None:
@@ -1198,7 +1216,7 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertEqual(self.main_order(), "# groomed below\nb\nc\na")
 
     def test_rerank_ranks_the_whole_order_with_nothing_to_groom(self) -> None:
@@ -1207,37 +1225,10 @@ class GroomingTest(unittest.TestCase):
         b.issue("backlog", "b", "B", **WAITING)
         self.commit_order("# groomed below\na\nb\n")
         b.script(("primary", order("# groomed below\nb\na\n")), ("secondary", quiet))
-        self.assertEqual(b.loop.groom(rerank=True), "groomed")
+        self.assertEqual(b.groomer.groom(rerank=True), "groomed")
         self.assertIn("(none: this pass only ranks)", b.sent[0][1])
         self.assertIn("judged across the whole backlog", b.sent[0][1])
         self.assertEqual(self.main_order(), "# groomed below\nb\na")
-
-    def test_a_pass_and_an_issue_never_share_the_worktree(self) -> None:
-        b = self.b
-        b.issue("backlog", "a", "A", **WAITING)
-        b.issue("backlog", "x", "X")
-        b.stop_when_empty = True
-        b.script(("primary", order("# groomed below\na\n")))
-        self.assertEqual(b.loop.groom(), "stopped")
-        self.assertIn("underway: grooming pass, turn 1", status(b.repo))
-        self.assertEqual(b.loop.run(), "grooming")
-        b.stop_when_empty = False
-        b.loop.stop_requested = False
-        b.script(
-            (
-                "secondary",
-                both(front("x", difficulty="easy"), order("# groomed below\na\nx\n")),
-            ),
-            ("primary", quiet),
-        )
-        self.assertEqual(b.loop.groom(rerank=True), "groomed")
-        self.assertIn("nothing underway", status(b.repo))
-        self.assertEqual(self.main_order(), "# groomed below\na\nx")
-        b.stop_when_empty = True
-        b.script(("primary", quiet))
-        self.assertEqual(b.loop.run(), "stopped")
-        self.assertEqual(b.state().slug, "x")
-        self.assertEqual(b.loop.groom(), "busy")
 
     def test_a_pass_that_changes_the_developers_lines_is_not_accepted(self) -> None:
         b = self.b
@@ -1250,17 +1241,17 @@ class GroomingTest(unittest.TestCase):
             ("primary", both(*groomed, order("b\n# groomed below\na\nc\n"))),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "stopped")
-        st = b.state()
+        self.assertEqual(b.groomer.groom(), "stopped")
+        st = b.state(b.groomer)
         self.assertEqual(st.stage, "grooming")
         self.assertIn("are the developer's; put them back as they were:\na", st.note)
         b.stop_when_empty = False
-        b.loop.stop_requested = False
+        b.groomer.stop_requested = False
         b.script(
             ("primary", order("a\n# groomed below\nc\nb\n")),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertEqual(self.main_order(), "a\n# groomed below\nc\nb")
 
     def test_a_pass_that_deletes_a_backlog_issue_is_not_accepted(self) -> None:
@@ -1279,19 +1270,19 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "stopped")
-        self.assertIn("issues/backlog/b.md is gone", b.state().note)
+        self.assertEqual(b.groomer.groom(), "stopped")
+        self.assertIn("issues/backlog/b.md is gone", b.state(b.groomer).note)
 
     def test_a_pass_writes_order_and_its_marker_where_they_are_missing(self) -> None:
         b = self.b
         b.issue("backlog", "a", "A", **WAITING)
         b.script(("primary", order("# groomed below\na\n")), ("secondary", quiet))
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertEqual(self.main_order(), "# groomed below\na")
         b.issue("backlog", "b", "B", **WAITING)
         self.commit_order("b\n")
         b.script(("primary", order("b\n# groomed below\na\n")), ("secondary", quiet))
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertEqual(self.main_order(), "b\n# groomed below\na")
 
     def test_a_hard_issue_split_in_a_pass_stays_in_backlog_and_order(
@@ -1316,7 +1307,7 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertTrue(b.on_main("issues/backlog/big.md"))
         self.assertFalse(b.on_main("issues/done/big.md"))
         self.assertEqual(self.main_order(), "big\n# groomed below\na")
@@ -1343,7 +1334,7 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertEqual(self.main_order(), "# groomed below\nbig\na")
         self.assertEqual(board.running_order(b.repo, "main"), ["big-1", "big", "a"])
 
@@ -1353,7 +1344,7 @@ class GroomingTest(unittest.TestCase):
         b.issue("backlog", "part", "Part", difficulty="easy", parent="big")
         self.commit_order("# groomed below\nbig\n")
         self.assertEqual(board.unnamed(b.repo, "main"), [])
-        self.assertEqual(b.loop.groom(), "nothing")
+        self.assertEqual(b.groomer.groom(), "nothing")
         self.assertEqual(b.sent, [])
 
     def test_a_hard_issue_the_pass_did_not_split_stays_in_backlog(self) -> None:
@@ -1368,7 +1359,7 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertTrue(b.on_main("issues/backlog/big.md"))
 
     def test_needs_elaboration_in_a_pass_parks_the_issue_and_lands(self) -> None:
@@ -1384,10 +1375,10 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertTrue(b.on_main("issues/backlog/a.md"))
         self.assertIsNone(board.next_ripe(b.repo, "main"))
-        self.assertEqual(b.loop.groom(), "nothing")
+        self.assertEqual(b.groomer.groom(), "nothing")
 
     def test_a_send_back_writes_no_record(self) -> None:
         b = self.b
@@ -1404,13 +1395,13 @@ class GroomingTest(unittest.TestCase):
     def test_a_pass_past_its_cap_pauses_and_groom_gives_it_another(self) -> None:
         b = self.b
         b.issue("backlog", "a", "A")
-        b.loop.round_cap = 1
+        b.groomer.round_cap = 1
         b.script(("primary", order("# groomed below\na\n")), ("secondary", quiet))
-        self.assertEqual(b.loop.groom(), "paused")
-        st = b.state()
+        self.assertEqual(b.groomer.groom(), "paused")
+        st = b.state(b.groomer)
         self.assertEqual((st.stage, st.retry), ("grooming", "grooming"))
         b.script(("primary", front("a", difficulty="easy")), ("secondary", quiet))
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertEqual(self.main_order(), "# groomed below\na")
 
     def test_an_edit_on_main_mid_pass_lands_with_the_pass(self) -> None:
@@ -1437,12 +1428,217 @@ class GroomingTest(unittest.TestCase):
             ),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "groomed")
         self.assertEqual(
             self.main_order(), "# mine\na\n# note\n# groomed below\nb"
         )
         self.assertIn("B, sharper", sh(b.repo, "show", "main:issues/backlog/b.md"))
         self.assertEqual(len(b.sent), 2)
+
+
+def land_the_issue(slug: str) -> tuple[tuple[str, object], ...]:
+    """The turns that take an easy Issue from its backlog stage's second turn to landing."""
+    return (
+        ("secondary", quiet),
+        ("primary", append(slug, PLAN)),
+        ("secondary", quiet),
+        ("primary", write(f"{slug}.txt", "done\n")),
+        ("secondary", quiet),
+    )
+
+
+class AlongsideTest(unittest.TestCase):
+    """A grooming pass and an Issue at once, each in its own worktree."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.issue("backlog", "a", "A")
+        (b.repo / board.ORDER).write_text("# groomed below\nx\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+
+    def main_order(self) -> str:
+        return sh(self.b.repo, "show", f"main:{board.ORDER}")
+
+    def start_issue(self) -> None:
+        """Take `x` through one turn of its backlog stage, and stop."""
+        b = self.b
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.run(), "stopped")
+        b.loop.stop_requested = b.stop_when_empty = False
+
+    def start_pass(self) -> None:
+        """Groom `a` and place it after `x` in one turn of a pass, and stop."""
+        b = self.b
+        b.stop_when_empty = True
+        b.script(
+            ("primary", both(front("a", difficulty="easy"), order("# groomed below\nx\na\n")))
+        )
+        self.assertEqual(b.groomer.groom(), "stopped")
+        b.groomer.stop_requested = b.stop_when_empty = False
+
+    def test_a_pass_lands_while_an_issue_is_underway_and_the_issue_after_it(self) -> None:
+        b = self.b
+        self.start_issue()
+        b.script(
+            ("primary", both(front("a", difficulty="easy"), order("# groomed below\nx\na\n"))),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertIn("difficulty: easy", sh(b.repo, "show", "main:issues/backlog/a.md"))
+        b.script(*land_the_issue("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertTrue(b.on_main("issues/done/x.md"))
+        self.assertEqual(self.main_order(), "# groomed below\na")
+        log = sh(b.repo, "log", "--format=%s", "main").splitlines()
+        self.assertEqual(log[:3], ["X", "Groom the backlog", "Start x"])
+        self.assertEqual(b.notes[-1], "landed x")
+
+    def test_an_issue_lands_while_a_pass_is_underway_and_the_pass_after_it(self) -> None:
+        b = self.b
+        self.start_pass()
+        b.script(("primary", quiet), *land_the_issue("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(self.main_order(), "# groomed below")
+        b.script(("secondary", quiet))
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertEqual(self.main_order(), "# groomed below\na")
+        self.assertTrue(b.on_main("issues/done/x.md"))
+        self.assertIn("difficulty: easy", sh(b.repo, "show", "main:issues/backlog/a.md"))
+
+    def test_status_shows_the_pass_and_the_issue(self) -> None:
+        b = self.b
+        self.start_issue()
+        self.start_pass()
+        shown = status(b.repo)
+        self.assertIn("underway: x in underway/, its backlog stage", shown)
+        self.assertIn("underway: grooming pass, turn 1", shown)
+        self.assertIn("cd worktrees/pair && claude", shown)
+        self.assertIn("cd worktrees/groom && claude", shown)
+
+    def test_the_loop_leaves_alone_what_a_pass_targets(self) -> None:
+        b = self.b
+        sh(b.repo, "mv", "issues/backlog/x.md", "issues/done/x.md")
+        sh(b.repo, "commit", "-q", "-m", "x is done")
+        self.start_pass()
+        self.assertEqual(b.loop.run(), "empty")
+        b.issue("backlog", "y", "Y", difficulty="easy")
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertEqual(b.state().slug, "y")
+
+    def test_a_pass_that_loses_a_target_leaves_the_issue_underway_alone(self) -> None:
+        b = self.b
+        b.stop_when_empty = True
+        b.script(
+            ("primary", both(front("x", note="groomed"), order("# groomed below\nx\na\n")))
+        )
+        self.assertEqual(b.groomer.groom(), "stopped")
+        b.groomer.stop_requested = b.stop_when_empty = False
+        saved = b.groomer.state_file.read_text()
+        b.groomer.clear()
+        self.start_issue()
+        b.groomer.state_file.write_text(saved)
+        b.script(("secondary", both(front("a", difficulty="easy"))), ("primary", quiet))
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertNotIn("groomed", sh(b.repo, "show", "main:issues/underway/x.md"))
+        self.assertEqual(self.main_order(), "# groomed below\nx\na")
+
+    def test_a_rebuilt_order_that_undoes_the_commit_skips_it(self) -> None:
+        b = self.b
+        b.groomer.ensure_worktree()
+        wt = b.groomer.wt
+        sh(wt, "checkout", "-q", "-b", "pair/grooming")
+        (wt / board.ORDER).write_text("# groomed below\nx\ngone\n")
+        sh(wt, "commit", "-qam", "place a slug with no file")
+        (b.repo / board.ORDER).write_text("# groomed below\nx\na\n")
+        sh(b.repo, "commit", "-qam", "place a on main")
+        st = State(slug="grooming", stage="grooming", base="x")
+        self.assertIs(b.groomer.rebase(st), True)
+        self.assertEqual(sh(wt, "rev-parse", "HEAD"), sh(b.repo, "rev-parse", "main"))
+
+    def test_a_lock_that_stays_pauses_and_says_so(self) -> None:
+        b = self.b
+
+        def lock(repo: Path) -> None:
+            (repo / ".git" / "index.lock").write_text("")
+
+        b.loop.wait_for_lock = lambda: None  # type: ignore[method-assign]
+        b.before_land = [lambda _repo: None, lock]
+        b.script(("primary", quiet), *land_the_issue("x"))
+        self.assertEqual(b.loop.run(once=True), "paused")
+        self.assertIn(".git/index.lock stayed", b.state().paused or "")
+        (b.repo / ".git" / "index.lock").unlink()
+
+    def test_a_refused_fast_forward_is_tried_again(self) -> None:
+        b = self.b
+
+        def other_lands(repo: Path) -> None:
+            z = repo / "z.txt"
+            z.write_text((z.read_text() if z.exists() else "") + "z\n")
+            sh(repo, "add", "z.txt")
+            sh(repo, "commit", "-q", "-m", "the other process lands")
+
+        def other_holds_the_index(repo: Path) -> None:
+            (repo / ".git" / "index.lock").write_text("")
+
+        b.before_land = [other_lands, other_holds_the_index, other_lands]
+        b.script(("primary", quiet), *land_the_issue("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual((b.before_land, b.lock_waits), ([], 1))
+        self.assertEqual((b.repo / "z.txt").read_text(), "z\nz\n")
+        self.assertTrue(b.on_main("issues/done/x.md"))
+        self.assertTrue(b.on_main("z.txt"))
+        b.before_land = [lambda _repo: None, other_lands]
+        b.script(("primary", append("a", "\n# Needs elaboration\n\nWhich?\n")))
+        self.assertEqual(b.loop.run(once=True), "kicked")
+        self.assertIn("Which?", sh(b.repo, "show", "main:issues/backlog/a.md"))
+        self.assertEqual(b.before_land, [])
+
+    def test_local_edits_still_pause_a_landing(self) -> None:
+        b = self.b
+
+        def local_edits(repo: Path) -> None:
+            (repo / "x.txt").write_text("mine\n")
+
+        b.before_land = [lambda _repo: None, local_edits]
+        b.script(("primary", quiet), *land_the_issue("x"))
+        self.assertEqual(b.loop.run(once=True), "paused")
+        self.assertIn("local edits in the way", b.state().paused or "")
+
+    def test_a_pass_left_in_the_issue_worktree_is_dropped(self) -> None:
+        b = self.b
+        b.loop.ensure_worktree()
+        sh(b.loop.wt, "checkout", "-q", "-b", "pair/grooming")
+        b.loop.save(State(slug="grooming", stage="grooming", base="x", targets=["a"]))
+        b.script(
+            ("primary", both(front("a", difficulty="easy"), order("# groomed below\nx\na\n"))),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertIsNone(b.loop.load())
+        b.loop.save(State(slug="grooming", stage="grooming", base="x", targets=["a"]))
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertEqual(b.state().slug, "x")
+
+    def test_the_two_locks_are_apart(self) -> None:
+        from pair import hold_lock
+
+        run = hold_lock(self.b.repo, "run.lock")
+        self.assertIsNotNone(run)
+        groom = hold_lock(self.b.repo, "groom.lock")
+        self.assertIsNotNone(groom)
+        self.assertIsNone(hold_lock(self.b.repo, "run.lock"))
+        for lock in (run, groom):
+            assert lock is not None
+            lock.close()
 
 
 class BoardTest(unittest.TestCase):
@@ -1492,6 +1688,52 @@ class BoardTest(unittest.TestCase):
         self.assertEqual(board.next_ripe(b.repo, "main"), "c")
         b.issue("backlog", "c", "C\n\n# Needs elaboration\n\nWhich C?")
         self.assertEqual(board.next_ripe(b.repo, "main"), "a")
+
+    def test_merge_order_inserts_placements_after_their_anchor(self) -> None:
+        base = "# groomed below\nb\nc\n"
+        theirs = "# groomed below\nb\nn\nc\nm\n"
+        ours = "# groomed below\nc\nd\n"
+        self.assertEqual(
+            board.merge_order(ours, base, theirs, {"c", "d", "n", "m"}),
+            "# groomed below\nn\nc\nm\nd\n",
+        )
+
+    def test_merge_order_keeps_mains_lines_above_the_marker(self) -> None:
+        base = "# groomed below\nf\na\n"
+        theirs = "# groomed below\nf\na\nn\n"
+        ours = "f\n# mine\n# groomed below\na\n"
+        self.assertEqual(
+            board.merge_order(ours, base, theirs, {"f", "a", "n"}),
+            "f\n# mine\n# groomed below\na\nn\n",
+        )
+
+    def test_merge_order_drops_what_may_not_have_a_line(self) -> None:
+        base = "# groomed below\nbig\na\n"
+        theirs = "# groomed below\nbig\na\npart\n"
+        ours = "# groomed below\nbig\ngone\na\n"
+        self.assertEqual(
+            board.merge_order(ours, base, theirs, {"big", "a"}),
+            "# groomed below\nbig\na\n",
+        )
+
+    def test_merge_order_with_rerank_takes_the_branchs_ranking(self) -> None:
+        base = "# groomed below\na\nb\n"
+        theirs = "# groomed below\nb\na\n"
+        ours = "# groomed below\na\nb\nc\n"
+        self.assertEqual(
+            board.merge_order(ours, base, theirs, {"a", "b", "c"}, rerank=True),
+            "# groomed below\nb\na\nc\n",
+        )
+
+    def test_order_keeps_names_top_level_backlog_and_underway(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("backlog", "part", "Part", difficulty="easy", parent="big")
+        b.issue("backlog", "solo", "Solo")
+        b.issue("underway", "busy", "Busy")
+        b.issue("done", "old", "Old")
+        self.assertEqual(board.order_keeps(b.repo), {"big", "solo", "busy"})
 
     def test_grooming_faults_name_each_rule(self) -> None:
         b = Bench()

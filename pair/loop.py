@@ -18,11 +18,13 @@ first, and starts it by moving its file from `issues/backlog/` to
 `issues/underway/` in a commit of its own on `main`, so the board there shows
 what is being worked. Landing moves it on out of `underway/`. Grooming is a separate command: a pass takes up the backlog issues that
 are not groomed (no valid difficulty, and no `Needs elaboration` section) and
-runs the same turns on its own branch, `pair/grooming`, with no issue file. It
+runs the same turns on its own branch, `pair/grooming`, with no issue file, in
+its own worktree, `worktrees/groom`, so it runs alongside an Issue. It
 ends when both seats accept a backlog where each of those issues has a
 difficulty and `issues/backlog/ORDER` places it without moving the rest, and
 lands as one commit. An issue no pass has groomed is groomed by its own backlog
-stage.
+stage. Whichever of the two lands second rebases onto the other, and
+`ORDER` never stops it (`Loop.rebase`).
 
 An issue with children, which name it in `parent:`, is a Flight. Splitting a
 `hard` issue makes one, and the Flight lands back in `issues/backlog/`, not
@@ -54,7 +56,7 @@ from pathlib import Path
 from typing import Any
 
 import board
-from board import git, git_ok
+from board import git, git_ok, git_run
 from seats import Seat, TurnResult
 
 ROLES = ("primary", "secondary")
@@ -70,6 +72,10 @@ DIFF_LIMIT = 40_000
 GATE_TAIL = 6_000
 DELIVER_TAIL = 2_000
 """Less than `GATE_TAIL`: a failed delivery's tail goes into a pause reason, which is also notified."""
+LAND_TRIES = 5
+"""How many times a landing goes round when the other process lands first."""
+LOCK_WAIT = 0.5
+"""Seconds to wait for the other process to let go of the checkout's index lock."""
 RESTARTED = (
     "(Your session was restarted after an interruption. The working tree is as you "
     "left it; check `git status` and carry on.)\n\n"
@@ -103,6 +109,26 @@ class State:
     rerank: bool = False
 
 
+def runtime_dir(repo: Path, kind: str) -> Path:
+    """Where a loop of `kind` keeps its state, seat sessions, pids and logs.
+
+    The loop that works Issues keeps them in `.pair/`, and a grooming pass in
+    `.pair/groom/`, so the two run at once without reading each other's.
+    """
+    return repo / ".pair" if kind == "pair" else repo / ".pair" / kind
+
+
+def groom_targets(repo: Path) -> frozenset[str]:
+    """The Issues a grooming pass underway took up, which the loop leaves alone.
+
+    A paused pass is still underway, so its targets count until it lands.
+    """
+    path = runtime_dir(repo, "groom") / "state.json"
+    if not path.is_file():
+        return frozenset()
+    return frozenset(json.loads(path.read_text()).get("targets", []))
+
+
 def other(role: str) -> str:
     return ROLES[1 - ROLES.index(role)]
 
@@ -118,7 +144,12 @@ def home(stage: str) -> str:
 
 
 class Loop:
-    """Runs issues from `issues/backlog/` on `main` through a pair of seats."""
+    """Runs issues from `issues/backlog/` on `main` through a pair of seats.
+
+    A loop of kind `pair` works Issues in `worktrees/pair`, and one of kind
+    `groom` runs grooming passes in `worktrees/groom`. Each holds its own
+    state (`runtime_dir`), so one of each can run at once.
+    """
 
     def __init__(
         self,
@@ -134,10 +165,13 @@ class Loop:
         deliver: Deliver | None = None,
         say: Callable[[str], None] = print,
         round_cap: int | None = None,
+        kind: str = "pair",
     ) -> None:
         self.repo = repo
-        self.wt = repo / "worktrees" / "pair"
-        self.dir = repo / ".pair"
+        self.kind = kind
+        self.wt = repo / "worktrees" / kind
+        self.tree = f"worktrees/{kind}"
+        self.dir = runtime_dir(repo, kind)
         self.seat_factory = seat_factory
         self.gate = gate
         self.notify = notify
@@ -164,7 +198,7 @@ class Loop:
         return State(**json.loads(self.state_file.read_text()))
 
     def save(self, st: State) -> None:
-        self.dir.mkdir(exist_ok=True)
+        self.dir.mkdir(parents=True, exist_ok=True)
         self.state_file.write_text(json.dumps(dataclasses.asdict(st), indent=1))
 
     def clear(self) -> None:
@@ -182,7 +216,8 @@ class Loop:
     def run(self, once: bool = False, flight: str | None = None) -> str:
         """Work issues until the backlog empties or the developer is needed.
 
-        It never grooms, and does not start while a grooming pass is underway.
+        It never grooms. A grooming pass may run alongside it in its own
+        worktree, and the loop does not take up an Issue the pass targets.
 
         A turn cut short by the supervisor dying belongs to its seat: a restart
         gives it back to that seat, and does not mistake its leftovers for the
@@ -194,10 +229,8 @@ class Loop:
         """
         self.ensure_worktree()
         self.reap()
+        self.discard_old_pass()
         st = self.load() or self.adopt()
-        if st is not None and st.stage == GROOMING:
-            self.say("a grooming pass is underway; finish it with `just groom`")
-            return "grooming"
         if flight is not None:
             refusal = self.flight_refusal(flight, st)
             if refusal:
@@ -209,7 +242,9 @@ class Loop:
                 if flight is not None:
                     below = board.descendants(self.repo, self.main, flight)
                     within = frozenset(below | {flight})
-                slug = board.next_ripe(self.repo, self.main, within=within)
+                slug = board.next_ripe(
+                    self.repo, self.main, skip=groom_targets(self.repo), within=within
+                )
                 if slug is None:
                     self.say(self.nothing_ripe(flight))
                     return "empty"
@@ -299,20 +334,14 @@ class Loop:
 
         With `rerank`, the pass ranks the whole order below the marker again.
         A pass underway resumes with the targets and mode it started with. A
-        pass does not start while an issue is underway, nor when there is
-        nothing to groom, place or rerank.
+        pass does not start when there is nothing to groom, place or rerank.
+        It runs in its own worktree, so an Issue may be underway meanwhile;
+        that Issue is in `underway/`, where no pass takes it up.
         """
         self.ensure_worktree()
         self.reap()
+        self.discard_old_pass()
         st = self.load()
-        if st is not None and st.stage != GROOMING:
-            finish = (
-                "`just pair-accept` or `just pair-resume`"
-                if st.retry == "desk-check"
-                else "`just pair`"
-            )
-            self.say(f"{st.slug} is underway; finish it with {finish} first")
-            return "busy"
         if st is not None:
             if rerank != st.rerank:
                 self.say(
@@ -328,6 +357,28 @@ class Loop:
             State(slug=GROOMING, stage=GROOMING, targets=targets, rerank=rerank)
         )
         return "paused" if st is None else self.work(st)
+
+    def discard_old_pass(self) -> None:
+        """Drop a grooming pass left paused in `worktrees/pair` by an older loop.
+
+        Before passes had their own worktree, a pass kept its state in
+        `.pair/state.json` and its branch, `pair/grooming`, in `worktrees/pair`.
+        Nothing it did had landed, and a pass is cheap to run again, so it is
+        dropped: the branch is freed for `worktrees/groom` to check out, and
+        `.pair/state.json` for an Issue.
+        """
+        old = runtime_dir(self.repo, "pair") / "state.json"
+        if not old.is_file() or json.loads(old.read_text()).get("stage") != GROOMING:
+            return
+        tree = self.repo / "worktrees" / "pair"
+        if (tree / ".git").exists():
+            git(tree, "checkout", "-q", "--detach", "--force", self.main)
+        git(self.repo, "branch", "-q", "-D", f"pair/{GROOMING}", check=False)
+        old.unlink()
+        self.say(
+            "dropped a grooming pass left paused in worktrees/pair; "
+            "`just groom` runs it again in worktrees/groom"
+        )
 
     def accept(self, slug: str | None = None) -> str:
         """The developer passes the desk check: merge what is in the worktree.
@@ -477,7 +528,7 @@ class Loop:
         if git(self.wt, "status", "--porcelain"):
             self.pause(
                 st,
-                "worktrees/pair has uncommitted changes from before this issue; "
+                f"{self.tree} has uncommitted changes from before this issue; "
                 "commit or discard them, then run again",
                 retry=None,
             )
@@ -498,21 +549,27 @@ class Loop:
     def move_underway(self, st: State) -> bool:
         """Land the move of the issue's file from `backlog/` to `underway/` on `main`.
 
-        False when the developer's checkout refuses the fast-forward; the loop
-        is then paused.
+        When a grooming pass lands first, the move is made again on the new
+        `main`. False when the developer's checkout refuses the fast-forward
+        otherwise; the loop is then paused.
         """
-        if board.at_ref(self.repo, self.main, "underway", st.slug):
-            return True
-        git(self.wt, "checkout", "-q", "--detach", "--force", self.main)
-        (self.wt / board.ISSUES / "underway").mkdir(parents=True, exist_ok=True)
-        git(
-            self.wt,
-            "mv",
-            f"{board.ISSUES}/backlog/{st.slug}.md",
-            f"{board.ISSUES}/underway/{st.slug}.md",
-        )
-        git(self.wt, "commit", "-q", "-m", f"Start {st.slug}", "-m", "Seat: loop")
-        return self.land(st, git(self.wt, "rev-parse", "HEAD"), retry=None)
+        for _ in range(LAND_TRIES):
+            if board.at_ref(self.repo, self.main, "underway", st.slug):
+                return True
+            git(self.wt, "checkout", "-q", "--detach", "--force", self.main)
+            (self.wt / board.ISSUES / "underway").mkdir(parents=True, exist_ok=True)
+            git(
+                self.wt,
+                "mv",
+                f"{board.ISSUES}/backlog/{st.slug}.md",
+                f"{board.ISSUES}/underway/{st.slug}.md",
+            )
+            git(self.wt, "commit", "-q", "-m", f"Start {st.slug}", "-m", "Seat: loop")
+            landed = self.land(st, git(self.wt, "rev-parse", "HEAD"), retry=None)
+            if landed != "moved":
+                return landed == "landed"
+        self.pause(st, "main kept moving while starting; run again", retry=None)
+        return False
 
     # --- the turn loop ---------------------------------------------------------
 
@@ -714,7 +771,7 @@ class Loop:
             "output": usage.get("output_tokens"),
             "cost_usd": result.cost_usd,
         }
-        self.dir.mkdir(exist_ok=True)
+        self.dir.mkdir(parents=True, exist_ok=True)
         with (self.dir / "turns.jsonl").open("a") as f:
             f.write(json.dumps(row) + "\n")
         self.say(
@@ -750,7 +807,7 @@ class Loop:
             return self.pause(
                 st,
                 f"the grooming pass did not settle within {st.turn} turns; "
-                "steer it in worktrees/pair if you like, then run again",
+                f"steer it in {self.tree} if you like, then run again",
                 retry=GROOMING,
             )
         if st.turn >= 2 * cap:
@@ -897,7 +954,7 @@ class Loop:
             self.move(st, "desk-check")
             return self.pause(
                 st,
-                "ready for your desk check in worktrees/pair "
+                f"ready for your desk check in {self.tree} "
                 "(`just pair-accept`, or leave notes and `just pair-resume`)",
                 retry="desk-check",
             )
@@ -935,28 +992,73 @@ class Loop:
         return any(not p.startswith(f"{board.ISSUES}/") for p in changed)
 
     def rebase(self, st: State) -> bool | None:
-        """Rebase the issue branch onto `main`.
+        """Rebase the branch onto `main`.
 
         True if it moved, False if it was already there, None if it conflicted
-        (the loop is then paused).
+        (the loop is then paused). A conflict in `ORDER` alone is no conflict:
+        the file is rebuilt from `main`'s (`board.merge_order`), since a
+        landing on `main` drops a line and a pass inserts them.
+
+        A grooming pass is squashed before it is rebased, so one commit is
+        replayed, and afterwards keeps only its changes under
+        `issues/backlog/`. An Issue the loop started while the pass ran has
+        moved to `underway/`, and git would otherwise carry the pass's edit of
+        its backlog file onto the file underway.
         """
         if git_ok(self.wt, "merge-base", "--is-ancestor", self.main, "HEAD"):
             return False
-        if not git_ok(self.wt, "rebase", "-q", self.main):
-            git(self.wt, "rebase", "--abort", check=False)
-            self.pause(
-                st,
-                f"pair/{st.slug} conflicts with main; "
-                "resolve it in worktrees/pair, then run again",
-                retry=None,
+        fork = git(self.wt, "merge-base", self.main, "HEAD")
+        grooming = st.stage == GROOMING
+        if grooming and git(self.wt, "rev-list", "--count", f"{fork}..HEAD") != "1":
+            git(self.wt, "reset", "-q", "--soft", fork)
+            if not git_ok(self.wt, "diff", "--cached", "--quiet"):
+                git(self.wt, "commit", "-q", "-m", "Groom the backlog")
+        base = board.show(self.wt, fork, board.ORDER)
+        theirs = board.show(self.wt, "HEAD", board.ORDER)
+        done = git_ok(self.wt, "rebase", "-q", self.main)
+        while not done:
+            conflicted = git(self.wt, "diff", "--name-only", "--diff-filter=U")
+            if conflicted != board.ORDER:
+                git(self.wt, "rebase", "--abort", check=False)
+                self.pause(
+                    st,
+                    f"pair/{st.slug} conflicts with main; "
+                    f"resolve it in {self.tree}, then run again",
+                    retry=None,
+                )
+                return None
+            ours = board.show(self.wt, self.main, board.ORDER)
+            keep = board.order_keeps(self.wt)
+            (self.wt / board.ORDER).write_text(
+                board.merge_order(ours, base, theirs, keep, rerank=st.rerank)
             )
-            return None
+            git(self.wt, "add", board.ORDER)
+            done = git_ok(self.wt, "-c", "core.editor=true", "rebase", "--continue")
+        if grooming:
+            self.keep_backlog_only()
         st.head = git(self.wt, "rev-parse", "HEAD")
         return True
 
+    def keep_backlog_only(self) -> None:
+        """Put back from `main` each path outside `issues/backlog/` the pass changed."""
+        changed = git(self.wt, "diff", "--name-only", self.main, "HEAD").splitlines()
+        stray = [p for p in changed if not p.startswith(f"{board.ISSUES}/backlog/")]
+        if not stray:
+            return
+        for path in stray:
+            if git_ok(self.wt, "cat-file", "-e", f"{self.main}:{path}"):
+                git(self.wt, "checkout", "-q", self.main, "--", path)
+            else:
+                git(self.wt, "rm", "-q", "-f", "--", path)
+        git(self.wt, "commit", "-q", "-m", "Keep the pass to issues/backlog/")
+
     def merge(self, st: State, force_gate: bool = False) -> str | None:
-        """Squash the branch onto `main` and fast-forward the developer's checkout."""
-        for _ in range(3):
+        """Squash the branch onto `main` and fast-forward the developer's checkout.
+
+        When the other process lands first, the branch is rebased onto the new
+        `main` and landed again, up to `LAND_TRIES` times.
+        """
+        for _ in range(LAND_TRIES):
             moved = self.rebase(st)
             if moved is None:
                 return "paused"
@@ -988,7 +1090,10 @@ class Loop:
             sha = self.squash(st)
             if not git_ok(self.repo, "merge-base", "--is-ancestor", self.main, sha):
                 continue
-            if not self.land(st, sha):
+            landed = self.land(st, sha)
+            if landed == "moved":
+                continue
+            if landed == "paused":
                 return "paused"
             if self.push:
                 git(self.repo, "push", "-q", "origin", self.main, check=False)
@@ -1099,10 +1204,17 @@ class Loop:
         self.say(f"groomed the backlog ({sha[:8]})")
         return "groomed"
 
-    def land(self, st: State, sha: str, retry: str | None = "merge") -> bool:
+    def land(self, st: State, sha: str, retry: str | None = "merge") -> str:
         """Fast-forward `main` in the developer's checkout; refuse rather than overwrite.
 
-        A refusal pauses the loop with `retry`.
+        Answers `landed` when it moved, and `moved` when `main` has moved past
+        the commit `sha` was built on because the other process (a grooming
+        pass, or the loop working an Issue) landed first; the caller then
+        builds again on the new `main`. A fast-forward that meets the other
+        process's `index.lock` is tried again after `wait_for_lock`, and
+        pauses, naming the lock, if the lock never goes away. Any
+        other refusal, such as local edits in the way, pauses the loop with
+        `retry` and answers `paused`.
         """
         branch = git(self.repo, "symbolic-ref", "--short", "-q", "HEAD", check=False)
         if branch != self.main:
@@ -1112,16 +1224,36 @@ class Loop:
                 f"switch back, then run again",
                 retry=retry,
             )
-            return False
-        done = git_ok(self.repo, "merge", "--ff-only", "-q", sha)
-        if not done:
-            self.pause(
-                st,
-                f"could not fast-forward {self.main} in your checkout to {sha[:8]} "
-                f"(local edits in the way?); clear them, then run again",
-                retry=retry,
-            )
-        return done
+            return "paused"
+        lock = self.repo / git(self.repo, "rev-parse", "--git-path", "index.lock")
+        locked = False
+        for _ in range(LAND_TRIES):
+            done = git_run(self.repo, "merge", "--ff-only", "-q", sha)
+            if done.returncode == 0:
+                return "landed"
+            if not git_ok(self.repo, "merge-base", "--is-ancestor", self.main, sha):
+                return "moved"
+            locked = "index.lock" in done.stderr or lock.exists()
+            if not locked:
+                break
+            self.wait_for_lock()
+        why = (
+            f"({lock.relative_to(self.repo)} stayed in place); "
+            "if no git process holds it, delete it"
+            if locked
+            else "(local edits in the way?); clear them"
+        )
+        self.pause(
+            st,
+            f"could not fast-forward {self.main} in your checkout to {sha[:8]} "
+            f"{why}, then run again",
+            retry=retry,
+        )
+        return "paused"
+
+    def wait_for_lock(self) -> None:
+        """Give the other process time to finish with the checkout's index."""
+        time.sleep(LOCK_WAIT)
 
     def kick_back(self, st: State, reason: str | None) -> str:
         """Send the issue back to `issues/backlog/` on `main`, without the code.
@@ -1139,25 +1271,31 @@ class Loop:
                 text = text.rstrip() + f"\n\n# Needs elaboration\n\n{reason}\n"
             st.kick_text = text
         self.save(st)
-        git(self.wt, "checkout", "-q", "--detach", "--force", self.main)
-        for stage in board.STAGES:
-            if board.at_ref(self.repo, self.main, stage, st.slug):
-                git(self.wt, "rm", "-q", f"{board.ISSUES}/{stage}/{st.slug}.md")
-        home = self.wt / board.ISSUES / "backlog" / f"{st.slug}.md"
-        home.parent.mkdir(parents=True, exist_ok=True)
-        home.write_text(st.kick_text)
-        git(self.wt, "add", str(home.relative_to(self.wt)))
-        git(
-            self.wt,
-            "commit",
-            "-q",
-            "-m",
-            f"Send {st.slug} back for elaboration",
-            "-m",
-            "Seat: loop",
-        )
-        sha = git(self.wt, "rev-parse", "HEAD")
-        if not self.land(st, sha):
+        landed = "moved"
+        for _ in range(LAND_TRIES):
+            git(self.wt, "checkout", "-q", "--detach", "--force", self.main)
+            for stage in board.STAGES:
+                if board.at_ref(self.repo, self.main, stage, st.slug):
+                    git(self.wt, "rm", "-q", f"{board.ISSUES}/{stage}/{st.slug}.md")
+            home = self.wt / board.ISSUES / "backlog" / f"{st.slug}.md"
+            home.parent.mkdir(parents=True, exist_ok=True)
+            home.write_text(st.kick_text)
+            git(self.wt, "add", str(home.relative_to(self.wt)))
+            git(
+                self.wt,
+                "commit",
+                "-q",
+                "-m",
+                f"Send {st.slug} back for elaboration",
+                "-m",
+                "Seat: loop",
+            )
+            landed = self.land(st, git(self.wt, "rev-parse", "HEAD"))
+            if landed != "moved":
+                break
+        if landed != "landed":
+            if landed == "moved":
+                self.pause(st, "main kept moving while sending back; run again", None)
             st.retry = "kickback"
             self.save(st)
             return "paused"
@@ -1205,7 +1343,7 @@ class Loop:
 
 
 def status(repo: Path, main: str = "main") -> str:
-    """A plain-text view of the board on `main` and the issue underway."""
+    """A plain-text view of the board on `main`, the Issue underway and the grooming pass."""
     lines = []
     for stage in ("roadmap", "backlog", "underway", "done"):
         slugs = board.listed(repo, main, stage)
@@ -1213,8 +1351,12 @@ def status(repo: Path, main: str = "main") -> str:
             f"{stage:12} {len(slugs):3}  {', '.join(slugs[:6])}"
             f"{' ...' if len(slugs) > 6 else ''}"
         )
-    state = repo / ".pair" / "state.json"
-    if state.is_file():
+    underway = False
+    for kind in ("pair", "groom"):
+        state = runtime_dir(repo, kind) / "state.json"
+        if not state.is_file():
+            continue
+        underway = True
         st: dict[str, Any] = json.loads(state.read_text())
         what = (
             "grooming pass"
@@ -1235,15 +1377,18 @@ def status(repo: Path, main: str = "main") -> str:
         for role, sid in st.get("sessions", {}).items():
             lines.append(
                 f"{role:9} session {sid}  "
-                f"(take over: cd worktrees/pair && claude --resume {sid})"
+                f"(take over: cd worktrees/{kind} && claude --resume {sid})"
             )
-    else:
+    if not underway:
         lines.append("\nnothing underway")
-    turns = repo / ".pair" / "turns.jsonl"
-    if turns.is_file():
-        tail = turns.read_text().splitlines()[-4:]
+    rows = []
+    for kind in ("pair", "groom"):
+        turns = runtime_dir(repo, kind) / "turns.jsonl"
+        if turns.is_file():
+            rows += [json.loads(row) for row in turns.read_text().splitlines()[-4:]]
+    if rows:
         lines.append("\nlast turns:")
-        for row in map(json.loads, tail):
+        for row in sorted(rows, key=lambda row: row["at"])[-4:]:
             lines.append(
                 f"  {row['slug']} {row['stage']} #{row['turn']} {row['role']:8} "
                 f"{'quiet' if row['quiet'] else 'changed'}  {row['seconds']}s  "

@@ -19,6 +19,9 @@ stops when the Flight reaches its desk check.
 With SLUG, `accept` and `resume` answer the desk check of that Flight on
 `main`, in your checkout, and run alongside a running loop.
 
+`groom` runs in its own worktree and holds its own lock, so a grooming pass
+runs alongside `run`.
+
 In stereorepo itself, `just pair`, `just groom`, `just pair-status`,
 `just pair-accept` and `just pair-resume` run the same.
 """
@@ -86,7 +89,7 @@ def provision(tree: Path) -> None:
     the gate tests the branch and not what happens to be installed beside it.
     """
     if "setup" in recipes(tree):
-        print("provisioning worktrees/pair (just setup) ...", flush=True)
+        print(f"provisioning {tree.parent.name}/{tree.name} (just setup) ...", flush=True)
         subprocess.run(["just", "setup"], cwd=tree, check=True)
 
 
@@ -100,13 +103,16 @@ def deliver(tree: Path) -> tuple[bool, str] | None:
     """
     if "deliver" not in recipes(tree):
         return None
-    print("delivering from worktrees/pair (just deliver) ...", flush=True)
+    print(f"delivering from {tree.parent.name}/{tree.name} (just deliver) ...", flush=True)
     done = subprocess.run(["just", "deliver"], cwd=tree, capture_output=True, text=True)
     return done.returncode == 0, done.stdout + done.stderr
 
 
-def hold_lock(repo: Path) -> IO[str] | None:
-    """Take the repository's run lock and write this process's pid into it.
+def hold_lock(repo: Path, name: str = "run.lock") -> IO[str] | None:
+    """Take one of the repository's locks and write this process's pid into it.
+
+    `run.lock` is held by the loop working Issues, and `groom.lock` by a
+    grooming pass, so a pass and an Issue run at once, but never two of either.
 
     The lock file is opened without truncating, so a second process that is
     refused the lock cannot erase the pid of the one holding it. Returns the
@@ -114,7 +120,7 @@ def hold_lock(repo: Path) -> IO[str] | None:
     another process holds it.
     """
     (repo / ".pair").mkdir(exist_ok=True)
-    lock = (repo / ".pair" / "run.lock").open("a+")
+    lock = (repo / ".pair" / name).open("a+")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
@@ -185,6 +191,7 @@ def main() -> int:
         print(status(repo))
         return 0
 
+    kind = "groom" if args.command == "groom" else "pair"
     model = getattr(args, "model", None)
     system = {
         role: (PROMPTS / f"{role}.md").read_text() for role in ("primary", "secondary")
@@ -192,7 +199,7 @@ def main() -> int:
     loop = Loop(
         repo,
         lambda role, cwd, resume: ClaudeSeat(
-            role, cwd, system[role], repo / ".pair", resume=resume, model=model
+            role, cwd, system[role], loop.dir, resume=resume, model=model
         ),
         gate,
         notify,
@@ -202,6 +209,7 @@ def main() -> int:
         deliver=deliver,
         say=lambda message: print(message, flush=True),
         round_cap=args.round_cap,
+        kind=kind,
     )
 
     desk = getattr(args, "slug", None)
@@ -210,9 +218,10 @@ def main() -> int:
         print(f"pair: {answer(desk)}")
         return 0
 
-    lock = hold_lock(repo)
+    lock = hold_lock(repo, "groom.lock" if kind == "groom" else "run.lock")
     if lock is None:
-        print("another pair process is running in this repository")
+        doing = "grooming pass" if kind == "groom" else "loop working Issues"
+        print(f"another {doing} is running in this repository")
         return 1
 
     def stop(_sig: int, _frame: object) -> None:

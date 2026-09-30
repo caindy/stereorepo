@@ -162,6 +162,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-297](assertions/decisions/DR-297.yaml) | A decision number below 297 that the record does not hold is outmoded | Adopted |
 | [DR-298](assertions/decisions/DR-298.yaml) | The developer desk-checks a Flight once, after its parts have landed | Adopted |
 | [DR-299](assertions/decisions/DR-299.yaml) | The running order ranks Flights and standalone Issues, not a Flight's parts | Adopted |
+| [DR-300](assertions/decisions/DR-300.yaml) | A grooming pass runs alongside the loop, each in its own worktree | Adopted |
 
 ## Holes
 
@@ -313,8 +314,8 @@ and the query a reader in a file actually has.
 | [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
 | [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-262](assertions/decisions/DR-262.yaml) |
 | [`justfile`](../justfile) | [DR-106](assertions/decisions/DR-106.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-234](assertions/decisions/DR-234.yaml), [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml) |
-| [`pair/README.md`](../pair/README.md) | [DR-298](assertions/decisions/DR-298.yaml), [DR-299](assertions/decisions/DR-299.yaml) |
-| [`pair/pair.py`](../pair/pair.py) | [DR-299](assertions/decisions/DR-299.yaml) |
+| [`pair/README.md`](../pair/README.md) | [DR-298](assertions/decisions/DR-298.yaml), [DR-299](assertions/decisions/DR-299.yaml), [DR-300](assertions/decisions/DR-300.yaml) |
+| [`pair/pair.py`](../pair/pair.py) | [DR-299](assertions/decisions/DR-299.yaml), [DR-300](assertions/decisions/DR-300.yaml) |
 | [`stakeholders/README.md`](../stakeholders/README.md) | [DR-041](assertions/decisions/DR-041.yaml) |
 | [`template/.meta/README.md`](../template/.meta/README.md) | [DR-183](assertions/decisions/DR-183.yaml) |
 | [`template/AGENTS.md`](../template/AGENTS.md) | [DR-183](assertions/decisions/DR-183.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml) |

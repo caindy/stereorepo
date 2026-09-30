@@ -42,6 +42,11 @@ def git(cwd: Path, *args: str, check: bool = True) -> str:
     return done.stdout.strip()
 
 
+def git_run(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """Run git in `cwd` and return the finished process, whatever its exit code."""
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+
+
 def git_ok(cwd: Path, *args: str) -> bool:
     """Whether a git command exits zero."""
     return (
@@ -202,6 +207,11 @@ def listed(repo: Path, ref: str, stage: str) -> list[str]:
         if n.endswith(".md") and Path(n).name != "README.md"
     ]
     return sorted(slugs)
+
+
+def show(repo: Path, ref: str, path: str) -> str:
+    """A file's text as committed at a ref, or '' where it is missing."""
+    return git(repo, "show", f"{ref}:{path}", check=False)
 
 
 def at_ref(repo: Path, ref: str, stage: str, slug: str) -> Issue | None:
@@ -383,6 +393,72 @@ def split_order(text: str) -> tuple[list[str], list[str] | None]:
         return lines, None
     at = lines.index(MARKER)
     return lines[:at], lines[at + 1 :]
+
+
+def merge_order(
+    ours: str, base: str, theirs: str, keep: Collection[str], rerank: bool = False
+) -> str:
+    """The `ORDER` a branch lands with when its edits to it conflict with `main`'s.
+
+    `ours` is `main`'s file, `base` the file where the branch left `main`, and
+    `theirs` the branch's. The lines above the marker are `main`'s, since they
+    belong to the developer or to a Flight sent back from its desk check.
+    Below it, `main`'s ranking stands, and each slug the branch placed there
+    (one `base` did not rank) goes in after the nearest slug above it in
+    `theirs` that is already placed, or first. With `rerank`, the branch's
+    ranking stands instead, and `main`'s slugs it lacks follow it. A slug not
+    in `keep` loses its line, as does any slug named a second time, so a line
+    above the marker wins. `#` lines other than the marker are kept where
+    `main` has them.
+    """
+    above, ours_below = split_order(ours)
+    ours_below = ours_below or []
+    base_below = split_order(base)[1] or []
+    their_below = split_order(theirs)[1] or []
+    if rerank:
+        below = their_below + [s for s in ours_below if s not in their_below]
+    else:
+        below = list(ours_below)
+        for at, slug in enumerate(their_below):
+            if slug.startswith("#") or slug in base_below or slug in below:
+                continue
+            anchor = next((s for s in reversed(their_below[:at]) if s in below), None)
+            below.insert(below.index(anchor) + 1 if anchor else 0, slug)
+    seen: set[str] = set()
+
+    def kept(lines: list[str]) -> list[str]:
+        out = []
+        for line in lines:
+            if line.startswith("#"):
+                out.append(line)
+            elif line in keep and line not in seen:
+                seen.add(line)
+                out.append(line)
+        return out
+
+    return "\n".join([*kept(above), MARKER, *kept(below)]) + "\n"
+
+
+def order_keeps(tree: Path) -> set[str]:
+    """The slugs in `tree` that may have a line in `ORDER`.
+
+    Each Flight and standalone Issue in `backlog/`, and the Issue in
+    `underway/`, whose landing drops its line and whose send-back keeps it.
+    """
+    backlog = [
+        p.stem for p in (tree / ISSUES / "backlog").glob("*.md") if p.name != "README.md"
+    ]
+    parent_of = {}
+    for slug in backlog:
+        parent = parse((tree / ISSUES / "backlog" / f"{slug}.md").read_text())[0].get(
+            "parent"
+        )
+        if parent:
+            parent_of[slug] = str(parent)
+    underway = {
+        p.stem for p in (tree / ISSUES / "underway").glob("*.md") if p.name != "README.md"
+    }
+    return (set(backlog) - parts(parent_of, backlog)) | underway
 
 
 def grooming_faults(

@@ -154,9 +154,19 @@ Issue and does not end the pass. A pass that runs past its round cap pauses,
 and `just groom` gives it another. With nothing to groom and nothing to place,
 `just groom` says so and exits.
 
-A pass and an Issue share `worktrees/pair`, so one waits for the other:
-`just groom` refuses while an Issue is underway, and `just pair` refuses while
-a pass is, saying to finish it with `just groom`.
+A pass runs in its own worktree, `worktrees/groom`, and holds its own lock,
+`.pair/groom.lock`, so `just groom` and `just pair` run at once; two passes
+cannot, nor two Issues. The Issue underway is in `underway/`, where no pass
+takes it up, and the loop does not start an Issue that a pass underway, paused
+or not, took up. Whichever of the two lands second rebases onto the other. A
+pass is squashed before it rebases, and keeps only its changes under
+`issues/backlog/`. A conflict in `ORDER` alone does not stop a landing: the
+loop rebuilds the file from `main`'s, with the pass's placements put back
+after the line they followed, and without the line of any slug that has left
+`backlog/` and is not underway. When the other process lands first, or holds
+the index of the developer's checkout, the landing is tried again on the new
+`main`, a few times, before the loop pauses; local edits in the developer's
+checkout still pause it at once.
 
 ## Using it
 
@@ -166,9 +176,9 @@ a pass is, saying to finish it with `just groom`.
 | groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | run one Flight | `just pair --flight <slug>` |
-| watch | `just pair-status`; `tail -f .pair/primary.log .pair/secondary.log` |
-| steer an Issue underway | edit files in `worktrees/pair` between turns; the next seat sees the change |
-| take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` with the id `just pair-status` prints; `just pair` again afterwards |
+| watch | `just pair-status`; `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
+| steer an Issue or a pass underway | edit files in `worktrees/pair`, or `worktrees/groom` for a pass, between turns; the next seat sees the change |
+| take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` (`worktrees/groom` for a pass) with the id `just pair-status` prints; `just pair` or `just groom` again afterwards |
 | desk check | test in `worktrees/pair`, then `just pair-accept`, or write notes in the Issue file and `just pair-resume` |
 | desk-check a Flight | read its brief in `issues/desk-check/<slug>.md`, then `just pair-accept <slug>`, or write `## Desk-check notes` in it and `just pair-resume <slug>` |
 
@@ -177,9 +187,12 @@ root: `uv run --script <stereorepo>/pair/pair.py run`, `groom`, `status`,
 `accept` or `resume`, each with a Flight's slug where it has one.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
-`state.json` is the Issue or grooming pass underway, `turns.jsonl` has one
-row per turn with tokens and cache reads, and `<seat>.log` and `<seat>.jsonl` are each seat's
-output.
+`state.json` is the Issue underway, `turns.jsonl` has one row per turn with
+tokens and cache reads, `<seat>.log` and `<seat>.jsonl` are each seat's
+output, and `run.lock` holds the pid of the loop working Issues. A grooming
+pass keeps the same files in `.pair/groom/`, and its lock in
+`.pair/groom.lock`. A pass left paused in `.pair/state.json` by a loop older
+than this layout is dropped by the next `just pair` or `just groom`.
 
 The loop's tests run as the `pair` Project's gate, `just gate pair`, against
 fake seats over a temporary git repository.
