@@ -139,3 +139,11 @@ sections. `just pair-status` shows the board. The Flight concept is at
 - Write a two-child Flight by hand (children naming it in `parent:`, with no
   `hard`), and run `just pair --flight <slug>` to see it stop at the desk
   check while other backlog Issues are left alone.
+
+## Desk-check notes
+
+- A Flight whose parts have all landed is taken next, ahead of the running
+  order, so a plain `just pair` checks it and moves it to the desk check as
+  soon as its last part lands, whatever else is ripe. A delivered unit of value
+  waiting only for its check gains nothing by waiting behind unrelated Issues.
+  `just pair --once` still ends after one unit of work.
