@@ -1,3 +1,7 @@
+---
+difficulty: medium
+---
+
 # Keep each turn's rationale and findings in the Issue file
 
 A seat learns what the other did only from the diff of the working tree and
@@ -22,10 +26,20 @@ the way it was, and what a review checked.
   right. Neither is a recap of the diff. Reasoning that belongs in a Decision
   Record or a docstring still goes there, as Journaling routes it.
 - **The supervisor keeps the notes.** After each turn, the loop appends that
-  turn's closing message to the Issue file under `## Pair notes`, labelled by
-  seat, stage and turn, and commits it as part of the turn. Its own append does
-  not count as a change: a turn whose only change is its note is quiet. A
-  grooming pass has no Issue file, and keeps no notes.
+  turn's closing message (`TurnResult.text`) to the Issue file under
+  `## Pair notes`, labelled by seat, stage and turn, and commits it as part of
+  the turn. Its own append does not count as a change: a turn whose only
+  change is its note is quiet. A grooming pass has no Issue file, and keeps no
+  notes; nor does a turn whose Issue file is gone, which is sent back as now.
+- **A note cannot steer the loop.** The loop reads headings from the Issue
+  file: `Needs elaboration` sends an Issue back, `The plan` finishes `todo/`,
+  and the `Desk-check` sections drive a Flight's desk check. `board.section`,
+  `board.last_section` and `board.last_of` match a heading at any level, and a
+  bold lead such as `**The plan.**`, even when indented, so demoting a heading
+  is not enough: the loop appends each note as a block quote (every line
+  prefixed `> `), which none of them matches. The `## Pair notes` heading
+  itself is not a name the loop reads, and closes the section above it, so the
+  Flight's brief and desk-check notes read as before.
 - **The other seat reads them in its diff**, since the Issue file changed. No
   message passes between the seats except through the file, and the notes
   land in `issues/done/` with the Issue.
@@ -43,6 +57,10 @@ the way it was, and what a review checked.
   file, labelled by seat, stage and turn.
 - A turn whose only change is its appended note is quiet, and a stage still
   advances on two such turns.
+- A closing message containing `# Needs elaboration`, `## The plan` or
+  `**The plan.**` neither sends the Issue back nor finishes `todo/`, and a
+  Flight whose check turns leave notes still reaches its desk check with its
+  brief intact.
 - The stage prompts ask for rationale from a changing turn and findings from a
   reviewing one.
 - The pair tests cover each of these, and `just gate` passes.

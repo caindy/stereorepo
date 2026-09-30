@@ -1,3 +1,7 @@
+---
+difficulty: hard
+---
+
 # Flight instruments: the loop's event log, `pair-watch` and exit codes
 
 A copilot session that runs the loop for the developer has to know when an
@@ -27,6 +31,13 @@ paused, or found nothing ripe.
 - **Exit codes that say what happened.** `run`, `accept` and `resume` exit
   with distinct codes for landed, desk check, paused, stopped and nothing
   ripe, documented in `pair/README.md`.
+
+## Parts
+
+- `pair-exit-codes`: distinct exit codes for each outcome.
+- `pair-event-log`: `.pair/events.jsonl` and `just pair-watch`.
+- `pair-status-json`: `just pair-status --json`, after the human screen
+  (`status-lists-what-waits-on-the-developer`) settles what the state is.
 
 ## Overlaps
 
