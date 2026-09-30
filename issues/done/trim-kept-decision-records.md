@@ -1,3 +1,7 @@
+---
+difficulty: hard
+---
+
 # Trim PR First residue from the Decision Records that stayed
 
 The bootstrap removed the Decision Records that existed only for PR First, its
@@ -21,3 +25,15 @@ cover several records. Where a record no longer decides anything, withdraw it.
 
 Done when no kept record's rule depends on a class, a verb or a workflow this
 repository no longer has, and `just gate` passes.
+
+## Split
+
+Forty-nine records are too many to read, supersede and re-render in one
+piece, so the work is split by record number into four parts of ten to
+thirteen records each. The parts are independent; each re-renders the index
+after it lands.
+
+- `trim-decision-records-002-048`
+- `trim-decision-records-065-177`
+- `trim-decision-records-179-217`
+- `trim-decision-records-218-272`

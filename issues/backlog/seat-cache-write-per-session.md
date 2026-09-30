@@ -1,3 +1,9 @@
+---
+difficulty: developer
+waits_on:
+  - seat-sandbox-permissions
+---
+
 # Find what a fresh seat session still writes to the prompt cache
 
 Each fresh seat session writes part of its prompt to the cache again. In the
@@ -18,16 +24,31 @@ clone of stereorepo, two fresh one-turn sessions on Sonnet:
 | `--setting-sources "" --strict-mcp-config`, `AGENTS.md` appended | 4,976 | no |
 | as above, plus `--disable-slash-commands` | 2,405 | no |
 
-Two things remain:
+It waits on `seat-sandbox-permissions`, which changes the same command line.
+
+## Wanted
 
 - **What still varies.** With the project source alone, both sessions wrote
   the same ~7,300 tokens, so something the project source loads differs per
-  session. Identify it, and whether it can be made byte-identical without
-  losing the skills (for example by appending `AGENTS.md` and the skill texts
-  in `--append-system-prompt` with every source off).
-- **Convergence.** Run one real Issue through `just pair --once` and check
-  that the pair converges as it did in the spike, and that `.pair/turns.jsonl`
-  shows the lower first-turn writes.
+  session. Identify it by diffing what two fresh sessions send, and whether
+  it can be made byte-identical without losing the skills (for example by
+  appending `AGENTS.md` and the skill texts with `--append-system-prompt`
+  and every setting source off).
+- **The result in the code.** Either change `CONTEXT` to the cheaper flags,
+  or record the ~7,300 tokens as the floor and why, in `CONTEXT`'s docstring,
+  with the table above extended by the new measurement.
 
-Done when the per-session write is explained, either reduced or recorded as
-the floor, and one real Issue has landed with the new flags.
+## Out of scope
+
+Choosing a model per stage (`seat-models-per-stage`), and caching across
+Issues.
+
+## Done when
+
+The per-session write is explained, and either reduced or recorded as the
+floor, and `just gate` passes. The developer checks it by hand, since the
+measurements spend their subscription and only they can judge a seat that
+has lost its skills: at the desk check they re-run the two-session
+measurement with the branch's flags, and after it lands they compare the
+first-turn cache writes of the next Issue the loop runs, in
+`.pair/turns.jsonl`, with the table, and confirm that pair converged.

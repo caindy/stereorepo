@@ -1,3 +1,7 @@
+---
+difficulty: hard
+---
+
 # Write WHY_FORK.md up into Decision Records and wiki pages
 
 `WHY_FORK.md` at the root holds the reasoning behind this repository: why PR
@@ -27,3 +31,17 @@ delete it.
 
 Done when `WHY_FORK.md` is gone, every claim it made is in a record or a page
 that the gate checks, and `just gate` passes.
+
+## Split
+
+Each bullet above is a different kind of artifact, written under a different
+discipline, and together they are too much for one piece. The records come
+first, since the pages, the Explanation and the re-test all cite them; the
+file goes last.
+
+- `why-fork-delivery-records`: the Decision Records.
+- `why-fork-board-wiki-pages`: the eight concept pages, with the spike's
+  evidence.
+- `why-fork-harness-survey`: sections 6 and 7 as Explanation.
+- `why-fork-inherited-terms`: the re-test, *Client Repo* first.
+- `why-fork-remove-file`: the audit, and deleting the file and its exemption.
