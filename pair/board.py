@@ -20,6 +20,7 @@ DIFFICULTIES = ("easy", "medium", "hard", "developer")
 ISSUES = "issues"
 ORDER = f"{ISSUES}/backlog/ORDER"
 """The backlog's running order: one slug per line, the developer's above `# groomed below`."""
+MARKER = "# groomed below"
 
 _FRONT = re.compile(r"\A---\n(?P<block>.*?)\n---(?:\n|\Z)", re.DOTALL)
 _HEADING = re.compile(r"^(?:#{1,6}\s*|\*\*)(?P<name>[^*\n]+?)\.?(?:\*\*)?\s*$")
@@ -221,6 +222,102 @@ def next_ripe(repo: Path, ref: str, skip: frozenset[str] = frozenset()) -> str |
         ):
             return slug
     return None
+
+
+def backlog_blobs(repo: Path, ref: str) -> dict[str, str]:
+    """Each backlog Issue's path at `ref`, mapped to its blob id."""
+    blobs = {}
+    for line in git(repo, "ls-tree", ref, f"{ISSUES}/backlog/", check=False).splitlines():
+        meta, path = line.split("\t", 1)
+        if path.endswith(".md") and Path(path).name != "README.md":
+            blobs[path] = meta.split()[2]
+    return blobs
+
+
+def stale(blobs: dict[str, str], record: dict[str, str] | None) -> bool:
+    """Whether the backlog needs a grooming pass: a file is new or changed since `record`.
+
+    A file that only left the backlog does not count. With no record, any
+    backlog file counts, but an empty backlog does not: a fresh board has
+    nothing to groom, and a pass would spend turns only to write `ORDER`.
+    """
+    if record is None:
+        return bool(blobs)
+    return any(record.get(path) != blob for path, blob in blobs.items())
+
+
+def split_order(text: str) -> tuple[list[str], list[str] | None]:
+    """The non-blank lines of an `ORDER` file above the marker, and those below it.
+
+    Below is None when the file has no marker, and every line is then above it.
+    """
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    if MARKER not in lines:
+        return lines, None
+    at = lines.index(MARKER)
+    return lines[:at], lines[at + 1 :]
+
+
+def grooming_faults(tree: Path, repo: Path, ref: str) -> list[str]:
+    """What a grooming pass in `tree` still lacks, against the board at `ref`.
+
+    `ref` is the commit the pass started from, so a change on `main` during the
+    pass never shows here as a fault the seats cannot see. An empty list means
+    the pass is finished.
+    """
+    faults = []
+    backlog = sorted(
+        p.stem for p in (tree / ISSUES / "backlog").glob("*.md") if p.name != "README.md"
+    )
+    for slug in backlog:
+        issue = Issue(slug, "backlog", *parse((tree / ISSUES / "backlog" / f"{slug}.md").read_text()))
+        if issue.difficulty is None:
+            faults.append(
+                f"{issue.path} needs `difficulty:` set to easy, medium, hard or developer."
+            )
+        elif issue.difficulty == "hard" and not children(tree, slug):
+            faults.append(
+                f"{issue.path} is hard, so split it: write each part as a new file "
+                f"in issues/backlog/ with `parent: {slug}` in its front matter."
+            )
+    for slug in listed(repo, ref, "backlog"):
+        if slug not in backlog:
+            faults.append(
+                f"issues/backlog/{slug}.md is gone; put it back. "
+                "The pass does not delete a backlog Issue or move one out of backlog/."
+            )
+    for path in git(tree, "diff", "--name-only", ref, "HEAD").splitlines():
+        if not path.startswith(f"{ISSUES}/") or path.startswith(f"{ISSUES}/roadmap/"):
+            faults.append(f"{path} changed; the pass changes only issues/, and not issues/roadmap/.")
+    was = subprocess.run(
+        ["git", "show", f"{ref}:{ORDER}"], cwd=repo, capture_output=True, text=True
+    )
+    kept = split_order(was.stdout)[0] if was.returncode == 0 else []
+    path = tree / ORDER
+    above, below = split_order(path.read_text()) if path.is_file() else ([], None)
+    if below is None:
+        faults.append(
+            f"{ORDER} needs the line `{MARKER}`, with the ranking below it."
+        )
+        return faults
+    if above != kept:
+        shown = "\n".join(kept) or "(nothing)"
+        faults.append(
+            f"the lines above `{MARKER}` in {ORDER} are the developer's; "
+            f"put them back as they were:\n{shown}"
+        )
+    placed = set(above)
+    wanted = [s for s in backlog if s not in placed]
+    missing = [s for s in wanted if s not in below]
+    if missing:
+        faults.append(f"rank {', '.join(missing)} below `{MARKER}` in {ORDER}.")
+    extra = sorted({s for s in below if not s.startswith("#") and (s not in wanted or below.count(s) > 1)})
+    if extra:
+        faults.append(
+            f"below `{MARKER}` in {ORDER}, name each backlog Issue not placed above it "
+            f"exactly once, and nothing else: {', '.join(extra)}."
+        )
+    return faults
 
 
 def children(tree: Path, parent: str) -> list[str]:

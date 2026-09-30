@@ -50,6 +50,24 @@ the seat left uncommitted, with a `Seat:` trailer.
 A seat that crashes is restarted once from its session id. A supervisor that
 is killed restarts the turn in flight on the same session.
 
+## Grooming the backlog
+
+Before it takes the next Issue, the loop compares each `issues/backlog/*.md`
+on `main` with what the last grooming pass left. If any file is new or has
+changed, the pair grooms the whole backlog first, on the branch
+`pair/grooming`, from `prompts/stage-grooming.md`. The seats groom every Issue
+as the backlog stage grooms one, and rank the backlog below the
+`# groomed below` line of `issues/backlog/ORDER`, leaving the developer's lines
+above it alone. The pass takes turns and ends the way a stage does. Its
+requirement is that every backlog Issue has a `difficulty`, every `hard` Issue
+has children, `ORDER` ranks every Issue the developer has not placed, nothing
+was deleted, and `just gate` passes. The loop then moves each `hard` Issue to
+`done/` and lands the pass as one commit, `Groom the backlog`. A
+`Needs elaboration` section written in a pass parks that Issue and does not
+end the pass. A pass that runs past its round cap pauses the loop, and
+`just pair` gives it another round cap. A file that only left the backlog, an
+edit to `ORDER` alone, and the loop's own send-back start no pass.
+
 ## Using it
 
 | To… | Do… |
@@ -66,7 +84,8 @@ root: `uv run --script <stereorepo>/pair/pair.py run`, `status`, `accept` or
 `resume`.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
-`state.json` is the Issue in flight, `turns.jsonl` has one row per turn with
+`state.json` is the Issue or grooming pass in flight, `groomed.json` is each
+backlog file's blob id as the last pass left it, `turns.jsonl` has one row per turn with
 tokens and cache reads, and `<seat>.log` and `<seat>.jsonl` are each seat's
 output.
 
