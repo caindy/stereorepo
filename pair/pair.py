@@ -7,11 +7,14 @@
 Run from the root of the repository whose board it works; the loop's own code
 stays wherever this file is, outside that repository's tree (see README.md):
 
-    uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--model M] [--round-cap N]
+    uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--flight SLUG] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py groom [--rerank] [--push] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py status
     uv run --script <stereorepo>/pair/pair.py accept [SLUG]
     uv run --script <stereorepo>/pair/pair.py resume [SLUG]
+
+With `--flight`, `run` works only that Flight and the Issues below it, and
+stops when the Flight reaches its desk check.
 
 With SLUG, `accept` and `resume` answer the desk check of that Flight on
 `main`, in your checkout, and run alongside a running loop.
@@ -142,6 +145,11 @@ def main() -> int:
     run.add_argument(
         "--push", action="store_true", help="push main to origin after each landing"
     )
+    run.add_argument(
+        "--flight",
+        metavar="SLUG",
+        help="work only this Flight's Issues, and stop at its desk check",
+    )
     groom = sub.add_parser(
         "groom",
         parents=[seats],
@@ -196,10 +204,10 @@ def main() -> int:
         round_cap=args.round_cap,
     )
 
-    flight = getattr(args, "slug", None)
-    if flight:
+    desk = getattr(args, "slug", None)
+    if desk:
         answer = loop.accept if args.command == "accept" else loop.resume
-        print(f"pair: {answer(flight)}")
+        print(f"pair: {answer(desk)}")
         return 0
 
     lock = hold_lock(repo)
@@ -217,7 +225,7 @@ def main() -> int:
 
     signal.signal(signal.SIGINT, stop)
     if args.command == "run":
-        outcome = loop.run(once=args.once)
+        outcome = loop.run(once=args.once, flight=args.flight)
     elif args.command == "groom":
         outcome = loop.groom(rerank=args.rerank)
     elif args.command == "accept":

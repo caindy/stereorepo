@@ -171,7 +171,7 @@ class Loop:
 
     # --- entry points ----------------------------------------------------------
 
-    def run(self, once: bool = False) -> str:
+    def run(self, once: bool = False, flight: str | None = None) -> str:
         """Work issues until the backlog empties or the developer is needed.
 
         It never grooms, and does not start while a grooming pass is underway.
@@ -179,6 +179,10 @@ class Loop:
         A turn cut short by the supervisor dying belongs to its seat: a restart
         gives it back to that seat, and does not mistake its leftovers for the
         developer's edits.
+
+        With `flight`, only that Flight and the Issues below it are worked,
+        read again from `main` before each pick so that children written during
+        the run join it. The run ends when the Flight lands in `desk-check/`.
         """
         self.ensure_worktree()
         self.reap()
@@ -186,15 +190,24 @@ class Loop:
         if st is not None and st.stage == GROOMING:
             self.say("a grooming pass is underway; finish it with `just groom`")
             return "grooming"
+        if flight is not None:
+            refusal = self.flight_refusal(flight, st)
+            if refusal:
+                self.say(refusal)
+                return "refused"
         while True:
             if st is None:
-                slug = board.next_ripe(self.repo, self.main)
+                within = None
+                if flight is not None:
+                    below = board.descendants(self.repo, self.main, flight)
+                    within = frozenset(below | {flight})
+                slug = board.next_ripe(self.repo, self.main, within=within)
                 if slug is None:
-                    self.say("backlog is empty (or nothing in it is ripe)")
+                    self.say(self.nothing_ripe(flight))
                     return "empty"
-                flight = board.children(self.repo, self.main, slug)
+                kids = board.children(self.repo, self.main, slug)
                 st = self.start(
-                    State(slug=slug, stage=FLIGHT_CHECK if flight else "backlog")
+                    State(slug=slug, stage=FLIGHT_CHECK if kids else "backlog")
                 )
                 if st is None:
                     return "paused"
@@ -207,7 +220,50 @@ class Loop:
             outcome = self.work(st)
             if outcome in ("paused", "stopped") or once:
                 return outcome
+            if flight in board.listed(self.repo, self.main, "desk-check"):
+                self.say(
+                    f"{flight} is waiting for your desk check: "
+                    f"`just pair-accept {flight}` or `just pair-resume {flight}`"
+                )
+                return "desk-check"
             st = None
+
+    def flight_refusal(self, flight: str, st: State | None) -> str | None:
+        """Why `run` cannot work `flight` from here, or None when it can."""
+        if flight in board.listed(self.repo, self.main, "desk-check"):
+            return (
+                f"{flight} is waiting for your desk check: "
+                f"`just pair-accept {flight}` or `just pair-resume {flight}`"
+            )
+        backlog = board.listed(self.repo, self.main, "backlog")
+        if flight not in backlog or not board.children(self.repo, self.main, flight):
+            return f"{flight} is not a Flight in issues/backlog/"
+        below = board.descendants(self.repo, self.main, flight)
+        if st is not None and st.slug != flight and st.slug not in below:
+            finish = (
+                "`just pair-accept` or `just pair-resume`"
+                if st.retry == "desk-check"
+                else "`just pair`"
+            )
+            return (
+                f"{st.slug} is underway and is not part of {flight}; "
+                f"finish it with {finish} first"
+            )
+        return None
+
+    def nothing_ripe(self, flight: str | None) -> str:
+        """What `run` says when no issue it may work is ripe."""
+        if flight is None:
+            return "backlog is empty (or nothing in it is ripe)"
+        desk = set(board.listed(self.repo, self.main, "desk-check"))
+        kin = board.families(self.repo, self.main)
+        below = board.descendants(self.repo, self.main, flight)
+        held = sorted(slug for slug in below & desk if kin.get(slug))
+        if held:
+            return f"nothing in {flight} is ripe; it waits on the desk check of " + (
+                ", ".join(held)
+            )
+        return f"nothing in {flight} is ripe"
 
     def groom(self, rerank: bool = False) -> str:
         """Groom the backlog issues that are not groomed, and place them in `ORDER`.

@@ -872,6 +872,99 @@ class FlightCheckTest(unittest.TestCase):
         self.assertFalse(b.on_main("issues/todo/big.md"))
 
 
+def easy_turns(slug: str) -> tuple[tuple[str, object], ...]:
+    """The six turns that take a groomed `easy` Issue from backlog to landing."""
+    return (
+        ("primary", quiet),
+        ("secondary", quiet),
+        ("primary", append(slug, PLAN)),
+        ("secondary", quiet),
+        ("primary", write(f"{slug}.txt", "x")),
+        ("secondary", quiet),
+    )
+
+
+def flight_check_turns(slug: str) -> tuple[tuple[str, object], ...]:
+    """The turns of a Flight check that writes a brief."""
+    return (
+        ("primary", append(slug, BRIEF)),
+        ("secondary", quiet),
+    )
+
+
+class FlightRunTest(unittest.TestCase):
+    """`run(flight=...)`: one Flight worked to its desk check, and nothing else."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+        b = self.b
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("backlog", "big-a", "Big A", difficulty="easy", parent="big")
+        b.issue(
+            "backlog", "big-b", "Big B", difficulty="easy", parent="big",
+            waits_on="[big-a]",
+        )
+        b.issue("backlog", "other", "Other", difficulty="easy")
+        (b.repo / board.ORDER).write_text("other\nbig-b\nbig-a\nbig\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+
+    def test_the_run_lands_the_flight_and_stops_at_its_desk_check(self) -> None:
+        b = self.b
+        b.script(*easy_turns("big-a"), *easy_turns("big-b"), *flight_check_turns("big"))
+        self.assertEqual(b.loop.run(flight="big"), "desk-check")
+        self.assertFalse(b.turns)
+        self.assertTrue(b.on_main("issues/done/big-a.md"))
+        self.assertTrue(b.on_main("issues/done/big-b.md"))
+        self.assertTrue(b.on_main("issues/desk-check/big.md"))
+        self.assertTrue(b.on_main("issues/backlog/other.md"))
+        self.assertTrue(all("other" not in text for _, text in b.sent))
+
+    def test_a_run_refuses_what_it_cannot_work(self) -> None:
+        b = self.b
+        head = sh(b.repo, "rev-parse", "HEAD")
+        self.assertEqual(b.loop.run(flight="nothing"), "refused")
+        self.assertEqual(b.loop.run(flight="other"), "refused")
+        b.loop.save(State(slug="other", stage="todo"))
+        self.assertEqual(b.loop.run(flight="big"), "refused")
+        says: list[str] = []
+        b.loop.say = says.append
+        b.loop.save(State(slug="other", stage="desk-check", retry="desk-check"))
+        self.assertEqual(b.loop.run(flight="big"), "refused")
+        self.assertIn("`just pair-accept`", says[-1])
+        b.loop.clear()
+        sh(b.repo, "mv", "issues/backlog/big.md", "issues/desk-check/big.md")
+        sh(b.repo, "commit", "-q", "-m", "at the desk")
+        self.assertEqual(b.loop.run(flight="big"), "refused")
+        self.assertEqual(b.sent, [])
+        self.assertEqual(sh(b.repo, "rev-parse", "HEAD~1"), head)
+
+    def test_an_issue_of_the_flight_underway_is_resumed(self) -> None:
+        b = self.b
+        b.loop.ensure_worktree()
+        st = b.loop.start(State(slug="big-a", stage="backlog"))
+        assert st is not None
+        b.script(*easy_turns("big-a"), *easy_turns("big-b"), *flight_check_turns("big"))
+        self.assertEqual(b.loop.run(flight="big"), "desk-check")
+        self.assertTrue(b.on_main("issues/done/big-a.md"))
+        self.assertTrue(b.on_main("issues/done/big-b.md"))
+
+    def test_a_flight_below_is_worked_and_its_desk_check_stops_the_run(self) -> None:
+        b = self.b
+        sh(b.repo, "rm", "-q", "issues/backlog/big-b.md")
+        b.issue("backlog", "big-a-1", "Big A 1", difficulty="easy", parent="big-a")
+        says: list[str] = []
+        b.loop.say = says.append
+        b.script(*easy_turns("big-a-1"), *flight_check_turns("big-a"))
+        self.assertEqual(b.loop.run(flight="big"), "empty")
+        self.assertFalse(b.turns)
+        self.assertTrue(b.on_main("issues/done/big-a-1.md"))
+        self.assertTrue(b.on_main("issues/desk-check/big-a.md"))
+        self.assertTrue(b.on_main("issues/backlog/big.md"))
+        self.assertIn("waits on the desk check of big-a", says[-1])
+
+
 class GroomingTest(unittest.TestCase):
     def setUp(self) -> None:
         self.b = Bench()
@@ -1285,6 +1378,22 @@ class BoardTest(unittest.TestCase):
         self.assertEqual(board.next_ripe(b.repo, "main"), "big")
         b.issue("roadmap", "someday", "Someday", parent="big")
         self.assertEqual(board.children(b.repo, "main", "big"), {"part": "done"})
+
+    def test_descendants_and_within_keep_to_one_flight(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "loose", "Loose")
+        b.issue("backlog", "big", "Big")
+        b.issue("done", "mid", "Mid", parent="big")
+        b.issue("backlog", "leaf", "Leaf", parent="mid")
+        self.assertEqual(board.descendants(b.repo, "main", "big"), {"mid", "leaf"})
+        self.assertEqual(board.descendants(b.repo, "main", "loose"), set())
+        self.assertEqual(board.next_ripe(b.repo, "main"), "big")
+        self.assertEqual(
+            board.next_ripe(b.repo, "main", within=frozenset({"leaf", "loose"})),
+            "leaf",
+        )
+        self.assertIsNone(board.next_ripe(b.repo, "main", within=frozenset({"mid"})))
 
     def test_sections_counts_each_heading_of_a_name(self) -> None:
         body = "# F\n\n## Desk-check brief\n\none\n\n## Desk-check brief\n\ntwo\n"

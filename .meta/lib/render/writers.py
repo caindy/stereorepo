@@ -68,7 +68,7 @@ def justfile() -> str:
     if "work:artifact/pair" in artifacts:
         lines += [
             "",
-            "# the pair loop: carry issues from issues/backlog/ to main (--once, --push, --model)",
+            "# the pair loop: carry issues to main (--once, --push, --flight SLUG, --model)",
             "pair *args:",
             "    uv run --quiet --script pair/pair.py run {{args}}",
             "",

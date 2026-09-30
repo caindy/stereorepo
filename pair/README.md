@@ -87,6 +87,16 @@ slug that is not a Flight in `desk-check/`, a checkout off `main`, and a resume
 with no notes after the latest brief. A commit that lands on `main` in the
 moment the loop is landing makes the loop pause; run it again.
 
+`just pair --flight <slug>` runs one Flight: it works only that Flight and the
+Issues below it (a child that is itself a Flight, with its own children), in
+running order, whatever else is ripe, and stops when the Flight reaches
+`desk-check/`. Children written during the run, by a split or a Flight check,
+join it. It also stops where `just pair` would, for a pause or a `developer`
+Issue's desk check, and when nothing in the Flight is ripe, naming any Flight
+below it that waits on its desk check. It refuses a slug that is not a Flight
+in `backlog/`, a Flight already in `desk-check/`, and a run while an Issue
+outside the Flight is underway.
+
 A seat that crashes is restarted once from its session id. A supervisor that
 is killed restarts the turn being worked on the same session.
 
@@ -130,6 +140,7 @@ a pass is, saying to finish it with `just groom`.
 | add work | commit `issues/backlog/<slug>.md` to `main` |
 | groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
+| run one Flight | `just pair --flight <slug>` |
 | watch | `just pair-status`; `tail -f .pair/primary.log .pair/secondary.log` |
 | steer an Issue underway | edit files in `worktrees/pair` between turns; the next seat sees the change |
 | take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` with the id `just pair-status` prints; `just pair` again afterwards |

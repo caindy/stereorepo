@@ -244,21 +244,27 @@ def without(text: str, slug: str) -> str:
     )
 
 
-def next_ripe(repo: Path, ref: str, skip: frozenset[str] = frozenset()) -> str | None:
+def next_ripe(
+    repo: Path,
+    ref: str,
+    skip: frozenset[str] = frozenset(),
+    within: frozenset[str] | None = None,
+) -> str | None:
     """The first backlog item at `ref`, in running order, that is ripe.
 
     The running order is the slugs `ORDER` names, then every other backlog
     slug in filename order. An item is ripe when its `waits_on` are all done,
     every Issue naming it in `parent:` is done, and it has no `Needs
     elaboration` section, which marks a send-back the developer has yet to
-    answer.
+    answer. Slugs in `skip`, and with `within` those outside it, are passed
+    over.
     """
     done = set(listed(repo, ref, "done"))
     kin = families(repo, ref)
     backlog = listed(repo, ref, "backlog")
     named = [s for s in dict.fromkeys(order(repo, ref)) if s in backlog]
     for slug in named + [s for s in backlog if s not in named]:
-        if slug in skip:
+        if slug in skip or (within is not None and slug not in within):
             continue
         issue = at_ref(repo, ref, "backlog", slug)
         if (
@@ -419,6 +425,19 @@ def children(repo: Path, ref: str, parent: str) -> dict[str, str]:
     which holds every turn once the loop has settled it.
     """
     return families(repo, ref).get(parent, {})
+
+
+def descendants(repo: Path, ref: str, parent: str) -> set[str]:
+    """Every Issue at `ref` below `parent`: its children, theirs, and so on."""
+    kin = families(repo, ref)
+    found: set[str] = set()
+    todo = [parent]
+    while todo:
+        for slug in kin.get(todo.pop(), {}):
+            if slug not in found and slug != parent:
+                found.add(slug)
+                todo.append(slug)
+    return found
 
 
 def waiting(repo: Path, ref: str, parent: str) -> bool:
