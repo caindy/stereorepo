@@ -23,7 +23,7 @@ apm_modules/
 .codex/
 
 
-# The pair loop's runtime state and its worktree: the Issue in flight, the turn
+# The pair loop's runtime state and its worktree: the Issue underway, the turn
 # log, each seat's output, and the checkout the seats work in.
 .pair/
 worktrees/

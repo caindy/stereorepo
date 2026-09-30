@@ -48,7 +48,7 @@ the seat left uncommitted, with a `Seat:` trailer.
    edits.
 
 A seat that crashes is restarted once from its session id. A supervisor that
-is killed restarts the turn in flight on the same session.
+is killed restarts the turn being worked on the same session.
 
 ## Grooming the backlog
 
@@ -80,7 +80,7 @@ and `just groom` gives it another. With nothing to groom and nothing to place,
 `just groom` says so and exits.
 
 A pass and an Issue share `worktrees/pair`, so one waits for the other:
-`just groom` refuses while an Issue is in flight, and `just pair` refuses while
+`just groom` refuses while an Issue is underway, and `just pair` refuses while
 a pass is, saying to finish it with `just groom`.
 
 ## Using it
@@ -91,7 +91,7 @@ a pass is, saying to finish it with `just groom`.
 | groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | watch | `just pair-status`; `tail -f .pair/primary.log .pair/secondary.log` |
-| steer an Issue in flight | edit files in `worktrees/pair` between turns; the next seat sees the change |
+| steer an Issue underway | edit files in `worktrees/pair` between turns; the next seat sees the change |
 | take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` with the id `just pair-status` prints; `just pair` again afterwards |
 | desk check | test in `worktrees/pair`, then `just pair-accept`, or write notes in the Issue file and `just pair-resume` |
 
@@ -100,7 +100,7 @@ root: `uv run --script <stereorepo>/pair/pair.py run`, `groom`, `status`,
 `accept` or `resume`.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
-`state.json` is the Issue or grooming pass in flight, `turns.jsonl` has one
+`state.json` is the Issue or grooming pass underway, `turns.jsonl` has one
 row per turn with tokens and cache reads, and `<seat>.log` and `<seat>.jsonl` are each seat's
 output.
 

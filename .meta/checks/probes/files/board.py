@@ -65,11 +65,11 @@ def board_front_matter_probes(views: Sequence[Any]) -> list[str]:
     return problems
 
 
-ORDER = "# the developer's\nkept\n\nflight\n# groomed below\nlanded\nnowhere\n"
-"""An `ORDER` naming one backlog Issue, one in flight, one landed and one nowhere,
+ORDER = "# the developer's\nkept\n\nunderway\n# groomed below\nlanded\nnowhere\n"
+"""An `ORDER` naming one backlog Issue, one underway, one landed and one nowhere,
 with a comment, a blank line and the marker between them."""
 
-ORDER_STAGES = {"kept": "backlog", "flight": "in-progress", "landed": "done"}
+ORDER_STAGES = {"kept": "backlog", "underway": "in-progress", "landed": "done"}
 """Where each slug `ORDER` names has its Issue file, by slug; `nowhere` has none."""
 
 ORDER_REPORTED = {"landed": 6, "nowhere": 7}

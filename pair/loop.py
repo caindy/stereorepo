@@ -144,7 +144,7 @@ class Loop:
     def run(self, once: bool = False) -> str:
         """Work issues until the backlog empties or the developer is needed.
 
-        It never grooms, and does not start while a grooming pass is in flight.
+        It never grooms, and does not start while a grooming pass is underway.
 
         A turn cut short by the supervisor dying belongs to its seat: a restart
         gives it back to that seat, and does not mistake its leftovers for the
@@ -154,7 +154,7 @@ class Loop:
         self.reap()
         st = self.load()
         if st is not None and st.stage == GROOMING:
-            self.say("a grooming pass is in flight; finish it with `just groom`")
+            self.say("a grooming pass is underway; finish it with `just groom`")
             return "grooming"
         while True:
             if st is None:
@@ -180,8 +180,8 @@ class Loop:
         """Groom the backlog issues that are not groomed, and place them in `ORDER`.
 
         With `rerank`, the pass ranks the whole order below the marker again.
-        A pass in flight resumes with the targets and mode it started with. A
-        pass does not start while an issue is in flight, nor when there is
+        A pass underway resumes with the targets and mode it started with. A
+        pass does not start while an issue is underway, nor when there is
         nothing to groom, place or rerank.
         """
         self.ensure_worktree()
@@ -193,12 +193,12 @@ class Loop:
                 if st.retry == "desk-check"
                 else "`just pair`"
             )
-            self.say(f"{st.slug} is in flight; finish it with {finish} first")
+            self.say(f"{st.slug} is underway; finish it with {finish} first")
             return "busy"
         if st is not None:
             if rerank != st.rerank:
                 self.say(
-                    "resuming the grooming pass in flight, "
+                    "resuming the grooming pass already underway, "
                     f"{'with' if st.rerank else 'without'} --rerank as it started"
                 )
             return self.work(st)
@@ -862,7 +862,7 @@ class Loop:
 
 
 def status(repo: Path, main: str = "main") -> str:
-    """A plain-text view of the board on `main` and the issue in flight."""
+    """A plain-text view of the board on `main` and the issue underway."""
     lines = []
     for stage in ("roadmap", "backlog", "done"):
         slugs = board.listed(repo, main, stage)
@@ -879,7 +879,7 @@ def status(repo: Path, main: str = "main") -> str:
             else f"{st['slug']} in {st['stage']}/"
         )
         lines.append(
-            f"\nin flight: {what}, turn {st['turn']}, "
+            f"\nunderway: {what}, turn {st['turn']}, "
             f"next {st['next_role']}, "
             f"accepted by {st['approvals'] or 'nobody yet'}"
         )
@@ -891,7 +891,7 @@ def status(repo: Path, main: str = "main") -> str:
                 f"(take over: cd worktrees/pair && claude --resume {sid})"
             )
     else:
-        lines.append("\nnothing in flight")
+        lines.append("\nnothing underway")
     turns = repo / ".pair" / "turns.jsonl"
     if turns.is_file():
         tail = turns.read_text().splitlines()[-4:]

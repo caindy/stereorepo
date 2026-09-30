@@ -42,7 +42,7 @@ declare, a difficulty outside its values, or a `waits_on` or `parent` naming no
 Issue on the board fails the gate rather than leaving the Issue silently
 ungroomed.
 
-While an Issue is in flight its file on `main` stays in `backlog/`; its
+While an Issue is underway its file on `main` stays in `backlog/`; its
 progress exists only on its branch, `pair/<slug>`, and the commit that lands it
 moves it to `done/`. Seats never move Issue files. `just pair-status` shows the
-board and the Issue in flight.
+board and the Issue underway.

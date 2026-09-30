@@ -109,13 +109,13 @@ ORDER = "backlog/ORDER"
 ORDERABLE = ("backlog", "todo", "in-progress", "desk-check")
 """The stages a slug in `ORDER` may name an Issue in: the backlog, or on its way from it.
 
-An Issue in flight keeps its line on its own branch until the squash that lands
+An Issue underway keeps its line on its own branch until the squash that lands
 it removes the line, so its own gate must still find it."""
 
 
 @check("board order")
 def board_order(root: pathlib.Path | None = None) -> StepOutcome:
-    """Every slug `issues/backlog/ORDER` names is an Issue in the backlog or in flight.
+    """Every slug `issues/backlog/ORDER` names is an Issue in the backlog or underway.
 
     A line naming an Issue that landed, or no Issue at all, would sit in the
     running order unread, so each is reported with its line number. Blank lines

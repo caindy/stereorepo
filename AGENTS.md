@@ -37,7 +37,7 @@ observe. There are no pull requests.
   `issues/roadmap/` instead, where no agent moves it.
 - `just pair` runs the loop; `just groom` grooms the Issues that have no
   `difficulty` and places them in the running order; `just pair-status` shows
-  the board and the Issue in flight; `just pair-accept` and `just pair-resume`
+  the board and the Issue underway; `just pair-accept` and `just pair-resume`
   answer a desk check.
 - A seat that finds work outside its Issue writes it as a new file in
   `issues/backlog/` instead of doing it.

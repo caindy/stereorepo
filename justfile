@@ -40,7 +40,7 @@ pair *args:
 groom *args:
     uv run --quiet --script pair/pair.py groom {{args}}
 
-# the board on main, the issue in flight, and the last turns
+# the board on main, the issue underway, and the last turns
 pair-status:
     uv run --quiet --script pair/pair.py status
 

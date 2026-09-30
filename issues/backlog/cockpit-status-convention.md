@@ -6,7 +6,7 @@ difficulty: medium
 
 A cockpit, one view across every repository the developer runs a pair loop
 in, comes later. What it needs from each repository now is one convention for
-publishing what the loop knows: the Issue in flight, its stage, its round,
+publishing what the loop knows: the Issue underway, its stage, its round,
 whether it needs the developer, and why.
 
 ## Wanted
@@ -16,7 +16,7 @@ whether it needs the developer, and why.
   developer's checkout. The file also holds the checkout's absolute path, so a
   reader can tell two checkouts with the same basename apart. It is written to
   a temporary file and renamed, so a reader never sees half of it.
-- It holds: the Issue in flight (or none), its stage, its round, and whether
+- It holds: the Issue underway (or none), its stage, its round, and whether
   and why it needs the developer. The reasons are those the loop already
   distinguishes: a desk check waiting for `just pair-accept` or
   `just pair-resume`; an Issue sent back with a `Needs elaboration` section; a

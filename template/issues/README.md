@@ -37,7 +37,7 @@ neither a `difficulty` nor such a section, and places it in the running order;
 an Issue you write with a `difficulty` is taken as
 groomed, and deleting its `difficulty` asks for it to be groomed again.
 
-While an Issue is in flight its file on `main` stays in `backlog/`; its
+While an Issue is underway its file on `main` stays in `backlog/`; its
 progress exists only on its branch, named for its slug, and the commit that lands it
 moves it to `done/`. Seats never move Issue files. The pair loop's `status` shows the
-board and the Issue in flight.
+board and the Issue underway.

@@ -678,7 +678,7 @@ class GroomingTest(unittest.TestCase):
         b.stop_when_empty = True
         b.script(("primary", order("# groomed below\na\n")))
         self.assertEqual(b.loop.groom(), "stopped")
-        self.assertIn("in flight: grooming pass, turn 1", status(b.repo))
+        self.assertIn("underway: grooming pass, turn 1", status(b.repo))
         self.assertEqual(b.loop.run(), "grooming")
         b.stop_when_empty = False
         b.loop.stop_requested = False
@@ -690,7 +690,7 @@ class GroomingTest(unittest.TestCase):
             ("primary", quiet),
         )
         self.assertEqual(b.loop.groom(rerank=True), "groomed")
-        self.assertIn("nothing in flight", status(b.repo))
+        self.assertIn("nothing underway", status(b.repo))
         self.assertEqual(self.main_order(), "# groomed below\na\nx")
         b.stop_when_empty = True
         b.script(("primary", quiet))
