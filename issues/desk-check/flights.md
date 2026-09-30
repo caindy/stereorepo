@@ -93,3 +93,49 @@ Split by grooming, in landing order: `underway-not-in-flight`,
   its desk check.
 - No text outside `WHY_FORK.md` uses "in flight" for the Issue being worked.
 - The pair tests cover each of these, and `just gate` passes.
+
+## Desk-check brief
+
+**Delivered.** A parent Issue is now a Flight, carried from split to desk
+check by the pair loop. All six parts are in `issues/done/`:
+`underway-not-in-flight`, `flight-check`, `flight-desk-check`,
+`flight-deliver`, `pair-flight-option` and `flight-vocabulary`. Each item of
+"Done when" was checked on `main` at `fae5ab6`:
+
+- A `hard` Issue's parent stays in `backlog/` while any child is outside
+  `done/` (`board.py`, the pending-child check near its end). Once the last
+  child lands, the loop gives the parent the Flight check
+  (`pair/prompts/stage-flight-check.md`), runs `just deliver` where the
+  repository defines it (`deliver` in `pair/pair.py`), and moves the Flight to
+  `desk-check/`. This Flight is the first real run: it stayed in `backlog/`
+  while its parts landed, and this check is what the loop gave it after the
+  last one.
+- `just pair-accept <slug>` moves a Flight to `done/`. `just pair-resume
+  <slug>` returns it to `backlog/`, and the next Flight check writes one child
+  per note and lists them under `## Desk-check children`.
+- `just pair --flight <slug>` works only that Flight and the Issues below it,
+  and stops at its desk check.
+- Outside `WHY_FORK.md` and `issues/done/`, "in flight" is used only for a
+  Flight's parts being worked: in the Flight concept
+  (`.meta/assertions/imported/vocabulary.yaml`, `wiki/stereorepo/flight.md`).
+  The Issue being worked is *underway*.
+- `just gate` passes, including 67 pair tests. The tests covering the Flight
+  are in `FlightCheckTest` and the `--flight` run tests in
+  `pair/test_pair.py`, together with
+  `test_a_flight_waits_until_every_child_is_done`.
+
+**Where to see it.** `pair/README.md` has the stage table and the Flight
+sections. `just pair-status` shows the board. The Flight concept is at
+`wiki/stereorepo/flight.md` and in `.meta/vocabulary.md`.
+
+**Worth trying.**
+
+- Run `just pair-accept flights` to close this Flight. Or write a
+  `## Desk-check notes` section here and run `just pair-resume flights`; the
+  round trip back to `desk-check/` then runs on a real Flight.
+- This repository defines no `deliver` recipe, so no delivery ran and this
+  brief has no `Delivered by` line. To see a delivery, add a trivial
+  `deliver` recipe on a scratch clone and land a small Flight there.
+- Write a two-child Flight by hand (children naming it in `parent:`, with no
+  `hard`), and run `just pair --flight <slug>` to see it stop at the desk
+  check while other backlog Issues are left alone.
