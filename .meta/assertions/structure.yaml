@@ -379,6 +379,9 @@ artifacts:
   - id: work:artifact/meta-checks-files-wiki
     name: .meta/checks/files/wiki.py
     path: .meta/checks/files/wiki.py
+  - id: work:artifact/meta-checks-files-board
+    name: .meta/checks/files/board.py
+    path: .meta/checks/files/board.py
   - id: work:artifact/meta-checks-files-inline-python
     name: .meta/checks/files/inline_python.py
     path: .meta/checks/files/inline_python.py
@@ -472,6 +475,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-files-rendered
     name: .meta/checks/probes/files/rendered.py
     path: .meta/checks/probes/files/rendered.py
+  - id: work:artifact/meta-checks-probes-files-board
+    name: .meta/checks/probes/files/board.py
+    path: .meta/checks/probes/files/board.py
   - id: work:artifact/meta-checks-probes-tools
     name: .meta/checks/probes/tools/__init__.py
     path: .meta/checks/probes/tools/__init__.py

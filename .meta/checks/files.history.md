@@ -116,3 +116,16 @@ git's conflict marker patterns (`<<<<<<<`, `=======`, `>>>>>>>`).
 
 Evidence: `.meta/checks/files/conflicts.py::conflict_markers`
 
+
+### Issue front matter that the pair loop silently ignores
+
+The pair loop reads an Issue's `difficulty`, `waits_on` and `parent` and
+nothing else, so a misspelt key (`dificulty: easy`), a difficulty outside the
+enum (`difficulty: trivial`) or a `waits_on` naming no Issue left the Issue
+ungroomed or waiting forever, with nothing to say why. Established:
+`board_front_matter` holds every `issues/<stage>/*.md` file but `README.md` to
+the slots of the ontology's `Issue` class and the values of its `Difficulty`
+enum, read off the schema, and resolves `waits_on` and `parent` against the
+slugs on the board, leaving a `<repository>:<slug>` entry unresolved.
+
+Evidence: `.meta/checks/files/board.py::board_front_matter`

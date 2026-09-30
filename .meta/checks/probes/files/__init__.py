@@ -11,12 +11,14 @@ because the gate over assertions should not take its imports from a test suite
 report in (stereorepo's DR-218); the re-export is what imports the module and so
 what registers its step, which is why this package suppresses nothing.
 """
+from checks.probes.files.board import board_front_matter_probes
 from checks.probes.files.rendered import rendered_artifact_probes
 from checks.probes.files.sizes import SIZE_CASES, SizeCase, file_size_ceiling_probes
 
 __all__ = [
     "SIZE_CASES",
     "SizeCase",
+    "board_front_matter_probes",
     "file_size_ceiling_probes",
     "rendered_artifact_probes",
 ]

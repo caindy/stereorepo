@@ -22,7 +22,7 @@ observed or derived, and all of it is optional:
 ```markdown
 ---
 difficulty: medium      # easy, medium, hard or developer; the pair sets it if you do not
-waits_on: [other-slug]  # Issues that must be done first
+waits_on: [other-slug]  # Issues that must be done first; another repository's is <repository>:<slug>
 parent: parent-slug     # the Issue this one was split from
 ---
 
@@ -30,6 +30,12 @@ parent: parent-slug     # the Issue this one was split from
 
 What is wanted, what is out of scope, and how anyone will know it is done.
 ```
+
+The front matter is the ontology's `Issue` class (`.meta/work/purpose.yaml`),
+and `just gate meta` holds every Issue file to it: a key the class does not
+declare, a difficulty outside its values, or a `waits_on` or `parent` naming no
+Issue on the board fails the gate rather than leaving the Issue silently
+ungroomed.
 
 While an Issue is in flight its file on `main` stays in `backlog/`; its
 progress exists only on its branch, `pair/<slug>`, and the commit that lands it
