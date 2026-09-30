@@ -55,7 +55,9 @@ the Flight through the Flight check (`prompts/stage-flight-check.md`) instead of
 its backlog stage: the seats check its "Done when" end to end on `main`, and
 either write each gap as a new child, which puts the Flight back to waiting, or
 write a desk-check brief into the Flight file, which lands it in `desk-check/`
-and out of `ORDER`.
+and out of `ORDER`. A ripe Flight is taken ahead of the running order, before
+any other ripe Issue, so it is checked as soon as its last child lands; among
+ripe Flights the running order decides.
 
 The loop leaves how a product is built and deployed to the repository's
 `justfile`, and runs two recipes where it defines them. `just setup` provisions
@@ -89,21 +91,21 @@ moment the loop is landing makes the loop pause; run it again.
 
 `just pair --flight <slug>` runs one Flight: it works only that Flight and the
 Issues below it (a child that is itself a Flight, with its own children), in
-running order, whatever else is ripe, and stops when the Flight reaches
-`desk-check/`. Children written during the run, by a split or a Flight check,
-join it. It also stops where `just pair` would, for a pause or a `developer`
-Issue's desk check, and when nothing in the Flight is ripe, naming any Flight
-below it that waits on its desk check. It refuses a slug that is not a Flight
-in `backlog/`, a Flight already in `desk-check/`, and a run while an Issue
-outside the Flight is underway.
+running order with a ripe Flight first, whatever else is ripe, and stops when
+the Flight reaches `desk-check/`. Children written during the run, by a split
+or a Flight check, join it. It also stops where `just pair` would, for a pause
+or a `developer` Issue's desk check, and when nothing in the Flight is ripe,
+naming any Flight below it that waits on its desk check. It refuses a slug
+that is not a Flight in `backlog/`, a Flight already in `desk-check/`, and a
+run while an Issue outside the Flight is underway.
 
 A seat that crashes is restarted once from its session id. A supervisor that
 is killed restarts the turn being worked on the same session.
 
 ## Grooming the backlog
 
-`just pair` takes the Issues in the running order as it stands, and never
-grooms. Grooming is a separate command, `just groom`. An Issue is groomed when
+`just pair` takes the Issues in the running order as it stands, a ripe Flight
+first, and never grooms. Grooming is a separate command, `just groom`. An Issue is groomed when
 its front matter sets a valid `difficulty` and it has no `Needs elaboration`
 section, so an Issue the developer writes with a `difficulty` counts as groomed,
 and deleting an Issue's `difficulty` asks for it to be groomed again. An Issue

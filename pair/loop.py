@@ -13,13 +13,14 @@ whether the gate passes) and decides what happens next:
   section, and sits out until the developer answers it.
 - Otherwise the other seat takes the next turn.
 
-The loop takes the next issue in running order as it stands. Grooming is a
-separate command: a pass takes up the backlog issues that are not groomed
-(no valid difficulty, and no `Needs elaboration` section) and runs the same
-turns on its own branch, `pair/grooming`, with no issue file. It ends when
-both seats accept a backlog where each of those issues has a difficulty and
-`issues/backlog/ORDER` places it without moving the rest, and lands as one
-commit. An issue no pass has groomed is groomed by its own backlog stage.
+The loop takes the next issue in running order as it stands, a ripe Flight
+first. Grooming is a separate command: a pass takes up the backlog issues that
+are not groomed (no valid difficulty, and no `Needs elaboration` section) and
+runs the same turns on its own branch, `pair/grooming`, with no issue file. It
+ends when both seats accept a backlog where each of those issues has a
+difficulty and `issues/backlog/ORDER` places it without moving the rest, and
+lands as one commit. An issue no pass has groomed is groomed by its own backlog
+stage.
 
 An issue with children, which name it in `parent:`, is a Flight. Splitting a
 `hard` issue makes one, and the Flight stays in `issues/backlog/`, not ripe,

@@ -250,33 +250,44 @@ def next_ripe(
     skip: frozenset[str] = frozenset(),
     within: frozenset[str] | None = None,
 ) -> str | None:
-    """The first backlog item at `ref`, in running order, that is ripe.
+    """The backlog item at `ref` the loop takes next: a ripe Flight, else the first ripe item.
 
     The running order is the slugs `ORDER` names, then every other backlog
     slug in filename order. An item is ripe when its `waits_on` are all done,
     every Issue naming it in `parent:` is done, and it has no `Needs
     elaboration` section, which marks a send-back the developer has yet to
-    answer. Slugs in `skip`, and with `within` those outside it, are passed
-    over.
+    answer. A ripe Flight, one with children, is taken before any other ripe
+    item, so a Flight is checked as soon as its last child lands; among ripe
+    Flights, and among the rest, the running order decides. Slugs in `skip`,
+    and with `within` those outside it, are passed over.
     """
     done = set(listed(repo, ref, "done"))
     kin = families(repo, ref)
     backlog = listed(repo, ref, "backlog")
     named = [s for s in dict.fromkeys(order(repo, ref)) if s in backlog]
-    for slug in named + [s for s in backlog if s not in named]:
-        if slug in skip or (within is not None and slug not in within):
-            continue
+
+    def ripe(slug: str) -> bool:
         issue = at_ref(repo, ref, "backlog", slug)
-        if (
+        return bool(
             issue
             and not needs_elaboration(issue.body)
             and all(stage == "done" for stage in kin.get(slug, {}).values())
             and all(
                 w.split(":")[-1] in done for w in as_list(issue.front.get("waits_on"))
             )
-        ):
-            return slug
-    return None
+        )
+
+    first = None
+    for slug in named + [s for s in backlog if s not in named]:
+        if slug in skip or (within is not None and slug not in within):
+            continue
+        if first is not None and slug not in kin:
+            continue
+        if ripe(slug):
+            if slug in kin:
+                return slug
+            first = slug
+    return first
 
 
 def to_groom(repo: Path, ref: str) -> list[str]:
