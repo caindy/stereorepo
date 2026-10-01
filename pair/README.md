@@ -128,6 +128,14 @@ run while an Issue outside the Flight is underway.
 A seat that crashes is restarted once from its session id. A supervisor that
 is killed restarts the turn being worked on the same session.
 
+A seat whose message the model refuses is restarted once with a fresh session
+and the plain turn message, because the refused message stays in the old
+session's history and resuming it would be refused again. A restart that is
+refused, whether the first failure was a refusal or a crash, pauses the loop
+with `the <role> seat was refused` and keeps no session for that seat, so the
+next run starts it fresh. Such a pause points at the
+seat's instructions or the Issue, not at the machine.
+
 ## Grooming the backlog
 
 `just pair` takes the Issues in the running order as it stands, a ripe Flight
@@ -242,6 +250,7 @@ Every event carries `at` (local time, as in `turns.jsonl`), `kind`, `loop`
 | `sent-back` | an Issue lands back in `backlog/` with `Needs elaboration` | `reason`, null when a seat wrote the section |
 | `desk-check` | a `developer` Issue waits for its desk check, or a Flight has landed in `desk-check/` | `stage` |
 | `paused` | the loop pauses for any other reason | `reason`, `retry` |
+| `seat-refused` | the model refuses a seat's message, and the seat restarts with a fresh session | `role`, `error` |
 | `stopped` | the loop stops after a Ctrl-C | `reason`, `retry` |
 | `empty` | nothing is ripe, or there is nothing to groom; no `slug` | `message` |
 | `ended` | the supervisor process ends; no `slug` | `outcome`, as `pair:` prints it, or `abandoned` (a second Ctrl-C) or `crashed` |

@@ -659,14 +659,16 @@ class Loop:
                         st, "stopped by the developer", retry=None, kind="stopped"
                     )
                 role = st.next_role
-                restarted = st.in_turn == role
-                if not restarted:
+                interrupted = st.in_turn == role
+                if not interrupted:
                     self.absorb_developer(st)
                 st.in_turn = role
                 self.save(st)
-                message = self.message(st, role)
                 result = self.turn(
-                    st, role, RESTARTED + message if restarted else message
+                    st,
+                    role,
+                    self.message(st, role),
+                    restarted=interrupted and self.has_session(st, role),
                 )
                 if result is None:
                     return "paused"
@@ -686,6 +688,10 @@ class Loop:
             resume = st.sessions.get(role) or self.saved_session(role)
             self.seats[role] = self.seat_factory(role, self.wt, resume)
         return self.seats[role]
+
+    def has_session(self, st: State, role: str) -> bool:
+        """Whether `seat` would resume a session for `role` rather than start one."""
+        return bool(st.sessions.get(role) or self.saved_session(role))
 
     def saved_session(self, role: str) -> str | None:
         """The session a seat recorded for this issue, if it recorded one."""
@@ -739,16 +745,47 @@ class Loop:
             return False
         return True
 
-    def turn(self, st: State, role: str, message: str) -> TurnResult | None:
-        """Send one turn; restart the seat once from its session if it fails."""
-        result = self.seat(st, role).send(message)
+    def turn(
+        self, st: State, role: str, message: str, restarted: bool = False
+    ) -> TurnResult | None:
+        """Send one turn, and restart the seat once if it fails.
+
+        A seat resuming a session it was interrupted in (`restarted`) is told
+        so with `RESTARTED`. A crash or a timeout restarts the seat from its
+        session. A refusal restarts it with a fresh session and the plain
+        message, because the refused message is in the old session's history
+        and resuming it would replay it. A restart that is refused, after
+        either kind of failure, pauses with no session kept, so the next run
+        starts the seat fresh too.
+        """
+        result = self.seat(st, role).send(
+            RESTARTED + message if restarted else message
+        )
         if not result.ok:
-            self.say(f"{role} failed ({result.error}); restarting it once")
-            if result.session_id:
-                st.sessions[role] = result.session_id
-            self.seats.pop(role).stop()
-            result = self.seat(st, role).send(RESTARTED + message)
+            first_refused = result.refused
+            if first_refused:
+                self.say(f"{role} was refused; restarting it once, fresh")
+                self.event("seat-refused", st.slug, role=role, error=result.error)
+                self.seats.pop(role).stop()
+                self.forget_session(st, role)
+                result = self.seat(st, role).send(message)
+            else:
+                self.say(f"{role} failed ({result.error}); restarting it once")
+                if result.session_id:
+                    st.sessions[role] = result.session_id
+                self.seats.pop(role).stop()
+                result = self.seat(st, role).send(RESTARTED + message)
+            if result.refused:
+                self.seats.pop(role).stop()
+                self.forget_session(st, role)
+                again = "twice" if first_refused else "on its restart"
+                self.pause(
+                    st, f"the {role} seat was refused {again}: {result.error}", retry=None
+                )
+                return None
             if not result.ok:
+                if result.session_id:
+                    st.sessions[role] = result.session_id
                 self.pause(
                     st, f"the {role} seat failed twice: {result.error}", retry=None
                 )
@@ -756,6 +793,11 @@ class Loop:
         if result.session_id:
             st.sessions[role] = result.session_id
         return result
+
+    def forget_session(self, st: State, role: str) -> None:
+        """Drop a seat's session from both places `seat` resumes it from."""
+        st.sessions.pop(role, None)
+        (self.dir / f"{role}.session").unlink(missing_ok=True)
 
     def absorb_developer(self, st: State) -> bool:
         """Commit edits the developer made in the worktree between turns, as a turn of their own."""

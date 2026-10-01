@@ -20,7 +20,7 @@ from typing import Any
 
 import board
 from loop import Loop, State, append_event, event_log, status, status_json, status_view
-from seats import ALLOWED, TurnResult, command
+from seats import ALLOWED, TurnResult, command, is_refusal
 from watch import watch
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
@@ -38,6 +38,14 @@ def quiet(_cwd: Path) -> None:
 
 
 CRASH = object()
+REFUSED = object()
+REFUSAL = (
+    "API Error: Opus 5.5's safeguards flagged this message "
+    "(https://www.anthropic.com/legal/aup). This sometimes happens with safe, "
+    "normal conversations. Claude Code can't respond to this message with Opus 5.5.\n"
+    "Details: `[reasoning_extraction]`"
+)
+"""The error text of a turn the model refused, as Claude Code reported it on 2026-10-01."""
 
 
 def front(slug: str, **fields: str) -> Action:
@@ -99,6 +107,13 @@ class FakeSeat:
             raise AssertionError(f"expected a {role} turn, got {self.role}")
         if action is CRASH:
             return TurnResult(False, error="boom", session_id=self.session_id)
+        if action is REFUSED:
+            return TurnResult(
+                False,
+                error=REFUSAL,
+                session_id=self.session_id,
+                refused=is_refusal(REFUSAL),
+            )
         action(self.cwd)
         if self.bench.stop_when_empty and not self.bench.turns:
             self.loop.stop_requested = True
@@ -226,6 +241,14 @@ class Bench:
 
     def close(self) -> None:
         self.tmp.cleanup()
+
+    def events(self, kind: str | None = None) -> list[dict[str, Any]]:
+        """The loop's logged events, or only those of `kind`."""
+        path = event_log(self.repo)
+        if not path.is_file():
+            return []
+        rows = [json.loads(line) for line in path.read_text().splitlines()]
+        return [row for row in rows if kind is None or row["kind"] == kind]
 
 
 PLAN = "\n## The plan\n\nChange a.txt.\n"
@@ -453,6 +476,78 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.loop.run(), "paused")
         self.assertIn("failed twice", b.state().paused or "")
         self.assertTrue(b.notes)
+
+    def test_a_refusal_is_told_apart_from_a_failure(self) -> None:
+        self.assertTrue(is_refusal(REFUSAL))
+        for error in ("boom", "turn timed out after 2700s", "seat exited mid-turn: ", None):
+            self.assertFalse(is_refusal(error))
+
+    def test_a_refused_seat_restarts_once_with_a_fresh_session(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.stop_when_empty = True
+        b.script(("primary", REFUSED), ("primary", quiet))
+        b.loop.run()
+        self.assertEqual(b.opened, [("primary", None), ("primary", None)])
+        self.assertEqual(b.sent[0][1], b.sent[1][1])
+        self.assertFalse(b.sent[1][1].startswith("(Your session was restarted"))
+        refused = b.events("seat-refused")
+        self.assertEqual([(e["role"], e["error"]) for e in refused], [("primary", REFUSAL)])
+
+    def test_a_crashed_seat_refused_on_its_restart_pauses_with_no_session_kept(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.script(("primary", CRASH), ("primary", REFUSED))
+        self.assertEqual(b.loop.run(), "paused")
+        st = b.state()
+        self.assertIn("the primary seat was refused on its restart", st.paused or "")
+        self.assertNotIn("primary", st.sessions)
+        self.assertFalse((b.loop.dir / "primary.session").exists())
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        b.loop.run()
+        self.assertEqual(b.opened[-1], ("primary", None))
+        self.assertFalse(b.sent[-1][1].startswith("(Your session was restarted"))
+
+    def test_a_seat_refused_twice_pauses_with_no_session_kept(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.script(("primary", REFUSED), ("primary", REFUSED))
+        self.assertEqual(b.loop.run(), "paused")
+        st = b.state()
+        self.assertIn("the primary seat was refused twice", st.paused or "")
+        self.assertNotIn("primary", st.sessions)
+        self.assertFalse((b.loop.dir / "primary.session").exists())
+        paused = b.events("paused")
+        self.assertIn("refused twice", paused[-1]["reason"])
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        b.loop.run()
+        self.assertEqual(b.opened[-1], ("primary", None))
+        self.assertFalse(b.sent[-1][1].startswith("(Your session was restarted"))
+
+    def test_a_refused_resumed_turn_restarts_fresh_without_claiming_a_session(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X")
+
+        def supervisor_killed_mid_turn(cwd: Path) -> None:
+            front("x", difficulty="easy")(cwd)
+            raise KeyboardInterrupt
+
+        b.script(("primary", supervisor_killed_mid_turn))
+        with self.assertRaises(KeyboardInterrupt):
+            b.loop.run()
+        b.stop_when_empty = True
+        b.script(("primary", REFUSED), ("primary", quiet))
+        b.loop.run()
+        self.assertEqual(b.opened[-2:], [("primary", "primary-session"), ("primary", None)])
+        self.assertTrue(b.sent[-2][1].startswith("(Your session was restarted"))
+        self.assertFalse(b.sent[-1][1].startswith("(Your session was restarted"))
+        self.assertTrue(b.sent[-2][1].endswith(b.sent[-1][1]))
 
     def test_a_refused_fast_forward_pauses_until_the_human_clears_the_way(self) -> None:
         b = self.b
@@ -1790,11 +1885,7 @@ class EventLogTest(unittest.TestCase):
         self.addCleanup(self.b.close)
 
     def events(self, kind: str | None = None) -> list[dict[str, Any]]:
-        path = event_log(self.b.repo)
-        if not path.is_file():
-            return []
-        rows = [json.loads(line) for line in path.read_text().splitlines()]
-        return [row for row in rows if kind is None or row["kind"] == kind]
+        return self.b.events(kind)
 
     def kinds(self) -> list[tuple[str, str, str | None]]:
         return [(e["loop"], e["kind"], e.get("slug")) for e in self.events()]
@@ -2110,6 +2201,12 @@ class StatusTest(unittest.TestCase):
         self.assertIn("desk check in worktrees/pair", waiting)
         self.assertIn("just pair-accept, or just pair-resume", waiting)
         self.assertNotIn("paused", status(b.repo))
+
+    def test_a_refused_seat_waits_as_refused(self) -> None:
+        self.b.loop.save(
+            State(slug="x", stage="todo", paused="the primary seat was refused twice: …")
+        )
+        self.assertIn("paused: the primary seat was refused twice", self.waiting())
 
     def test_a_paused_loop_and_pass_wait_with_their_reasons(self) -> None:
         b = self.b

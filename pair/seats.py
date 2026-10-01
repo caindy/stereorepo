@@ -85,6 +85,26 @@ class TurnResult:
     cost_usd: float | None = None
     seconds: float = 0.0
     error: str | None = None
+    refused: bool = False
+
+
+def is_refusal(error: str | None) -> bool:
+    """Whether a turn's error is the model refusing the message, not a failure.
+
+    Claude Code reports a refusal as the `result` text of a `result` event with
+    `is_error` set, in this shape (2026-10-01):
+
+        API Error: Opus 5.5's safeguards flagged this message
+        (https://www.anthropic.com/legal/aup). This sometimes happens with safe,
+        normal conversations. Claude Code can't respond to this message with Opus 5.5.
+        [...]
+        Details: `[reasoning_extraction]`
+
+    The refused message stays in the session's history, so resuming the
+    session replays it. When the harness rewords the error, update the match
+    here; nothing else in the loop reads the text.
+    """
+    return error is not None and "safeguards flagged this message" in error
 
 
 class Seat(Protocol):
@@ -240,16 +260,20 @@ class ClaudeSeat:
                 self.session_id = session
                 (self.log_dir / f"{self.role}.session").write_text(f"{session}\n")
             if event.get("type") == "result":
+                error = (
+                    str(event.get("result") or event.get("subtype"))
+                    if event.get("is_error")
+                    else None
+                )
                 return TurnResult(
-                    ok=not event.get("is_error", False),
+                    ok=error is None,
                     text=str(event.get("result") or ""),
                     session_id=self.session_id,
                     usage=event.get("usage") or {},
                     cost_usd=event.get("total_cost_usd"),
                     seconds=time.monotonic() - started,
-                    error=None
-                    if not event.get("is_error")
-                    else str(event.get("result") or event.get("subtype")),
+                    error=error,
+                    refused=is_refusal(error),
                 )
 
     def stop(self) -> None:
