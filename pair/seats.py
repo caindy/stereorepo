@@ -185,6 +185,12 @@ def confinement(cwd: Path) -> Confinement:
     its home directory. That root is allowed, and every entry in it is
     denied except the sockets, so that its configuration (which can name a
     program for the agent to run) and its keys stay out of reach.
+
+    Verifying a signature hangs in the sandbox, so a developer's
+    `log.showSignature = true` would hang every `git show` and `git log` a
+    seat runs. `env` turns that setting off with a `GIT_CONFIG_COUNT` entry,
+    which outranks every config file, after any entries the loop's own
+    environment already holds. Signing a commit is unaffected.
     """
 
     def out(*argv: str) -> str:
@@ -213,7 +219,12 @@ def confinement(cwd: Path) -> Confinement:
         refs / "heads" / "pair",
         common / "logs" / "refs" / "heads" / "pair",
     ]
-    env = {}
+    n = int(os.environ.get("GIT_CONFIG_COUNT", "0"))
+    env = {
+        "GIT_CONFIG_COUNT": str(n + 1),
+        f"GIT_CONFIG_KEY_{n}": "log.showSignature",
+        f"GIT_CONFIG_VALUE_{n}": "false",
+    }
     if shutil.which("uv"):
         cache = Path(out("uv", "cache", "dir"))
         allow.append(cache)

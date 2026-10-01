@@ -17,6 +17,7 @@ import unittest
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import board
 from loop import Loop, State, append_event, event_log, status, status_json, status_view
@@ -2921,6 +2922,38 @@ class ConfinementTest(unittest.TestCase):
         if "UV_TOOL_DIR" in confined.env:
             tools = Path(confined.env["UV_TOOL_DIR"])
             self.assertTrue(any(tools.is_relative_to(a) for a in confined.allow))
+
+    def git_config(self, env: dict[str, str], *args: str) -> str:
+        return subprocess.run(
+            ["git", "config", *args],
+            cwd=self.wt,
+            env={**os.environ, **env},
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+
+    def test_signature_display_is_off_for_the_seat(self) -> None:
+        sh(self.repo, "config", "log.showSignature", "true")
+        confined = confinement(self.wt)
+        self.assertEqual(self.git_config(confined.env, "--bool", "log.showSignature"), "false")
+
+    def test_existing_git_config_overrides_are_kept(self) -> None:
+        theirs = {
+            "GIT_CONFIG_COUNT": "1",
+            "GIT_CONFIG_KEY_0": "core.abbrev",
+            "GIT_CONFIG_VALUE_0": "12",
+        }
+        sh(self.repo, "config", "log.showSignature", "true")
+        with mock.patch.dict(os.environ, theirs):
+            confined = confinement(self.wt)
+            self.assertEqual(confined.env["GIT_CONFIG_COUNT"], "2")
+            self.assertEqual(confined.env["GIT_CONFIG_KEY_1"], "log.showSignature")
+            self.assertNotIn("GIT_CONFIG_KEY_0", confined.env)
+            self.assertEqual(self.git_config(confined.env, "core.abbrev"), "12")
+            self.assertEqual(
+                self.git_config(confined.env, "--bool", "log.showSignature"), "false"
+            )
 
     def test_the_main_checkout_is_refused(self) -> None:
         with self.assertRaises(ValueError):

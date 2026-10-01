@@ -1,6 +1,4 @@
 fast-pair-tests
-gate-only-touched-projects
-seat-git-signature-check-hangs
 seat-background-work-outlives-turn
 seat-gpg-stuck-in-sandbox
 seat-unanalysable-command-denials
