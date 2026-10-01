@@ -50,12 +50,13 @@ import os
 import signal
 import subprocess
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 import board
+import touched
 from board import git, git_ok, git_run
 from seats import Seat, TurnResult
 
@@ -82,7 +83,8 @@ RESTARTED = (
 )
 
 SeatFactory = Callable[[str, Path, "str | None"], Seat]
-Gate = Callable[[Path], "tuple[bool, str]"]
+Gate = Callable[[Path, "Sequence[str] | None"], "tuple[bool, str]"]
+"""Runs the gate in a tree over the named Projects, or over every Project for `None`."""
 Deliver = Callable[[Path], "tuple[bool, str] | None"]
 
 
@@ -164,9 +166,10 @@ class GateFailure(str):
     """An unmet requirement that is a failed gate, which the primary seat repairs."""
 
 
-def gate_fails(out: str) -> GateFailure:
-    """The requirement a failed gate leaves, with the tail of its output."""
-    return GateFailure(f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```")
+def gate_fails(out: str, targets: Sequence[str] | None = None) -> GateFailure:
+    """The requirement a failed gate leaves: what was gated, and the tail of its output."""
+    command = " ".join(["just gate", *(targets or [])])
+    return GateFailure(f"`{command}` fails:\n```\n{out[-GATE_TAIL:]}\n```")
 
 
 def home(stage: str) -> str:
@@ -953,8 +956,7 @@ class Loop:
                 return "the backlog is not groomed yet:\n" + "\n".join(
                     f"- {fault}" for fault in faults
                 )
-            ok, out = self.gate(self.wt)
-            return None if ok else gate_fails(out)
+            return self.run_gate()
         if st.stage == "backlog":
             if issue.difficulty is None:
                 return (
@@ -983,8 +985,7 @@ class Loop:
                 return "nothing outside issues/ has changed on this branch yet."
             if self.rebase(st) is None:
                 return "paused"
-            ok, out = self.gate(self.wt)
-            return None if ok else gate_fails(out)
+            return self.run_gate()
         return None
 
     def flight_checked(self, st: State, issue: board.Issue) -> str | None:
@@ -1013,8 +1014,7 @@ class Loop:
             missing = self.owed_children(st, issue, was, gaps)
             if missing:
                 return missing
-            ok, out = self.gate(self.wt)
-            return None if ok else gate_fails(out)
+            return self.run_gate()
         briefs = board.sections(issue.body, BRIEF)
         if not gaps and briefs <= (board.sections(was.body, BRIEF) if was else 0):
             return (
@@ -1023,8 +1023,7 @@ class Loop:
                 f"`parent: {st.slug}` in its front matter, or add a "
                 f"`## {BRIEF}` section to {issue.path}."
             )
-        ok, out = self.gate(self.wt)
-        return None if ok else gate_fails(out)
+        return self.run_gate()
 
     def owed_children(
         self, st: State, issue: board.Issue, was: board.Issue, gaps: list[str]
@@ -1116,6 +1115,24 @@ class Loop:
 
     # --- landing ---------------------------------------------------------------
 
+    def run_gate(self) -> GateFailure | None:
+        """Gate what the branch changes against `main`, or None when it passes.
+
+        Only the Projects the change touches and the Products built from them
+        are gated (`touched.select`, stereorepo's DR-303); a branch that
+        changes nothing passes without running the gate. Renames are listed as
+        a deletion and an addition, so a file moved out of a Project still
+        gates the Project it left.
+        """
+        changed = git(
+            self.wt, "diff", "--name-only", "--no-renames", f"{self.main}...HEAD"
+        ).splitlines()
+        if not changed:
+            return None
+        targets = touched.select(self.wt, changed)
+        ok, out = self.gate(self.wt, targets)
+        return None if ok else gate_fails(out, targets)
+
     def touches_code(self) -> bool:
         changed = git(
             self.wt, "diff", "--name-only", f"{self.main}...HEAD"
@@ -1198,8 +1215,8 @@ class Loop:
             if moved is None:
                 return "paused"
             if (moved or force_gate) and self.touches_code():
-                ok, out = self.gate(self.wt)
-                if not ok:
+                failure = self.run_gate()
+                if failure is not None:
                     if st.stage == "done" or (
                         st.stage != GROOMING
                         and not board.at_ref(self.wt, "HEAD", home(st.stage), st.slug)
@@ -1209,10 +1226,7 @@ class Loop:
                             "main moved and the gate now fails on the squashed issue",
                             "merge",
                         )
-                    st.approvals, st.note = (
-                        [],
-                        gate_fails(out),
-                    )
+                    st.approvals, st.note = [], failure
                     self.save(st)
                     return None
             force_gate = False

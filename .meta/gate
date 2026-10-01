@@ -2,7 +2,9 @@
 """Portfolio and project gate runner streaming Article 21 structured reports.
 
 Reads declared projects, products, and gate commands from
-`.meta/assertions/structure.yaml` (stereorepo's DR-104). Executes gate commands
+`.meta/assertions/structure.yaml` (stereorepo's DR-104). Takes any number of
+Project or Product names and gates the union of what they select, or every
+Project when given none (stereorepo's DR-303). Executes gate commands
 from repository root, streams and re-prefixes structured step reports adhering to
 Article 21 (stereorepo's DR-092), and enforces clean exit and non-empty step assertions.
 
@@ -97,6 +99,31 @@ def select(
     sys.exit(f"gate: nothing is called '{word}'. Projects and Products: {', '.join(known)}")
 
 
+def select_all(
+    words: list[str],
+    projects: dict[str, dict[str, Any]],
+    products: dict[str, dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """Resolves the union of the projects each word selects, or every project for no words.
+
+    Args:
+        words: Project names, Product names or CURIEs, in any order and possibly overlapping.
+        projects: Mapping of project identifiers to declared project configurations.
+        products: Mapping of product identifiers to declared product configurations.
+
+    Returns:
+        list[dict[str, Any]]: Each selected project once, in the order `structure.yaml`
+        declares them.
+
+    Raises:
+        SystemExit: If any word matches no declared project or product (see `select`).
+    """
+    if not words:
+        return select(None, projects, products)
+    chosen = {project["id"] for word in words for project in select(word, projects, products)}
+    return [project for ident, project in projects.items() if ident in chosen]
+
+
 def _emit(text: str, *, file: Any = sys.stdout, lock: "threading.Lock | None" = None) -> None:
     """Emits output line-buffered and thread-safe when a lock is provided."""
     if lock is not None:
@@ -151,19 +178,20 @@ def main(argv: list[str]) -> int:
     """CLI entrypoint for running gates across selected projects or products.
 
     Args:
-        argv: Command-line arguments starting with the script name.
+        argv: Command-line arguments starting with the script name, followed by
+            any number of Project or Product names.
 
     Returns:
         int: 0 if all selected gates report green and exit cleanly, 1 on failure.
     """
     if isinstance(sys.stdout, io.TextIOWrapper):
         sys.stdout.reconfigure(line_buffering=True)
-    word = argv[1] if len(argv) > 1 else None
+    words = argv[1:]
     projects, products = structure()
-    chosen = select(word, projects, products)
+    chosen = select_all(words, projects, products)
     if not chosen:
-        what = (f"no Project is asserted in {STRUCTURE.relative_to(ROOT)}" if word is None
-                else f"{word} is built from no Project")
+        what = (f"no Project is asserted in {STRUCTURE.relative_to(ROOT)}" if not words
+                else f"{' '.join(words)} is built from no Project")
         sys.exit(f"gate: {what}, so there is no gate to run. A gate over nothing is not green.")
 
     if len(chosen) == 1:
@@ -190,7 +218,7 @@ def main(argv: list[str]) -> int:
             failures.append(f"{name}: {', '.join(found)}")
         elif code:
             failures.append(f"{name}: every step reported ok or ? and the gate exited {code}")
-    label = word or "portfolio"
+    label = " ".join(words) or "portfolio"
     if failures:
         print(f"x  {label} ({len(failures)})")
         for failure in failures:

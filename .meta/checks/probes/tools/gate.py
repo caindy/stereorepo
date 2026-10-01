@@ -7,6 +7,16 @@ import threading
 from checks.collect import META, check
 from checks.probes.harness import load_module
 
+SELECTIONS = (
+    ((), ("meta", "rust-seed", "python-seed", "pair")),
+    (("pair", "rust-standard"), ("rust-seed", "pair")),
+    (("scaffold", "pair"), ("meta", "pair")),
+    (("python-seed", "meta"), ("meta", "python-seed")),
+)
+"""Words put to `select_all`, and the Projects it must choose, once each, in declared order
+(stereorepo's DR-303): none is every Project, a Product brings its Projects, and an overlap or
+an order other than the declared one changes nothing."""
+
 
 @check("gate runner probes", pre=True)
 def gate_runner_probes() -> list[str]:
@@ -19,7 +29,8 @@ def gate_runner_probes() -> list[str]:
     `lock: threading.Lock | None` loads on one interpreter and raises
     `TypeError: unsupported operand type(s) for |` on the other. Loaded, the
     runner's `_emit` is asked for its two paths — with a lock and without —
-    and both must reach the file handed to them.
+    and both must reach the file handed to them. Then `select_all` is put each
+    of `SELECTIONS`.
     """
     problems = []
     try:
@@ -32,4 +43,16 @@ def gate_runner_probes() -> list[str]:
         gate._emit("ok meta/step", file=said, lock=lock)
         if said.getvalue() != "ok meta/step\n":
             problems.append(f"gate runner: _emit {name} wrote {said.getvalue()!r}, not 'ok meta/step\\n'")
+
+    projects = {f"work:project/{name}": {"id": f"work:project/{name}"}
+                for name in ("meta", "rust-seed", "python-seed", "pair")}
+    products = {
+        "work:product/scaffold": {"built_from": ["work:project/meta", "work:project/pair"]},
+        "work:product/rust-standard": {"built_from": ["work:project/rust-seed"]},
+    }
+    for words, expected in SELECTIONS:
+        got = [gate.short(p["id"]) for p in gate.select_all(list(words), projects, products)]
+        if got != list(expected):
+            problems.append(f"gate runner: select_all{words} chose {got}, not {list(expected)}")
     return problems
+

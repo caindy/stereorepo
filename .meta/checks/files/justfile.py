@@ -55,7 +55,7 @@ IDENTIFIER = "identifier"
 
 CONTRACT: Contract = {
     "default": (),
-    "gate": (("target", SUBCOMMAND),),
+    "gate": (("targets", FLAGS),),
     "render": (),
     "dereference": (("args", FLAGS),),
     "terms": (("args", FLAGS),),

@@ -8,9 +8,9 @@
 default:
     @just --list --unsorted
 
-# every Project's gate — or one Project: meta, rust-seed, python-seed, pair — or one Product: scaffold, rust-standard, python-standard
-gate target="":
-    .meta/gate {{target}}
+# every Project's gate — or any of the Projects: meta, rust-seed, python-seed, pair — and the Products: scaffold, rust-standard, python-standard
+gate *targets:
+    .meta/gate {{targets}}
 
 # every generated page, from the assertions
 render:

@@ -5,7 +5,7 @@ The pair loop carries one Issue at a time from `issues/backlog/` on `main` to
 take turns in one worktree, `worktrees/pair`, on a branch named `pair/<slug>`.
 A deterministic supervisor, `loop.py`, decides every transition from what it can
 observe: where the Issue file sits, whether a turn changed anything, and the
-exit code of `just gate`. The seats are never told a protocol exists.
+exit code of `just gate` over what the branch touches. The seats are never told a protocol exists.
 Starting an Issue moves its file from `issues/backlog/` to `issues/underway/` in
 a commit of its own on `main`, fast-forwarded into the developer's checkout
 before the first turn, and the branch starts from that commit. If the
@@ -29,9 +29,16 @@ takes the first turn in each stage. After every turn the loop commits whatever
 the seat left uncommitted, with a `Seat:` trailer. An implementing seat runs
 only the gate of each Project its change touches: `just gate meta` always, and
 `just gate pair` when it changes `pair/`, for example
-(`prompts/stage-in-progress.md`). The full `just gate` is the loop's, run before
-the Issue lands (see the table below), and a failure goes back to the seats
-with its output. No seat runs it in any stage, even when an Issue names it
+(`prompts/stage-in-progress.md`). The loop's own gate runs before the Issue
+lands (see the table below), and a failure goes back to the seats with its
+output and the targets gated. It gates the Projects whose directories the
+branch changes against `main`, a path under none of them counting as `meta`'s,
+and every Project of each Product built from one of them (`touched.py`,
+stereorepo's DR-303). When that is every Project it is the whole `just gate`,
+and a branch with no change passes without one. A break that the directories
+do not show, through a shared tool or a generated file, lands unchecked: the
+decision accepts that risk for the minutes the whole gate cost on every
+landing. No seat runs the whole `just gate` in any stage, even when an Issue names it
 (`prompts/primary.md`, `prompts/secondary.md`), and grooming states how an
 Issue will be known done in behaviour and tests, never as a gate
 (`prompts/stage-backlog.md`, `prompts/stage-grooming.md`).
@@ -48,7 +55,7 @@ Issue will be known done in behaviour and tests, never as a gate
    | backlog (file in `underway/`) | `difficulty` is set; a `hard` Issue has children | `todo/`; for `hard`, landing the children, with the parent moved back to `backlog/` as a Flight |
    | Flight check (file in `underway/`) | a new child for each gap, or a new `## Desk-check brief` section, and nothing outside `issues/` changed; after desk-check notes, a child for each note listed in one new `## Desk-check children` section, and no brief | landing; the Flight goes to `desk-check/` unless a child left it waiting |
    | `todo/` | a `## The plan` section | `in-progress/` |
-   | `in-progress/` | code outside `issues/` changed, and `just gate` passes after a rebase onto `main` | `desk-check/` for `developer`, otherwise landing |
+   | `in-progress/` | code outside `issues/` changed, and the gate of what it touches passes after a rebase onto `main` | `desk-check/` for `developer`, otherwise landing |
    | `desk-check/` | `just pair-accept` | landing; `just pair-resume` sends it back to `in-progress/`, as does an accept whose gate fails or whose rebase conflicts. No turn runs in this stage. A Flight here holds nothing: see below |
 
    If the requirement does not hold, acceptance is cleared and the next turn is
@@ -167,7 +174,7 @@ The pass takes turns and ends the way a stage does. Its requirement is that
 each Issue it took up, and each part it wrote, has a `difficulty`, that each
 such `hard` Issue has children, that `ORDER` names every Flight and standalone
 Issue the developer has not placed and no part, that without `--rerank` the Issues already ranked keep their
-relative order, that nothing was deleted, and that `just gate` passes. The loop
+relative order, that nothing was deleted, and that the gate of what the pass changed passes. The loop
 then lands the pass as one commit, `Groom the backlog`; each split `hard` Issue
 stays in `backlog/` and in `ORDER` as a Flight. A `Needs elaboration` section written in a pass parks that
 Issue and does not end the pass. A pass that runs past its round cap pauses,

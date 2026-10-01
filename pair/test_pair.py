@@ -18,12 +18,13 @@ import tempfile
 import threading
 import time
 import unittest
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import Any
 from unittest import mock
 
 import board
+import touched
 from loop import Loop, State, append_event, event_log, status, status_json, status_view
 from seats import (
     ALLOWED,
@@ -173,6 +174,33 @@ class FakeSeat:
         pass
 
 
+def project(name: str, path: str) -> str:
+    return f"  - id: work:project/{name}\n    name: {path}\n"
+
+
+def product(name: str, *projects: str) -> str:
+    built = "".join(f"      - work:project/{p}\n" for p in projects)
+    return f"  - id: work:product/{name}\n    built_from:\n{built}"
+
+
+STRUCTURE = (
+    "projects:\n"
+    + project("meta", ".meta")
+    + project("rust-seed", "bootstraps/rust/seed")
+    + project("python-seed", "bootstraps/python/seed")
+    + project("pair", "pair")
+    + project("widgets", "widgets")
+    + "products:\n"
+    + product("scaffold", "meta", "pair")
+    + product("rust-standard", "rust-seed")
+    + product("python-standard", "python-seed")
+    + product("widget-kit", "widgets")
+)
+"""A `structure.yaml` shaped like stereorepo's, with a fifth Project, `widgets`,
+that stereorepo does not have: a Project asserted here is selected with no
+change to the loop's code."""
+
+
 TEMPLATES = tempfile.TemporaryDirectory()
 """Where `board_repository` builds its repository, once per process."""
 
@@ -215,6 +243,7 @@ class Bench:
         self.opened: list[tuple[str, str | None]] = []
         self.gates: list[bool] = []
         self.gate_runs = 0
+        self.gate_targets: list[list[str] | None] = []
         self.delivers: list[tuple[bool, str]] = []
         self.deliver_runs = 0
         self.stop_when_empty = False
@@ -249,8 +278,9 @@ class Bench:
 
             return make
 
-        def gate(_tree: Path) -> tuple[bool, str]:
+        def gate(_tree: Path, targets: Sequence[str] | None) -> tuple[bool, str]:
             self.gate_runs += 1
+            self.gate_targets.append(None if targets is None else list(targets))
             if self.during_gate:
                 self.during_gate.pop(0)(self.repo)
             ok = self.gates.pop(0) if self.gates else True
@@ -293,6 +323,14 @@ class Bench:
         (self.repo / "issues" / stage / f"{slug}.md").write_text(text)
         sh(self.repo, "add", "-A")
         sh(self.repo, "commit", "-q", "-m", f"add {slug}")
+
+    def structure(self, text: str = STRUCTURE) -> None:
+        """Commit `text` to `main` as the repository's `structure.yaml`."""
+        path = self.repo / touched.STRUCTURE
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
+        sh(self.repo, "add", "-A")
+        sh(self.repo, "commit", "-q", "-m", "structure")
 
     def script(self, *turns: tuple[str, object]) -> None:
         self.turns.extend(turns)
@@ -1049,6 +1087,115 @@ def unappend(slug: str, text: str) -> Action:
         path.write_text(before + after)
 
     return act
+
+
+class GateSelectionTest(unittest.TestCase):
+    """The loop gates the Projects a change touches and the Products built from them (DR-303)."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+
+    def select(self, *paths: str) -> list[str] | None:
+        if not (self.b.repo / touched.STRUCTURE).is_file():
+            self.b.structure()
+        return touched.select(self.b.repo, paths)
+
+    def test_a_change_selects_its_projects_and_the_products_built_from_them(
+        self,
+    ) -> None:
+        cases = {
+            ("pair/loop.py",): ["meta", "pair"],
+            ("bootstraps/rust/seed/src/lib.rs",): ["rust-seed"],
+            ("wiki/pair/loop.md",): ["meta", "pair"],
+            ("issues/backlog/x.md",): ["meta", "pair"],
+            (".meta/gate", "justfile"): ["meta", "pair"],
+            (
+                "bootstraps/rust/seed/Cargo.toml",
+                "bootstraps/python/seed/pyproject.toml",
+            ): ["rust-seed", "python-seed"],
+            ("bootstraps/rust/render/x.md",): ["meta", "pair"],
+            ("widgets/x.py",): ["widgets"],
+            (): [],
+        }
+        for paths, expected in cases.items():
+            with self.subTest(paths=paths):
+                self.assertEqual(self.select(*paths), expected)
+
+    def test_every_project_selected_is_the_whole_gate(self) -> None:
+        paths = ("pair/x", "widgets/x", "bootstraps/rust/seed/x", "bootstraps/python/seed/x")
+        self.assertIsNone(self.select(*paths))
+
+    def test_no_structure_is_the_whole_gate(self) -> None:
+        self.assertIsNone(touched.select(self.b.repo, ["pair/loop.py"]))
+
+    def test_a_path_under_no_project_with_no_meta_project_is_the_whole_gate(
+        self,
+    ) -> None:
+        self.b.structure("projects:\n" + project("widgets", "widgets"))
+        self.assertIsNone(touched.select(self.b.repo, ["wiki/x.md"]))
+        self.assertIsNone(touched.select(self.b.repo, ["widgets/x.py"]))
+
+    def run_widget_issue(self, *, gates: list[bool]) -> None:
+        """Carry an Issue that changes `widgets/x.py` to landing, under `STRUCTURE`."""
+        b = self.b
+        b.structure()
+        b.issue("backlog", "w", "W", difficulty="easy")
+        b.gates = list(gates)
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("w", PLAN)),
+            ("secondary", quiet),
+            *(
+                turn
+                for n in range(len(gates) or 1)
+                for turn in (("primary", write("widgets/x.py", f"{n}\n")), ("secondary", quiet))
+            ),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+
+    def test_the_loop_gates_the_projects_its_branch_touches(self) -> None:
+        self.run_widget_issue(gates=[])
+        self.assertEqual(self.b.gate_targets, [["meta", "pair", "widgets"]])
+
+    def test_the_gate_at_landing_after_main_moves_selects_the_same_projects(
+        self,
+    ) -> None:
+        def commits(repo: Path) -> None:
+            write("b.txt", "main\n")(repo)
+            sh(repo, "add", "b.txt")
+            sh(repo, "commit", "-q", "-m", "add b.txt")
+
+        self.b.during_gate = [commits]
+        self.run_widget_issue(gates=[])
+        self.assertEqual(self.b.gate_runs, 2)
+        self.assertEqual(self.b.gate_targets, [["meta", "pair", "widgets"]] * 2)
+
+    def test_a_gate_failure_names_what_was_gated(self) -> None:
+        self.run_widget_issue(gates=[False, True])
+        self.assertIn("`just gate meta pair widgets` fails", self.b.sent[6][1])
+
+    def test_a_file_moved_out_of_a_project_gates_the_project_it_left(self) -> None:
+        b = self.b
+        b.structure()
+        write("bootstraps/rust/seed/notes.md", "notes\n" * 20)(b.repo)
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "notes")
+        wt = b.loop.wt
+        sh(b.repo, "worktree", "add", "-q", "--detach", str(wt), "main")
+        (wt / "wiki").mkdir(exist_ok=True)
+        sh(wt, "mv", "bootstraps/rust/seed/notes.md", "wiki/notes.md")
+        sh(wt, "commit", "-q", "-m", "move notes")
+        self.assertIsNone(b.loop.run_gate())
+        self.assertEqual(b.gate_targets, [["meta", "rust-seed", "pair"]])
+
+    def test_a_branch_that_changes_nothing_passes_without_a_gate(self) -> None:
+        b = self.b
+        b.structure()
+        sh(b.repo, "worktree", "add", "-q", "--detach", str(b.loop.wt), "main")
+        self.assertIsNone(b.loop.run_gate())
+        self.assertEqual(b.gate_runs, 0)
 
 
 class FlightCheckTest(unittest.TestCase):

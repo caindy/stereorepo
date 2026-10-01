@@ -41,7 +41,7 @@ import os
 import signal
 import subprocess
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import IO
 
@@ -98,13 +98,16 @@ def json_quote(text: str) -> str:
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def gate(tree: Path) -> tuple[bool, str]:
-    """`just gate` in the worktree: the repository's whole pre-merge gate.
+def gate(tree: Path, targets: Sequence[str] | None) -> tuple[bool, str]:
+    """`just gate` in the worktree over `targets`, or over every Project for `None`.
 
-    The whole gate and not a fast subset, because a check a seat asks for and
-    the loop does not run is a request that addresses nobody.
+    The loop names the Projects the branch touches and the Products built from
+    them (`touched.select`), and not every Project: the full gate cost 2 to 2.5
+    minutes an Issue, and the developer accepted that a break the path mapping
+    cannot see lands unchecked (stereorepo's DR-303).
     """
-    done = subprocess.run(["just", "gate"], cwd=tree, capture_output=True, text=True)
+    command = ["just", "gate", *(targets or [])]
+    done = subprocess.run(command, cwd=tree, capture_output=True, text=True)
     return done.returncode == 0, done.stdout + done.stderr
 
 

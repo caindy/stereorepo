@@ -1,0 +1,65 @@
+decisions:
+  - id: work:decision/303
+    name: "DR-303 · The loop gates only the Projects a change touches before it lands"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+      - work:artifact/meta-gate
+      - work:artifact/meta-lib-render-writers
+    context: >-
+      Before an Issue landed, the pair loop ran the whole `just gate`: every
+      Project in the portfolio, the Rust and Python seeds' mutation testing
+      included, whatever the change touched. On 2026-10-01 that cost 2 to 2.5
+      minutes an Issue, paid at every stage exit that gates and again at
+      landing when `main` had moved, and for most changes most of it checked
+      code nothing changed. `structure.yaml` already says which directory each
+      Project is. The question was whether to keep the catch-all until there
+      was evidence that a narrower gate is safe.
+    alternatives:
+      - name: Keep the whole gate before every landing
+        chosen: false
+        reason: >-
+          It catches a break through anything, but its cost is paid on every
+          Issue, and the loop needs to move faster.
+      - name: Wait for the "defects found after landing" measure before narrowing it
+        chosen: false
+        reason: >-
+          The measure from `pair-versus-single-seat` does not exist yet, and
+          the developer chose not to wait for it.
+      - name: Gate the Projects whose directories the change touches, and the Products built from them
+        chosen: true
+        reason: >-
+          The mapping is already asserted, so it costs no new declaration, and
+          gating each touched Project's Products keeps the Projects that ship
+          together checked together.
+    consequences:
+      - >-
+        A changed path belongs to the Project whose `name` is a directory
+        holding it, and a path under no Project's directory (`wiki/`,
+        `issues/`, `justfile`, `AGENTS.md`) belongs to `meta`, whose checks read
+        the whole repository. Each touched Project brings in every Product
+        built from it, and the loop gates every Project those Products are
+        built from (`pair/touched.py`).
+      - >-
+        When the selection is every Project, or the repository asserts no
+        structure, the loop runs `just gate` with no argument, as before. A
+        branch with no change against `main` passes without a gate.
+      - >-
+        `.meta/gate` and the `gate` recipe take any number of Project and
+        Product names and gate the union of what they select.
+      - >-
+        The accepted risk: a change that breaks a Project through something
+        the path mapping does not see, such as a shared tool, a generated
+        file or an import across Projects, lands without that Project's gate
+        having run.
+    falsifier: >-
+      A change lands green and a Project it did not select fails its gate on
+      `main` because of it, often enough that the minutes saved do not pay
+      for the repairs.
+    rationale: |-
+      The gate is an exit condition, and its cost is paid once per stage
+      exit and landing. Most changes touch one Project and the board, so most
+      of the whole gate re-checks code nothing changed. The developer accepts
+      the risk of a break the directories cannot see in exchange for a loop
+      that moves faster, and the falsifier names what would take it back.
