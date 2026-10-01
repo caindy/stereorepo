@@ -1069,8 +1069,8 @@ class FlightRunTest(unittest.TestCase):
             "backlog", "big-b", "Big B", difficulty="easy", parent="big",
             waits_on="[big-a]",
         )
-        b.issue("backlog", "other", "Other", difficulty="easy")
-        (b.repo / board.ORDER).write_text("other\nbig-b\nbig-a\nbig\n")
+        b.issue("backlog", "unflown", "Unflown", difficulty="easy")
+        (b.repo / board.ORDER).write_text("unflown\nbig-b\nbig-a\nbig\n")
         sh(b.repo, "add", "-A")
         sh(b.repo, "commit", "-q", "-m", "order")
 
@@ -1082,19 +1082,19 @@ class FlightRunTest(unittest.TestCase):
         self.assertTrue(b.on_main("issues/done/big-a.md"))
         self.assertTrue(b.on_main("issues/done/big-b.md"))
         self.assertTrue(b.on_main("issues/desk-check/big.md"))
-        self.assertTrue(b.on_main("issues/backlog/other.md"))
-        self.assertTrue(all("other" not in text for _, text in b.sent))
+        self.assertTrue(b.on_main("issues/backlog/unflown.md"))
+        self.assertTrue(all("unflown" not in text for _, text in b.sent))
 
     def test_a_run_refuses_what_it_cannot_work(self) -> None:
         b = self.b
         head = sh(b.repo, "rev-parse", "HEAD")
         self.assertEqual(b.loop.run(flight="nothing"), "refused")
-        self.assertEqual(b.loop.run(flight="other"), "refused")
-        b.loop.save(State(slug="other", stage="todo"))
+        self.assertEqual(b.loop.run(flight="unflown"), "refused")
+        b.loop.save(State(slug="unflown", stage="todo"))
         self.assertEqual(b.loop.run(flight="big"), "refused")
         says: list[str] = []
         b.loop.say = says.append
-        b.loop.save(State(slug="other", stage="desk-check", retry="desk-check"))
+        b.loop.save(State(slug="unflown", stage="desk-check", retry="desk-check"))
         self.assertEqual(b.loop.run(flight="big"), "refused")
         self.assertIn("`just pair-accept`", says[-1])
         b.loop.clear()

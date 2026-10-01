@@ -69,8 +69,9 @@ observe. There are no pull requests.
   (DR-106). Recipes take only flags, subcommands and atomic
   identifiers (DR-259, DR-272); do not invoke a script
   under `.meta/` directly where a recipe wraps it. `just gate` is an exit condition, not an entrance condition:
-  run it after authoring changes, not at session start. Prefer a targeted gate
-  (`just gate meta`, `just gate python-seed`, `just gate rust-seed`) while
+  it runs once the work is done (in the pair loop, before landing), not at
+  session start. Prefer a targeted gate (`just gate meta`,
+  `just gate python-seed`, `just gate rust-seed`, `just gate pair`) while
   working.
 - Nothing about this repository is written to the harness's memory. What a
   session needs remembered goes into an artifact that already exists: the

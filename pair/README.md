@@ -26,7 +26,12 @@ that cannot happen.
 Each turn, a seat is told the Issue file, what the current stage is for
 (`prompts/stage-*.md`), and what changed since its last turn. The primary seat
 takes the first turn in each stage. After every turn the loop commits whatever
-the seat left uncommitted, with a `Seat:` trailer.
+the seat left uncommitted, with a `Seat:` trailer. An implementing seat runs
+only the gate of each Project its change touches: `just gate meta` always, and
+`just gate pair` when it changes `pair/`, for example
+(`prompts/stage-in-progress.md`). The full `just gate` is the loop's, run before
+the Issue lands (see the table below), and a failure goes back to the seats
+with its output.
 
 1. **Acceptance.** A turn that changes nothing is a quiet turn: that seat
    accepts the state it found. A turn that changes something makes its author
