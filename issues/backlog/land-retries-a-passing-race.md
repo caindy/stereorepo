@@ -14,7 +14,8 @@ gate and the loop tried to land it. In the same second a commit was made on
 `main` in the developer's checkout (`182dc9c`). The loop paused with "could
 not fast-forward main in your checkout to 9027372d (local edits in the
 way?)". The checkout had no local changes afterwards, and `just pair` landed
-the Issue on the next try as `d45b1919`.
+the Issue on the next try as `d45b1919`. That landing also reverted an earlier
+commit on `main`, which is a separate bug: `squash-reverts-commits-on-main`.
 
 Which race it was is not known, because git's error is in neither the pause
 reason nor `.pair/events.jsonl`. Likely: the commit held the index lock or the
