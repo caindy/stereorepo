@@ -49,6 +49,21 @@ def git_run(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
 
 
+def head_and_dirty(tree: Path) -> tuple[str, bool]:
+    """A worktree's HEAD commit, and whether it has changes `git add -A` would stage.
+
+    One `git status --porcelain=v2 --branch` answers both, where `rev-parse
+    HEAD` and `status --porcelain` would start two processes.
+    """
+    head, dirty = "", False
+    for line in git(tree, "status", "--porcelain=v2", "--branch").splitlines():
+        if line.startswith("# branch.oid "):
+            head = line.removeprefix("# branch.oid ")
+        elif not line.startswith("#"):
+            dirty = True
+    return head, dirty
+
+
 def git_ok(cwd: Path, *args: str) -> bool:
     """Whether a git command exits zero."""
     return (
@@ -209,6 +224,23 @@ def listed(repo: Path, ref: str, stage: str) -> list[str]:
         if n.endswith(".md") and Path(n).name != "README.md"
     ]
     return sorted(slugs)
+
+
+def listed_by_stage(repo: Path, ref: str) -> dict[str, list[str]]:
+    """`listed` for every stage at once, from one `git ls-tree`."""
+    names = git(repo, "ls-tree", "-r", "--name-only", ref, f"{ISSUES}/", check=False)
+    found: dict[str, list[str]] = {stage: [] for stage in STAGES}
+    for name in names.splitlines():
+        path = Path(name)
+        stage = path.parent.name
+        if (
+            path.parent.parent == Path(ISSUES)
+            and stage in found
+            and path.suffix == ".md"
+            and path.name != "README.md"
+        ):
+            found[stage].append(path.stem)
+    return {stage: sorted(slugs) for stage, slugs in found.items()}
 
 
 def show(repo: Path, ref: str, path: str) -> str:

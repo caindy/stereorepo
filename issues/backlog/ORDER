@@ -1,5 +1,4 @@
 squash-reverts-commits-on-main
-fast-pair-tests
 gate-only-touched-projects
 land-retries-a-passing-race
 seat-background-work-outlives-turn

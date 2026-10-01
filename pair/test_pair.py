@@ -6,8 +6,12 @@ Run: uv run --with pyyaml python -m unittest discover -s pair -p 'test_*.py'
 from __future__ import annotations
 
 import collections
+import contextlib
+import functools
 import json
 import os
+import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -51,6 +55,27 @@ def inspects_processes() -> bool:
         return False
     return True
 
+
+def skip_git_trampoline() -> None:
+    """Put the git that macOS's `/usr/bin/git` resolves to first on `PATH`.
+
+    `/usr/bin/git` hands every call to `xcrun`, which costs about 7 ms a
+    process, and these tests and the loop under test start thousands of git
+    processes. Child processes inherit `os.environ`, so the loop's own calls
+    skip the trampoline too. A `PATH` whose git is not `/usr/bin/git`, such as
+    Homebrew's or Linux's, is left as it is.
+    """
+    if shutil.which("git") != "/usr/bin/git" or not shutil.which("xcrun"):
+        return
+    found = subprocess.run(
+        ["xcrun", "-f", "git"], capture_output=True, text=True, check=False
+    )
+    real = Path(found.stdout.strip())
+    if found.returncode == 0 and real.is_file() and os.access(real, os.X_OK):
+        os.environ["PATH"] = f"{real.parent}{os.pathsep}{os.environ.get('PATH', '')}"
+
+
+skip_git_trampoline()
 
 NO_PS = "`ps` cannot run in a seat's sandbox; the loop's own gate runs this test"
 INSPECTS = inspects_processes()
@@ -148,26 +173,43 @@ class FakeSeat:
         pass
 
 
+TEMPLATES = tempfile.TemporaryDirectory()
+"""Where `board_repository` builds its repository, once per process."""
+
+
+@functools.cache
+def board_repository() -> Path:
+    """A committed, empty board on `main`, which each `Bench` copies.
+
+    Building it once and copying it saves every test the git processes that
+    building it takes. It has no worktrees, so its `.git` names no absolute
+    path and a copy of it is a whole repository.
+    """
+    repo = Path(TEMPLATES.name) / "board"
+    repo.mkdir()
+    sh(repo, "init", "-q", "-b", "main")
+    for key, value in (
+        ("user.name", "Test"),
+        ("user.email", "t@example.com"),
+        ("commit.gpgsign", "false"),
+    ):
+        sh(repo, "config", key, value)
+    (repo / ".gitignore").write_text("worktrees/\n.pair/\n")
+    for stage in board.STAGES:
+        (repo / "issues" / stage).mkdir(parents=True)
+        (repo / "issues" / stage / "README.md").write_text(f"{stage}\n")
+    sh(repo, "add", "-A")
+    sh(repo, "commit", "-q", "-m", "board")
+    return repo
+
+
 class Bench:
     """The developer's checkout with a board, and a loop wired to fake seats and a fake gate."""
 
     def __init__(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name) / "developer"
-        self.repo.mkdir()
-        sh(self.repo, "init", "-q", "-b", "main")
-        for key, value in (
-            ("user.name", "Test"),
-            ("user.email", "t@example.com"),
-            ("commit.gpgsign", "false"),
-        ):
-            sh(self.repo, "config", key, value)
-        (self.repo / ".gitignore").write_text("worktrees/\n.pair/\n")
-        for stage in board.STAGES:
-            (self.repo / "issues" / stage).mkdir(parents=True)
-            (self.repo / "issues" / stage / "README.md").write_text(f"{stage}\n")
-        sh(self.repo, "add", "-A")
-        sh(self.repo, "commit", "-q", "-m", "board")
+        shutil.copytree(board_repository(), self.repo, symlinks=True)
         self.turns: collections.deque[tuple[str, object]] = collections.deque()
         self.sent: list[tuple[str, str]] = []
         self.opened: list[tuple[str, str | None]] = []
@@ -517,19 +559,42 @@ class LoopTest(unittest.TestCase):
 
     @unittest.skipUnless(INSPECTS, NO_PS)
     def test_reap_stops_only_an_orphaned_seat_in_this_worktree(self) -> None:
+        """The orphan is started through `sh`, so that it is not this process's child.
+
+        A child that `reap` stops stays a zombie, which `Loop.alive` counts as
+        alive until this process waits on it, so `reap` would poll for its full
+        ten seconds. The orphan's output goes to /dev/null, or `run` would wait
+        for the `sleep` to close the captured stdout.
+        """
         b = self.b
         b.loop.ensure_worktree()
         b.loop.dir.mkdir(exist_ok=True)
         b.loop.seat_command = "sleep"
-        orphan = subprocess.Popen(["sleep", "60"], cwd=b.loop.wt)
+        orphan = int(
+            subprocess.run(
+                ["sh", "-c", "sleep 60 >/dev/null 2>&1 & echo $!"],
+                cwd=b.loop.wt,
+                capture_output=True,
+                text=True,
+                check=True,
+            ).stdout
+        )
+
+        def kill_orphan() -> None:
+            with contextlib.suppress(ProcessLookupError):
+                os.kill(orphan, signal.SIGKILL)
+
+        self.addCleanup(kill_orphan)
         elsewhere = subprocess.Popen(["sleep", "60"], cwd=b.repo)
         self.addCleanup(elsewhere.wait)
         self.addCleanup(elsewhere.kill)
-        self.addCleanup(orphan.kill)
-        (b.loop.dir / "primary.pid").write_text(f"{orphan.pid}\n")
+        (b.loop.dir / "primary.pid").write_text(f"{orphan}\n")
         (b.loop.dir / "secondary.pid").write_text(f"{elsewhere.pid}\n")
         b.loop.reap()
-        self.assertIsNotNone(orphan.wait(timeout=10))
+        deadline = time.monotonic() + 10
+        while Loop.alive(orphan) and time.monotonic() < deadline:
+            time.sleep(0.05)
+        self.assertFalse(Loop.alive(orphan))
         self.assertIsNone(elsewhere.poll())
 
     def test_a_seat_that_crashes_twice_pauses_the_loop(self) -> None:
@@ -2422,6 +2487,29 @@ class BoardTest(unittest.TestCase):
         nested = "## The plan\n\n### Steps\n\n1. Do it.\n\n## Risks\n\nnone\n"
         self.assertEqual(board.section(nested, "The plan"), "### Steps\n\n1. Do it.")
         self.assertTrue(board.needs_elaboration("x\n# Needs elaboration\n\nwhy\n"))
+
+    def test_listing_every_stage_at_once_matches_listing_each(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "b", "B")
+        b.issue("backlog", "a", "A")
+        b.issue("done", "z", "Z")
+        (b.repo / "issues" / "done" / "old").mkdir()
+        (b.repo / "issues" / "done" / "old" / "y.md").write_text("# Y\n")
+        (b.repo / "issues" / "todo" / "notes.txt").write_text("not an issue\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "clutter")
+        each = {stage: board.listed(b.repo, "main", stage) for stage in board.STAGES}
+        self.assertEqual(board.listed_by_stage(b.repo, "main"), each)
+        self.assertEqual(each["backlog"], ["a", "b"])
+
+    def test_head_and_dirty_reads_a_worktree_in_one_status(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        head = sh(b.repo, "rev-parse", "HEAD")
+        self.assertEqual(board.head_and_dirty(b.repo), (head, False))
+        (b.repo / "untracked.md").write_text("new\n")
+        self.assertEqual(board.head_and_dirty(b.repo), (head, True))
 
     def test_waits_on_holds_an_item_back(self) -> None:
         b = Bench()

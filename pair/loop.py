@@ -812,9 +812,8 @@ class Loop:
 
     def absorb_developer(self, st: State) -> bool:
         """Commit edits the developer made in the worktree between turns, as a turn of their own."""
-        dirty = bool(git(self.wt, "status", "--porcelain"))
-        moved = git(self.wt, "rev-parse", "HEAD") != st.head
-        if not (dirty or moved):
+        head, dirty = board.head_and_dirty(self.wt)
+        if not dirty and head == st.head:
             return False
         if dirty:
             git(self.wt, "add", "-A")
@@ -827,7 +826,8 @@ class Loop:
                 "-m",
                 "Seat: developer",
             )
-        st.head = git(self.wt, "rev-parse", "HEAD")
+            head = git(self.wt, "rev-parse", "HEAD")
+        st.head = head
         st.approvals = []
         st.note = (
             st.note
@@ -855,7 +855,8 @@ class Loop:
             self.say(
                 f"moved {st.slug}.md back to {at}/ after the {role} seat moved it"
             )
-        if git(self.wt, "status", "--porcelain"):
+        head, dirty = board.head_and_dirty(self.wt)
+        if dirty:
             git(self.wt, "add", "-A")
             if git(self.wt, "diff", "--cached", "--name-only"):
                 git(
@@ -867,7 +868,7 @@ class Loop:
                     "-m",
                     f"Seat: {role}",
                 )
-        head = git(self.wt, "rev-parse", "HEAD")
+                head = git(self.wt, "rev-parse", "HEAD")
         quiet = head == st.head or not git(
             self.wt, "diff", "--name-only", st.head, head
         )
@@ -997,9 +998,11 @@ class Loop:
         """
         if self.touches_code():
             return "the Flight check changes nothing outside issues/; undo those changes."
-        before: set[str] = set()
-        for stage in board.STAGES:
-            before.update(board.listed(self.wt, st.base, stage))
+        before = {
+            slug
+            for slugs in board.listed_by_stage(self.wt, st.base).values()
+            for slug in slugs
+        }
         gaps = [
             slug
             for slug, stage in board.children(self.wt, "HEAD", st.slug).items()
@@ -1516,19 +1519,20 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
         path = runtime_dir(repo, kind) / "state.json"
         if path.is_file():
             states[kind] = json.loads(path.read_text())
-    done = set(board.listed(repo, main, "done"))
+    listed = board.listed_by_stage(repo, main)
+    done = set(listed["done"])
     kin = board.families(repo, main)
     targets = groom_targets(repo)
 
     waiting: list[dict[str, Any]] = []
-    for slug in board.listed(repo, main, "backlog"):
+    for slug in listed["backlog"]:
         issue = board.at_ref(repo, main, "backlog", slug)
         if issue and board.needs_elaboration(issue.body):
             why = first_line(board.section(issue.body, "Needs elaboration"))
             waiting.append(
                 {"slug": slug, "why": f"needs elaboration: {why}", "answer": []}
             )
-    for slug in board.listed(repo, main, "desk-check"):
+    for slug in listed["desk-check"]:
         issue = board.at_ref(repo, main, "desk-check", slug)
         if issue is None or not kin.get(slug):
             continue
@@ -1593,7 +1597,7 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
         ],
         "order": [entry(node) for node in board.running_tree(repo, main, kin)],
         "to_groom": board.to_groom(repo, main),
-        "counts": {stage: board.listed(repo, main, stage) for stage in SHOWN},
+        "counts": {stage: listed[stage] for stage in SHOWN},
         "sessions": [
             {"kind": kind, "role": role, "id": sid}
             for kind, st in states.items()
