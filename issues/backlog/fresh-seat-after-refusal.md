@@ -1,3 +1,7 @@
+---
+difficulty: medium
+---
+
 # Start a fresh seat session when the model refuses a seat's message
 
 A seat that fails is restarted once from its session id, and a seat that fails
@@ -31,16 +35,54 @@ refused message. Only clearing the saved session id by hand, in
 `.pair/state.json` and `.pair/primary.session`, let a fresh seat start with
 the restored instructions, and the Issue went on.
 
+## How to reproduce
+
+The refusal cannot be summoned on demand, so reproduce it with a seat that
+returns the refusal's error text. The `paused` event from 2026-10-01 carried
+it, as the `result` text of a `result` event with `is_error` set:
+
+```
+API Error: Opus 5.5's safeguards flagged this message
+(https://www.anthropic.com/legal/aup). This sometimes happens with safe,
+normal conversations. Claude Code can't respond to this message with Opus 5.5.
+[...]
+Details: `[reasoning_extraction]`
+```
+
+1. In `pair/test_pair.py`, script the fake seat's turn to fail with that error
+   on every send. `FakeSeat.send` fails with the fixed error `"boom"` today, so
+   it needs a way to be given the error text.
+2. Run the loop on an Issue.
+3. Today `Loop.turn` restarts the seat with the same session id (the fake
+   seat's `opened` list shows `("primary", "primary-session")`), pauses with
+   "the primary seat failed twice", and leaves the session in `State.sessions`
+   and in `.pair/primary.session`, so the next run resumes it.
+
 ## What is wanted
 
 - **A refusal is told apart from a failure.** `ClaudeSeat` recognises a turn
   that ends in the model's refusal (an API error naming the safeguards) and
   reports it as such in its `TurnResult`, distinct from a crash, a timeout or
-  another API error.
+  another API error. Recognise it from the error text of the `result` event
+  (the phrase `safeguards flagged this message`), in one named function in
+  `pair/seats.py` with a docstring quoting the shape it matches, so the match
+  can be updated in one place when the harness changes its wording.
 - **A refused seat restarts fresh.** On a refusal, the loop restarts the seat
   once with a new session rather than resuming the old one, and records that it
-  did. If the fresh session is refused too, the loop pauses as now, but with
-  no session id saved for that seat, so the next run starts it fresh.
+  did. A new session means the seat is opened with no `resume`: `Loop.seat`
+  takes it from `State.sessions` or from `<role>.session`, so both are
+  cleared for that seat. The fresh seat's message is the turn message without
+  the `RESTARTED` preamble, since that preamble tells the seat its session
+  survived. If the fresh session is refused too, the loop pauses as now, but with
+  no session id saved for that seat, so the next run starts it fresh. The
+  refused fresh session reports a session id of its own; `Loop.turn` today
+  stores any `result.session_id` in `State.sessions`, so that one must not be
+  kept either.
+- **The next run does not claim a surviving session.** A refusal pause leaves
+  `State.in_turn` naming the seat, and `Loop.run` prepends `RESTARTED` to the
+  message whenever `in_turn` matches the seat about to take its turn. After a
+  refusal pause the seat has no session to resume, so the next run sends the
+  plain turn message.
 - **The pause says so.** The `paused` event and `just pair-status` say the seat
   was refused, not that it failed, so the developer knows to look at the
   instructions or the Issue rather than the machine.
@@ -54,7 +96,12 @@ the restored instructions, and the Issue went on.
 ## Done when
 
 - A seat whose turn is refused is restarted with a fresh session, and a second
-  refusal pauses the loop with no session saved for that seat.
+  refusal pauses the loop with no session saved for that seat, in
+  `State.sessions` or in `<role>.session`.
+- The run after a refusal pause opens that seat with no `resume`, and its
+  message does not begin with `RESTARTED`.
 - A crash or timeout is still restarted from its session, as now.
-- The pause reason names the refusal.
-- The pair tests cover each of these with a fake seat, and `just gate` passes.
+- The pause reason names the refusal, in the `paused` event and in
+  `just pair-status`.
+- The pair tests cover each of these with a fake seat whose error is the
+  quoted refusal text, and `just gate pair` passes.
