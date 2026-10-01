@@ -25,6 +25,8 @@ from watch import watch
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 Action = Callable[[Path], None]
+Turn = tuple[str, object] | tuple[str, object, str]
+"""A scripted turn: the seat, what it does, and optionally its closing message."""
 
 
 def sh(cwd: Path, *args: str) -> str:
@@ -94,7 +96,7 @@ class FakeSeat:
         self.bench.sent.append((self.role, text))
         if not self.bench.turns:
             raise AssertionError(f"unscripted turn for {self.role}:\n{text}")
-        role, action = self.bench.turns.popleft()
+        role, action, *closing = self.bench.turns.popleft()
         if role != self.role:
             raise AssertionError(f"expected a {role} turn, got {self.role}")
         if action is CRASH:
@@ -103,7 +105,10 @@ class FakeSeat:
         if self.bench.stop_when_empty and not self.bench.turns:
             self.loop.stop_requested = True
         return TurnResult(
-            True, session_id=self.session_id, usage={"cache_read_input_tokens": 1}
+            True,
+            text=closing[0] if closing else "",
+            session_id=self.session_id,
+            usage={"cache_read_input_tokens": 1},
         )
 
     def stop(self) -> None:
@@ -130,7 +135,7 @@ class Bench:
             (self.repo / "issues" / stage / "README.md").write_text(f"{stage}\n")
         sh(self.repo, "add", "-A")
         sh(self.repo, "commit", "-q", "-m", "board")
-        self.turns: collections.deque[tuple[str, object]] = collections.deque()
+        self.turns: collections.deque[Turn] = collections.deque()
         self.sent: list[tuple[str, str]] = []
         self.opened: list[tuple[str, str | None]] = []
         self.gates: list[bool] = []
@@ -211,7 +216,7 @@ class Bench:
         sh(self.repo, "add", "-A")
         sh(self.repo, "commit", "-q", "-m", f"add {slug}")
 
-    def script(self, *turns: tuple[str, object]) -> None:
+    def script(self, *turns: Turn) -> None:
         self.turns.extend(turns)
 
     def on_main(self, rel: str) -> bool:
@@ -861,7 +866,11 @@ class FlightCheckTest(unittest.TestCase):
             ("secondary", quiet),
         )
         self.assertEqual(b.loop.run(once=True), "landed")
-        self.assertIn("ends in a `## Desk-check notes` section", b.sent[-6][1])
+        self.assertIn(
+            "the last of the Desk-check sections in issues/underway/big.md is "
+            "`## Desk-check notes`",
+            b.sent[-6][1],
+        )
         self.assertIn("This check wrote a brief", b.sent[-4][1])
         self.assertIn("## Desk-check children", b.sent[-2][1])
         self.assertTrue(b.on_main("issues/backlog/big.md"))
@@ -1034,6 +1043,44 @@ class FlightCheckTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertTrue(b.on_main("issues/desk-check/big.md"))
         self.assertFalse(b.on_main("issues/todo/big.md"))
+
+    def test_noted_check_turns_keep_the_brief_and_its_delivery_intact(self) -> None:
+        b = self.b
+        b.delivers = [(True, "deployed")]
+        b.script(
+            ("primary", append("big", BRIEF), "Wrote it.\n\n## Desk-check brief\n\nFake."),
+            ("secondary", quiet, "Read a.txt; the brief holds."),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        text = sh(b.repo, "show", f"main:{FLIGHT}")
+        self.assertEqual(board.sections(text, "Desk-check brief"), 1)
+        brief = board.section(text, "Desk-check brief") or ""
+        self.assertTrue(brief.startswith("Delivered; see it in a.txt."), brief)
+        self.assertTrue(brief.endswith("from main at " + sh(b.repo, "rev-parse", "--short", "main~1") + "."), brief)
+        self.assertIn("> Read a.txt; the brief holds.", text)
+
+    def test_noted_turns_answering_desk_check_notes_still_land(self) -> None:
+        b = self.b
+        b.script(("primary", append("big", BRIEF), "Wrote the brief."), ("secondary", quiet))
+        b.loop.run(once=True)
+        flight = b.repo / "issues/desk-check/big.md"
+        flight.write_text(flight.read_text() + NOTES)
+        self.assertEqual(b.loop.resume("big"), "resumed")
+        b.script(
+            (
+                "primary",
+                both(child("big-red"), child("big-loud"), append("big", CHILDREN)),
+                "One child per note.",
+            ),
+            ("secondary", quiet, "Both notes have a child."),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        text = sh(b.repo, "show", "main:issues/backlog/big.md")
+        self.assertEqual(
+            board.last_of(text, ("Desk-check brief", "Desk-check notes", "Desk-check children")),
+            "Desk-check children",
+        )
+        self.assertLess(text.index("> Both notes"), text.index("## Desk-check notes"))
 
 
 def easy_turns(slug: str) -> tuple[tuple[str, object], ...]:
@@ -2476,6 +2523,126 @@ class BoardTest(unittest.TestCase):
         text = "a\n# a\n# groomed below\nab\na\n"
         self.assertEqual(board.without(text, "a"), "# a\n# groomed below\nab\n")
         self.assertEqual(board.without("b\n", "a"), "b\n")
+
+    def test_the_first_note_adds_the_section_and_the_next_follows_it(self) -> None:
+        once = board.with_note("# X\n\nWords.\n", "primary · todo · turn 1", "Why.")
+        self.assertEqual(
+            once,
+            "# X\n\nWords.\n\n## Pair notes\n\n"
+            "> **primary · todo · turn 1**\n>\n> Why.\n",
+        )
+        twice = board.with_note(once, "secondary · todo · turn 2", "Checked.")
+        self.assertEqual(twice.count("## Pair notes"), 1)
+        self.assertTrue(
+            twice.endswith(
+                "> Why.\n\n> **secondary · todo · turn 2**\n>\n> Checked.\n"
+            ),
+            twice,
+        )
+
+    def test_a_note_quotes_every_line_and_steers_nothing(self) -> None:
+        note = "# Needs elaboration\n\n## The plan\n\n  **The plan.**\nDone."
+        text = board.with_note("# X\n", "primary · todo · turn 1", note)
+        self.assertFalse(board.needs_elaboration(text))
+        self.assertIsNone(board.section(text, "The plan"))
+        quoted = text.split("## Pair notes\n\n", 1)[1]
+        self.assertTrue(all(line.startswith(">") for line in quoted.splitlines()))
+
+    def test_a_note_goes_above_a_section_written_below_the_notes(self) -> None:
+        body = board.with_note("# F\n" + BRIEF, "primary · flight-check · turn 1", "a")
+        body += NOTES
+        later = board.with_note(body, "secondary · flight-check · turn 2", "b")
+        self.assertEqual(
+            board.section(later, "Desk-check notes"), board.section(body, "Desk-check notes")
+        )
+        self.assertEqual(
+            board.last_of(later, ("Desk-check brief", "Desk-check notes")),
+            "Desk-check notes",
+        )
+        self.assertLess(later.index("> b"), later.index("## Desk-check notes"))
+
+    def test_append_under_ends_a_nested_section_at_its_own_level(self) -> None:
+        text = "# F\n\n## Brief\n\nSaw it.\n\n### Try\n\nThis.\n\n## Pair notes\n\n> n\n"
+        self.assertEqual(
+            board.append_under(text, "Brief", "Delivered."),
+            "# F\n\n## Brief\n\nSaw it.\n\n### Try\n\nThis.\n\nDelivered.\n\n"
+            "## Pair notes\n\n> n\n",
+        )
+        self.assertIsNone(board.append_under(text, "Desk-check brief", "x"))
+
+
+class PairNotesTest(unittest.TestCase):
+    """Each turn's closing message, kept in the Issue file under `## Pair notes`."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+
+    def test_quiet_noted_turns_agree_and_each_note_is_kept_once(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.stop_when_empty = True
+        b.script(
+            ("primary", quiet, "Read X; easy holds."),
+            ("secondary", quiet, "Checked the scope."),
+            ("primary", quiet),
+        )
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertEqual(b.state().stage, "todo")
+        body = b.issue_in_worktree("x").body
+        self.assertEqual(body.count("## Pair notes"), 1)
+        for line in (
+            "> **primary · backlog · turn 1**",
+            "> Read X; easy holds.",
+            "> **secondary · backlog · turn 2**",
+            "> Checked the scope.",
+        ):
+            self.assertEqual(body.count(line), 1, line)
+        self.assertIn("This is your first turn here.", b.sent[1][1])
+        third = b.sent[2][1]
+        self.assertIn("+> Checked the scope.", third)
+        self.assertNotIn("+> Read X; easy holds.", third)
+        self.assertNotIn("The developer changed things", third)
+        log = sh(b.loop.wt, "log", "--format=%s")
+        self.assertNotIn("developer: edits", log)
+        self.assertIn("primary: note on backlog turn 1", log)
+
+    def test_a_note_naming_the_sections_the_loop_reads_steers_nothing(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.stop_when_empty = True
+        b.script(
+            ("primary", quiet, "# Needs elaboration\n\nNot really."),
+            ("secondary", quiet),
+            ("primary", quiet, "## The plan\n\nDo it."),
+            ("secondary", quiet, "**The plan.**\n\nDo it."),
+            ("primary", quiet),
+        )
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertEqual(b.state().stage, "todo")
+        self.assertIn("write the plan under", b.sent[4][1])
+
+    def test_a_turn_with_no_closing_text_keeps_no_note(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.stop_when_empty = True
+        b.script(("primary", quiet), ("secondary", quiet, "  \n"))
+        b.loop.run()
+        self.assertNotIn("Pair notes", b.issue_in_worktree("x").body)
+
+    def test_a_grooming_pass_keeps_no_note(self) -> None:
+        b = self.b
+        b.issue("backlog", "a", "A")
+        b.script(
+            (
+                "primary",
+                both(front("a", difficulty="easy"), order("# groomed below\na\n")),
+                "Easy: one file.",
+            ),
+            ("secondary", quiet, "Agreed."),
+        )
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertNotIn("Pair notes", sh(b.repo, "show", "main:issues/backlog/a.md"))
 
 
 class SeatCommandTest(unittest.TestCase):
