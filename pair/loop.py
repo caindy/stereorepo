@@ -780,7 +780,9 @@ class Loop:
                 self.forget_session(st, role)
                 again = "twice" if first_refused else "on its restart"
                 self.pause(
-                    st, f"the {role} seat was refused {again}: {result.error}", retry=None
+                    st,
+                    f"the {role} seat was refused {again}: {result.error}",
+                    retry=None,
                 )
                 return None
             if not result.ok:

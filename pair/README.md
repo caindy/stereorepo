@@ -133,8 +133,8 @@ and the plain turn message, because the refused message stays in the old
 session's history and resuming it would be refused again. A restart that is
 refused, whether the first failure was a refusal or a crash, pauses the loop
 with `the <role> seat was refused` and keeps no session for that seat, so the
-next run starts it fresh. Such a pause points at the
-seat's instructions or the Issue, not at the machine.
+next run starts it fresh. Such a pause points at the seat's instructions or
+the Issue, not at the machine.
 
 ## Grooming the backlog
 
