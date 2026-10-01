@@ -65,7 +65,7 @@ CONTRACT: Contract = {
     "adapt": (("args", FLAGS),),
     "pair": (("args", FLAGS),),
     "groom": (("args", FLAGS),),
-    "pair-status": (),
+    "pair-status": (("args", FLAGS),),
     "pair-accept": (("args", FLAGS),),
     "pair-resume": (("args", FLAGS),),
     "pair-watch": (("args", FLAGS),),

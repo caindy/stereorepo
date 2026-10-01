@@ -176,7 +176,7 @@ checkout still pause it at once.
 | groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | run one Flight | `just pair --flight <slug>` |
-| watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway, the running order with each Flight's parts and what holds each item back, and the counts per stage; `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
+| watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway, the running order with each Flight's parts and what holds each item back, and the counts per stage; `just pair-status --json` prints the same state as one JSON object, keyed `waiting`, `underway`, `order`, `to_groom`, `counts`, `sessions` and `turns`, whose fields `status_view` in `loop.py` describes; `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
 | wait for the loop | `just pair-watch --until landed`, `--until developer` (a desk check, a pause or a send-back) or `--until flight <slug>` (that Flight reaches `desk-check/`); see [The event log](#the-event-log) |
 | steer an Issue or a pass underway | edit files in `worktrees/pair`, or `worktrees/groom` for a pass, between turns; the next seat sees the change |
 | take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` (`worktrees/groom` for a pass) with the id `just pair-status` prints; `just pair` or `just groom` again afterwards |
@@ -184,8 +184,9 @@ checkout still pause it at once.
 | desk-check a Flight | read its brief in `issues/desk-check/<slug>.md`, then `just pair-accept <slug>`, or write `## Desk-check notes` in it and `just pair-resume <slug>` |
 
 In a portfolio, run the same commands through the script, from the portfolio's
-root: `uv run --script <stereorepo>/pair/pair.py run`, `groom`, `status`,
-`accept`, `resume` or `watch`, each with a Flight's slug where it has one.
+root: `uv run --script <stereorepo>/pair/pair.py run`, `groom`, `status` (or
+`status --json`), `accept`, `resume` or `watch`, each with a Flight's slug
+where it has one.
 
 ### Exit codes
 

@@ -9,7 +9,7 @@ stays wherever this file is, outside that repository's tree (see README.md):
 
     uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--flight SLUG] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py groom [--rerank] [--push] [--model M] [--round-cap N]
-    uv run --script <stereorepo>/pair/pair.py status
+    uv run --script <stereorepo>/pair/pair.py status [--json]
     uv run --script <stereorepo>/pair/pair.py accept [SLUG]
     uv run --script <stereorepo>/pair/pair.py resume [SLUG]
     uv run --script <stereorepo>/pair/pair.py watch --until landed|developer|flight SLUG
@@ -45,7 +45,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import IO
 
-from loop import Loop, append_event, status
+from loop import Loop, append_event, status, status_json
 from seats import ClaudeSeat
 from watch import CONDITIONS, watch
 
@@ -202,9 +202,12 @@ def main() -> int:
     groom.add_argument(
         "--push", action="store_true", help="push main to origin after the pass lands"
     )
-    sub.add_parser(
+    shown = sub.add_parser(
         "status",
         help="what waits on you, what is underway, the running order and the counts",
+    )
+    shown.add_argument(
+        "--json", action="store_true", help="print the same state as one JSON object"
     )
     accept = sub.add_parser(
         "accept", parents=[seats], help="pass the desk check and merge"
@@ -239,7 +242,7 @@ def main() -> int:
 
     repo = repo_root()
     if args.command == "status":
-        print(status(repo))
+        print(status_json(repo) if args.json else status(repo))
         return 0
     if args.command == "watch":
         return watch(repo, args.until, out=lambda line: print(line, flush=True))

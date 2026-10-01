@@ -1595,3 +1595,8 @@ def status(repo: Path, main: str = "main") -> str:
                 f"cache read {row['cache_read']}  write {row['cache_write']}"
             )
     return "\n".join(lines)
+
+
+def status_json(repo: Path, main: str = "main") -> str:
+    """`status_view` as one line of JSON, for a session that drives the loop; `status_view` documents the fields."""
+    return json.dumps(status_view(repo, main))

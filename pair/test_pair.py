@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Any
 
 import board
-from loop import Loop, State, append_event, event_log, status
+from loop import Loop, State, append_event, event_log, status, status_json, status_view
 from seats import ALLOWED, TurnResult, command
 from watch import watch
 
@@ -2073,6 +2073,46 @@ class StatusTest(unittest.TestCase):
         self.assertRegex(shown, r"\n  t +being groomed\n")
         self.assertIn("to groom: q, t  (just groom)", shown)
         self.assertNotIn("waits on you", shown)
+
+    def test_json_holds_what_the_screen_shows(self) -> None:
+        b = self.b
+        b.issue("backlog", "c", "C\n\n# Needs elaboration\n\nWhich C?")
+        b.issue("underway", "x", "X", difficulty="easy")
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("done", "p1", "P1", parent="big")
+        b.issue("backlog", "p3", "P3", difficulty="easy", parent="big", waits_on="[p2]")
+        b.issue("backlog", "p2", "P2", difficulty="easy", parent="big")
+        (b.repo / board.ORDER).write_text("# groomed below\nbig\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+        b.loop.save(State(slug="x", stage="todo", turn=2, sessions={"primary": "s1"}))
+        shown = json.loads(status_json(b.repo))
+        self.assertEqual(shown, status_view(b.repo))
+        self.assertEqual(
+            shown["waiting"],
+            [{"slug": "c", "why": "needs elaboration: Which C?", "answer": []}],
+        )
+        self.assertEqual(
+            [(st["slug"], st["stage"], st["turn"]) for st in shown["underway"]],
+            [("x", "todo", 2)],
+        )
+        big = next(node for node in shown["order"] if node["slug"] == "big")
+        self.assertTrue(big["flight"])
+        self.assertEqual(big["out"], [{"slug": "p1", "stage": "done"}])
+        self.assertEqual(
+            [(part["slug"], part["mark"]) for part in big["parts"]],
+            [("p2", "ripe"), ("p3", "waits on p2")],
+        )
+        self.assertEqual(shown["sessions"], [{"kind": "pair", "role": "primary", "id": "s1"}])
+        script = Path(__file__).resolve().parent / "pair.py"
+        printed = subprocess.run(
+            [sys.executable, str(script), "status", "--json"],
+            cwd=b.repo,
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+        self.assertEqual(json.loads(printed), shown)
 
 
 class BoardTest(unittest.TestCase):
