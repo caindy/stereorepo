@@ -221,6 +221,7 @@ class Bench:
         self.developer_between: dict[int, Action] = {}
         self.notes: list[str] = []
         self.before_land: list[Action] = []
+        self.during_gate: list[Action] = []
         self.lock_waits = 0
         bench = self
 
@@ -250,6 +251,8 @@ class Bench:
 
         def gate(_tree: Path) -> tuple[bool, str]:
             self.gate_runs += 1
+            if self.during_gate:
+                self.during_gate.pop(0)(self.repo)
             ok = self.gates.pop(0) if self.gates else True
             return ok, "" if ok else "FAILED: test_widget"
 
@@ -347,6 +350,40 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.opened, [("primary", None), ("secondary", None)])
         self.assertFalse((b.repo / ".pair" / "state.json").exists())
         self.assertEqual(b.gate_runs, 1)
+
+    def test_a_commit_on_main_while_merge_gates_is_not_reverted(self) -> None:
+        """`main` moves during `merge`'s own gate, between its rebase and the squash.
+
+        The first gate is the `in-progress` check; its commit makes `merge`'s
+        rebase move, so `merge` gates, and that gate's commit falls in the window.
+        """
+        b = self.b
+
+        def commits(rel: str) -> Action:
+            def act(repo: Path) -> None:
+                write(rel, "main\n")(repo)
+                sh(repo, "add", rel)
+                sh(repo, "commit", "-q", "-m", f"add {rel}")
+
+            return act
+
+        b.issue("backlog", "fix-typo", "Fix the typo", difficulty="easy")
+        b.during_gate = [commits("b.txt"), commits("c.txt"), quiet]
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("fix-typo", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "fixed\n")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertTrue(b.on_main("b.txt"))
+        self.assertTrue(b.on_main("c.txt"))
+        self.assertEqual(sh(b.repo, "log", "-1", "--format=%s", "main~1"), "add c.txt")
+        changed = sh(b.repo, "diff", "--name-only", "main~1", "main").splitlines()
+        self.assertEqual(sorted(changed), ["a.txt", "issues/done/fix-typo.md"])
+        self.assertEqual(b.gate_runs, 3)
 
     def test_two_quiet_turns_agree(self) -> None:
         b = self.b

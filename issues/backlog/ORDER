@@ -1,4 +1,3 @@
-squash-reverts-commits-on-main
 gate-only-touched-projects
 land-retries-a-passing-race
 seat-background-work-outlives-turn

@@ -1304,6 +1304,11 @@ class Loop:
     def squash(self, st: State) -> str:
         """Commit the rebased branch onto `main` as one commit.
 
+        The commit's parent is the `main` the branch was rebased onto, not
+        `main` as it is now: the index holds the rebased tree, so a commit made
+        on `main` since the rebase would otherwise be reverted. When `main` has
+        moved, the commit is then not on it, and `merge` goes round again.
+
         The same commit drops the slug from `ORDER` when the issue lands in
         `done/`, or a Flight in `desk-check/`; a Flight left waiting keeps its
         place. No earlier commit on the
@@ -1317,7 +1322,8 @@ class Loop:
         else:
             issue = board.read(self.wt, st.slug) or board.Issue(st.slug, "done")
             head = [issue.title, f"Issue: {issue.path}"]
-        git(self.wt, "reset", "-q", "--soft", self.main)
+        onto = git(self.wt, "merge-base", self.main, "HEAD")
+        git(self.wt, "reset", "-q", "--soft", onto)
         order = self.wt / board.ORDER
         retired = board.locations(self.wt, st.slug) in (["done"], ["desk-check"])
         if order.is_file() and not grooming and retired:

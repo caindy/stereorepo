@@ -62,8 +62,10 @@ Issue will be known done in behaviour and tests, never as a gate
 4. **Landing.** The loop rebases the branch onto `main`, squashes it into one
    commit that includes the move to `done/`, and fast-forwards `main` in the
    developer's checkout with `--ff-only`, which refuses rather than overwrite local
-   edits. A Flight that still has a child outside `done/` lands back in
-   `backlog/` instead, and keeps its place in `ORDER`.
+   edits. The squashed commit sits on the `main` the branch was rebased onto,
+   so a commit made on `main` while the gate runs is never reverted: the loop
+   rebases onto it and gates again. A Flight that still has a child outside
+   `done/` lands back in `backlog/` instead, and keeps its place in `ORDER`.
 
 An Issue that other Issues name in `parent:` is a Flight. It is not ripe while
 any of its children is outside `done/`. Once the last one lands, the loop takes
