@@ -31,7 +31,10 @@ only the gate of each Project its change touches: `just gate meta` always, and
 `just gate pair` when it changes `pair/`, for example
 (`prompts/stage-in-progress.md`). The full `just gate` is the loop's, run before
 the Issue lands (see the table below), and a failure goes back to the seats
-with its output.
+with its output. No seat runs it in any stage, even when an Issue names it
+(`prompts/primary.md`, `prompts/secondary.md`), and grooming states how an
+Issue will be known done in behaviour and tests, never as a gate
+(`prompts/stage-backlog.md`, `prompts/stage-grooming.md`).
 
 1. **Acceptance.** A turn that changes nothing is a quiet turn: that seat
    accepts the state it found. A turn that changes something makes its author
