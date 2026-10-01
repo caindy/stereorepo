@@ -21,7 +21,7 @@ from typing import Any
 import board
 from loop import Loop, State, append_event, event_log, status, status_json, status_view
 from seats import ALLOWED, TurnResult, command, is_refusal
-from watch import watch
+from watch import ENDED_FIRST, NOT_RUNNING, watch
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 Action = Callable[[Path], None]
@@ -1852,7 +1852,8 @@ class ExitCodeTest(unittest.TestCase):
         )
         done = {"landed", "groomed", "accepted", "resumed"}
         self.assertEqual({EXIT[o] for o in done}, {0})
-        codes = [code for o, code in EXIT.items() if o not in done] + [LOCKED]
+        codes = [code for o, code in EXIT.items() if o not in done]
+        codes += [LOCKED, ENDED_FIRST, NOT_RUNNING]
         self.assertEqual(len(codes), len(set(codes)))
         self.assertTrue(set(codes).isdisjoint({0, 1, 2}))
 
@@ -2100,16 +2101,16 @@ class WatchTest(unittest.TestCase):
     def test_a_supervisor_that_ends_first_fails_the_watch(self) -> None:
         self.supervisor()
         self.later(self.emit("landed", slug="x"), self.emit("ended", outcome="empty"))
-        self.assertEqual(self.watch("flight", "big"), 1)
+        self.assertEqual(self.watch("flight", "big"), ENDED_FIRST)
         self.assertEqual(len(self.out), 3)
 
     def test_a_killed_supervisor_fails_the_watch(self) -> None:
         proc = self.supervisor("groom.lock")
         self.later(proc.kill)
-        self.assertEqual(self.watch("landed"), 1)
+        self.assertEqual(self.watch("landed"), ENDED_FIRST)
 
     def test_no_supervisor_fails_the_watch_at_once(self) -> None:
-        self.assertEqual(self.watch("landed"), 2)
+        self.assertEqual(self.watch("landed"), NOT_RUNNING)
         gone = subprocess.Popen(["true"])
         gone.wait()
         other = subprocess.Popen(["sleep", "60"])
@@ -2118,13 +2119,13 @@ class WatchTest(unittest.TestCase):
         for pid in (gone.pid, other.pid, os.getpid()):
             with self.subTest(pid=pid):
                 (self.repo / ".pair" / "run.lock").write_text(f"{pid}\n")
-                self.assertEqual(self.watch("landed"), 2)
+                self.assertEqual(self.watch("landed"), NOT_RUNNING)
 
     def test_events_from_before_the_watch_are_not_read(self) -> None:
         self.supervisor()
         append_event(self.repo, "pair", "landed", "x")
         self.later(self.emit("ended", outcome="empty"))
-        self.assertEqual(self.watch("landed"), 1)
+        self.assertEqual(self.watch("landed"), ENDED_FIRST)
 
     def test_a_line_written_in_two_pieces_is_read_once_whole(self) -> None:
         self.supervisor()

@@ -2,9 +2,11 @@
 
 A watcher watches the supervisors that hold a lock in `.pair/` when it starts:
 the loop working Issues (`run.lock`) and a grooming pass (`groom.lock`). It
-never outlives them. It exits 0 when its condition is met, 1 when every
-supervisor it watches has ended first, logged or killed, and 2 at once when
-none is running.
+never outlives them. It exits 0 when its condition is met, `ENDED_FIRST`
+(12) when every supervisor it watches has ended first, logged or killed, and
+`NOT_RUNNING` (13) at once when none is running. Neither is 1, which Python
+gives an uncaught exception, or 2, which `argparse` gives a usage error, nor a
+code `pair.py` gives another outcome.
 """
 
 from __future__ import annotations
@@ -29,6 +31,10 @@ WAITING = frozenset({"desk-check", "paused"})
 `run` ends with `desk-check` at once, logging nothing else, when the Issue
 underway already waits on its desk check."""
 CONDITIONS = ("landed", "developer", "flight")
+ENDED_FIRST = 12
+"""The exit code when every supervisor watched ended without meeting the condition."""
+NOT_RUNNING = 13
+"""The exit code when no supervisor is running to watch."""
 
 
 def running(pid: int) -> bool:
@@ -128,7 +134,7 @@ def watch(
     }
     if not watched:
         out("no pair loop or grooming pass is running")
-        return 2
+        return NOT_RUNNING
     tail = Tail(event_log(repo))
     while True:
         watched = {loop: pid for loop, pid in watched.items() if running(pid)}
@@ -140,5 +146,5 @@ def watch(
                 watched.pop(event.get("loop"), None)
         if not watched:
             out("the loop ended without meeting the condition")
-            return 1
+            return ENDED_FIRST
         time.sleep(poll)

@@ -219,7 +219,10 @@ driving the loop reads the code instead of the line.
 | 9 | `refused` | `--flight` names a Flight that cannot be run from here |
 | 10 | `none` | there is no desk check to answer |
 | 11 | | another loop or grooming pass holds the lock |
+| 12 | | `just pair-watch`: every loop it watched ended without meeting its condition |
+| 13 | | `just pair-watch`: no loop or grooming pass is running |
 
+`just pair-watch` exits 0, 12 or 13; see [The event log](#the-event-log).
 1 is a crash (an uncaught exception) and 2 a usage error.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
@@ -260,8 +263,8 @@ starts, one line apiece, and exits 0 when its condition is met: `landed`,
 `developer` (`desk-check`, `paused`, `sent-back`, or an `ended` whose outcome
 is `desk-check` or `paused`), or `flight <slug>` (a `desk-check` event for
 that Flight). It watches the supervisors whose pid is in `run.lock` or
-`groom.lock` when it starts. It exits 1 once each of them has logged
-`ended` or died without a match, and 2 at once if none is running. A watcher
+`groom.lock` when it starts. It exits 12 once each of them has logged
+`ended` or died without a match, and 13 at once if none is running. A watcher
 therefore never outlives the loop it watches. Answering a Flight's desk check
 with `just pair-accept <slug>` or `just pair-resume <slug>` holds no lock and
 logs nothing.
