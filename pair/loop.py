@@ -439,10 +439,33 @@ class Loop:
         outcome = self.merge(st, force_gate=changed)
         if outcome:
             return outcome
-        failure = st.note
-        self.move(st, "in-progress")
-        st.note = failure
+        self.leave_desk_check(st, st.note)
         return self.work(st)
+
+    def leave_desk_check(self, st: State, why: str) -> None:
+        """Send an Issue that left its desk check without landing back to the pair.
+
+        A `developer` Issue goes back to `in-progress`, and a Flight to its
+        Flight check in `underway/`; no turn runs in `desk-check`. The note
+        says so, followed by `why`, and by the developer's edits if there are
+        any. Those are absorbed before the move, because `move` resets
+        `st.head`, and a conflict the developer resolved and committed would
+        then no longer read as theirs.
+        """
+        absorbed = self.absorb_developer(st)
+        to = FLIGHT_CHECK if board.children(self.wt, "HEAD", st.slug) else "in-progress"
+        self.move(st, to, into=home(to))
+        parts = [
+            f"This came back from its desk check to {home(to)}/ without landing.",
+            why,
+        ]
+        if absorbed:
+            parts.append(
+                "The developer changed things since the last turn; "
+                "see the changes below."
+            )
+        st.note = "\n\n".join(part for part in parts if part)
+        self.save(st)
 
     def resume(self, slug: str | None = None) -> str:
         """The developer fails the desk check: their notes go back to the pair.
@@ -627,6 +650,8 @@ class Loop:
                 return self.kick_back(st, None)
             elif st.retry == GROOMING:
                 st.turn = 0
+            if st.stage == "desk-check":
+                self.leave_desk_check(st, st.paused or "")
             st.retry = st.paused = None
             while True:
                 if self.stop_requested:
@@ -1005,13 +1030,19 @@ class Loop:
             )
         return self.merge(st)
 
-    def move(self, st: State, to: str) -> None:
-        (self.wt / board.ISSUES / to).mkdir(parents=True, exist_ok=True)
+    def move(self, st: State, to: str, into: str | None = None) -> None:
+        """Move the issue to stage `to`, its file to `issues/<into>/` (`to` by default).
+
+        The directory is not `home(to)`, because a Flight that `retirement`
+        sends to `backlog` goes to `backlog/` itself.
+        """
+        into = into or to
+        (self.wt / board.ISSUES / into).mkdir(parents=True, exist_ok=True)
         git(
             self.wt,
             "mv",
             f"{board.ISSUES}/{home(st.stage)}/{st.slug}.md",
-            f"{board.ISSUES}/{to}/{st.slug}.md",
+            f"{board.ISSUES}/{into}/{st.slug}.md",
         )
         git(
             self.wt,

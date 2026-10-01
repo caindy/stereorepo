@@ -569,6 +569,74 @@ class LoopTest(unittest.TestCase):
         self.assertIn("desk check", b.sent[-1][1])
         self.assertIn("make it red", b.sent[-1][1])
 
+    def test_an_accept_whose_gate_fails_goes_back_to_in_progress(self) -> None:
+        b = self.b
+        b.issue("backlog", "h", "Developer", difficulty="developer")
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("h", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "x")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(), "desk-check")
+        (b.repo / "b.txt").write_text("elsewhere")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "main moves")
+        b.gates = [False]
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.accept(), "stopped")
+        self.assertEqual(b.state().stage, "in-progress")
+        self.assertEqual(board.locations(b.loop.wt, "h"), ["in-progress"])
+        self.assertIn("Implement issues/in-progress/h.md", b.sent[-1][1])
+        self.assertIn("without landing", b.sent[-1][1])
+        self.assertIn("FAILED: test_widget", b.sent[-1][1])
+
+    def accept_that_conflicts(self) -> None:
+        """Bring a developer Issue to its desk check, then accept it into a conflict."""
+        b = self.b
+        b.issue("backlog", "h", "Developer", difficulty="developer")
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("h", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "x")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(), "desk-check")
+        (b.repo / "a.txt").write_text("y")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "developer's a.txt")
+        self.assertEqual(b.loop.accept(), "paused")
+        st = b.state()
+        self.assertEqual((st.stage, st.retry), ("desk-check", None))
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+
+    def test_an_accept_that_conflicts_goes_back_to_in_progress(self) -> None:
+        b = self.b
+        self.accept_that_conflicts()
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertEqual(b.state().stage, "in-progress")
+        self.assertEqual(board.locations(b.loop.wt, "h"), ["in-progress"])
+        self.assertIn("Implement issues/in-progress/h.md", b.sent[-1][1])
+        self.assertIn("conflicts with main", b.sent[-1][1])
+        self.assertNotIn("The developer changed things", b.sent[-1][1])
+
+    def test_a_resolved_conflict_reaches_the_pair_as_the_developers(self) -> None:
+        b = self.b
+        self.accept_that_conflicts()
+        b.developer_between[len(b.sent)] = write("a.txt", "resolved")
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertEqual(b.state().stage, "in-progress")
+        self.assertIn("conflicts with main", b.sent[-1][1])
+        self.assertIn("The developer changed things", b.sent[-1][1])
+        log = sh(b.loop.wt, "log", "--format=%s", "-3")
+        self.assertIn("developer: edits on h", log)
+
     def test_a_hard_issue_is_split_into_backlog_children(self) -> None:
         b = self.b
         b.issue("backlog", "big", "Big")
@@ -780,6 +848,32 @@ class FlightCheckTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertTrue(b.on_main("issues/desk-check/big.md"))
         self.assertFalse(b.on_main("issues/done/big.md"))
+
+    def test_a_flight_overtaken_and_conflicting_goes_back_to_its_check(
+        self,
+    ) -> None:
+        """`main` moves while the Flight lands, and the rebase onto it conflicts.
+
+        `start` lands too, so `before_land` holds a quiet action for it first.
+        """
+        b = self.b
+
+        def main_edits_the_flight(repo: Path) -> None:
+            append("big", "\n## Desk-check brief\n\nSomething else.\n")(repo)
+            sh(repo, "commit", "-q", "-am", "edit big on main")
+
+        b.before_land = [quiet, main_edits_the_flight]
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        self.assertEqual(b.loop.run(once=True), "paused")
+        st = b.state()
+        self.assertEqual((st.stage, st.retry), ("desk-check", None))
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.run(once=True), "stopped")
+        self.assertEqual(b.state().stage, "flight-check")
+        self.assertEqual(board.locations(b.loop.wt, "big"), ["underway"])
+        self.assertIn("Check the Flight issues/underway/big.md", b.sent[-1][1])
+        self.assertIn("conflicts with main", b.sent[-1][1])
 
     def test_a_passing_delivery_is_recorded_in_the_brief(self) -> None:
         b = self.b
