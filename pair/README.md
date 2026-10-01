@@ -187,6 +187,27 @@ In a portfolio, run the same commands through the script, from the portfolio's
 root: `uv run --script <stereorepo>/pair/pair.py run`, `groom`, `status`,
 `accept`, `resume` or `watch`, each with a Flight's slug where it has one.
 
+### Exit codes
+
+`just pair`, `just groom`, `just pair-accept` and `just pair-resume` print
+their outcome as `pair: <outcome>` and exit with its code, so a session
+driving the loop reads the code instead of the line.
+
+| Code | Outcome | Meaning |
+|---|---|---|
+| 0 | `landed`, `groomed`, `accepted`, `resumed` | done; nothing more is needed |
+| 3 | `desk-check` | an Issue or a Flight waits for your desk check |
+| 4 | `paused` | the loop paused; `just pair-status` says why |
+| 5 | `stopped` | the loop stopped after a Ctrl-C |
+| 6 | `kicked` | the Issue was sent back to `backlog/` (`run --once`, `accept` or `resume`; a plain `run` takes up the next Issue instead) |
+| 7 | `empty` | nothing in the backlog (or the Flight) is ripe |
+| 8 | `nothing` | there is nothing to groom |
+| 9 | `refused` | `--flight` names a Flight that cannot be run from here |
+| 10 | `none` | there is no desk check to answer |
+| 11 | | another loop or grooming pass holds the lock |
+
+1 is a crash (an uncaught exception) and 2 a usage error.
+
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
 `state.json` is the Issue underway, `turns.jsonl` has one row per turn with
 tokens and cache reads, `events.jsonl` is the event log below, `<seat>.log` and `<seat>.jsonl` are each seat's

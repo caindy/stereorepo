@@ -26,6 +26,9 @@ runs alongside `run`.
 `watch` prints the events both log to `.pair/events.jsonl` until its
 condition is met, and exits non-zero if the loops it watches end first.
 
+`run`, `groom`, `accept` and `resume` print their outcome as `pair: <outcome>`
+and exit with the code `EXIT` gives it, 0 when nothing more is needed.
+
 In stereorepo itself, `just pair`, `just groom`, `just pair-status`,
 `just pair-accept`, `just pair-resume` and `just pair-watch` run the same.
 """
@@ -49,6 +52,30 @@ from watch import CONDITIONS, watch
 HERE = Path(__file__).resolve().parent
 
 PROMPTS = HERE / "prompts"
+
+EXIT = {
+    "landed": 0,
+    "groomed": 0,
+    "accepted": 0,
+    "resumed": 0,
+    "desk-check": 3,
+    "paused": 4,
+    "stopped": 5,
+    "kicked": 6,
+    "empty": 7,
+    "nothing": 8,
+    "refused": 9,
+    "none": 10,
+}
+"""The exit code of each outcome of `run`, `groom`, `accept` and `resume`.
+
+0 means the command did what it was asked and needs nothing more. No code
+is 1, which Python gives an uncaught exception, or 2, which `argparse`
+gives a usage error.
+"""
+
+LOCKED = 11
+"""The exit code when another process holds the lock the command needs."""
 
 
 def repo_root() -> Path:
@@ -241,14 +268,15 @@ def main() -> int:
     desk = getattr(args, "slug", None)
     if desk:
         answer = loop.accept if args.command == "accept" else loop.resume
-        print(f"pair: {answer(desk)}")
-        return 0
+        outcome = answer(desk)
+        print(f"pair: {outcome}")
+        return EXIT[outcome]
 
     lock = hold_lock(repo, "groom.lock" if kind == "groom" else "run.lock")
     if lock is None:
         doing = "grooming pass" if kind == "groom" else "loop working Issues"
         print(f"another {doing} is running in this repository")
-        return 1
+        return LOCKED
 
     def stop(_sig: int, _frame: object) -> None:
         if loop.stop_requested:
@@ -265,8 +293,9 @@ def main() -> int:
         "accept": loop.accept,
         "resume": loop.resume,
     }[args.command]
-    print(f"pair: {supervise(repo, kind, work)}")
-    return 0
+    outcome = supervise(repo, kind, work)
+    print(f"pair: {outcome}")
+    return EXIT[outcome]
 
 
 def supervise(repo: Path, kind: str, work: Callable[[], str]) -> str:

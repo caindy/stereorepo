@@ -238,17 +238,17 @@ class Loop:
     def pause(
         self, st: State, reason: str, retry: str | None, kind: str = "paused"
     ) -> str:
-        """Pause with `reason`, logged as one event of `kind`.
+        """Pause with `reason`, logged as one event of `kind`, and return `kind`.
 
-        A desk check and a stop are pauses too, logged as `desk-check` and
-        `stopped` rather than also as `paused`.
+        A desk check and a stop are pauses too, logged and returned as
+        `desk-check` and `stopped` rather than as `paused`.
         """
         st.paused, st.retry = reason, retry
         self.save(st)
         self.event(kind, st.slug, reason=reason, retry=retry)
         self.notify(f"{st.slug}: {reason}")
         self.say(f"paused: {reason}")
-        return "paused"
+        return kind
 
     # --- entry points ----------------------------------------------------------
 
@@ -306,7 +306,7 @@ class Loop:
                 )
                 return "desk-check"
             outcome = self.work(st)
-            if outcome in ("paused", "stopped") or once:
+            if outcome in ("paused", "stopped", "desk-check") or once:
                 return outcome
             if flight in board.listed(self.repo, self.main, "desk-check"):
                 self.say(
@@ -630,10 +630,9 @@ class Loop:
             st.retry = st.paused = None
             while True:
                 if self.stop_requested:
-                    self.pause(
+                    return self.pause(
                         st, "stopped by the developer", retry=None, kind="stopped"
                     )
-                    return "stopped"
                 role = st.next_role
                 restarted = st.in_turn == role
                 if not restarted:

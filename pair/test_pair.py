@@ -541,7 +541,7 @@ class LoopTest(unittest.TestCase):
             ("primary", write("a.txt", "x")),
             ("secondary", quiet),
         )
-        self.assertEqual(b.loop.run(), "paused")
+        self.assertEqual(b.loop.run(), "desk-check")
         self.assertEqual(b.loop.run(), "desk-check")
         self.assertFalse(b.on_main("a.txt"))
         self.assertEqual(b.groomer.groom(), "nothing")
@@ -1648,6 +1648,46 @@ class AlongsideTest(unittest.TestCase):
             lock.close()
 
 
+class ExitCodeTest(unittest.TestCase):
+    """`pair.py` exits with a code for each outcome, and 0 only when nothing more is needed."""
+
+    def test_each_outcome_has_its_own_code(self) -> None:
+        from pair import EXIT, LOCKED
+
+        self.assertEqual(
+            set(EXIT),
+            {
+                "landed", "groomed", "accepted", "resumed", "desk-check", "paused",
+                "stopped", "kicked", "empty", "nothing", "refused", "none",
+            },
+        )
+        done = {"landed", "groomed", "accepted", "resumed"}
+        self.assertEqual({EXIT[o] for o in done}, {0})
+        codes = [code for o, code in EXIT.items() if o not in done] + [LOCKED]
+        self.assertEqual(len(codes), len(set(codes)))
+        self.assertTrue(set(codes).isdisjoint({0, 1, 2}))
+
+    def test_the_script_exits_with_its_code(self) -> None:
+        from pair import EXIT, LOCKED, hold_lock
+
+        b = Bench()
+        self.addCleanup(b.close)
+        script = Path(__file__).resolve().parent / "pair.py"
+
+        def exits(*args: str) -> int:
+            return subprocess.run(
+                [sys.executable, str(script), *args], cwd=b.repo, capture_output=True
+            ).returncode
+
+        self.assertEqual(exits("accept"), EXIT["none"])
+        self.assertEqual(exits("resume"), EXIT["none"])
+        self.assertEqual(exits("accept", "nosuch"), EXIT["none"])
+        lock = hold_lock(b.repo, "run.lock")
+        assert lock is not None
+        self.addCleanup(lock.close)
+        self.assertEqual(exits("accept"), LOCKED)
+
+
 class EventLogTest(unittest.TestCase):
     """`.pair/events.jsonl`: one event for each transition, written once."""
 
@@ -1687,7 +1727,7 @@ class EventLogTest(unittest.TestCase):
         b = self.b
         b.issue("backlog", "h", "Developer", difficulty="developer")
         b.script(*easy_turns("h"))
-        self.assertEqual(b.loop.run(), "paused")
+        self.assertEqual(b.loop.run(), "desk-check")
         self.assertEqual(
             self.kinds()[-2:], [("pair", "moved", "h"), ("pair", "desk-check", "h")]
         )
