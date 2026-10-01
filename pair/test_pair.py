@@ -355,6 +355,45 @@ class LoopTest(unittest.TestCase):
         self.assertIn("FAILED: test_widget", b.sent[6][1])
         self.assertEqual(b.gate_runs, 2)
 
+    def test_a_failed_gate_goes_to_the_primary_even_when_it_went_quiet_last(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.gates = [False, True]
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("x", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "1")),
+            ("secondary", write("a.txt", "2")),
+            ("primary", quiet),
+            ("primary", write("a.txt", "3")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.sent[7][0], "primary")
+        self.assertIn("FAILED: test_widget", b.sent[7][1])
+        self.assertEqual(b.gate_runs, 2)
+
+    def test_an_unmet_requirement_other_than_the_gate_goes_to_the_other_seat(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X")
+        b.stop_when_empty = True
+        b.script(
+            ("primary", append("x", "\nOne.\n")),
+            ("secondary", append("x", "\nTwo.\n")),
+            ("primary", quiet),
+        )
+        b.loop.run()
+        st = b.state()
+        self.assertEqual(st.stage, "backlog")
+        self.assertEqual(st.next_role, "secondary")
+        self.assertIn("set `difficulty:`", st.note)
+
     def test_needs_elaboration_sends_the_issue_to_backlog_and_drops_the_code(
         self,
     ) -> None:
@@ -948,6 +987,22 @@ class FlightCheckTest(unittest.TestCase):
         self.assertEqual(b.deliver_runs, 1)
         self.assertNotIn("Delivered by", sh(b.repo, "show", f"main:{FLIGHT}"))
 
+    def test_a_failed_gate_in_a_flight_check_goes_to_the_primary(self) -> None:
+        b = self.b
+        b.gates = [False]
+        b.stop_when_empty = True
+        b.script(
+            ("primary", append("big", BRIEF)),
+            ("secondary", append("big", "\nMore.\n")),
+            ("primary", quiet),
+            ("primary", quiet),
+            ("secondary", quiet),
+        )
+        b.loop.run(once=True)
+        self.assertEqual(b.sent[3][0], "primary")
+        self.assertIn("FAILED: test_widget", b.sent[3][1])
+        self.assertTrue(b.on_main("issues/desk-check/big.md"))
+
     def test_a_flight_paused_while_landing_still_lands_at_its_desk_check(
         self,
     ) -> None:
@@ -1390,6 +1445,25 @@ class GroomingTest(unittest.TestCase):
         self.assertIsNone(b.groomer.load())
         self.assertEqual(b.groomer.groom(), "nothing")
         self.assertEqual(len(b.sent), 2)
+
+    def test_a_failed_gate_in_a_pass_goes_to_the_primary(self) -> None:
+        b = self.b
+        b.issue("backlog", "a", "A")
+        b.gates = [False]
+        b.script(
+            (
+                "primary",
+                both(front("a", difficulty="easy"), order("# groomed below\na\n")),
+            ),
+            ("secondary", append("a", "\nMore.\n")),
+            ("primary", quiet),
+            ("primary", quiet),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertEqual(b.sent[3][0], "primary")
+        self.assertIn("FAILED: test_widget", b.sent[3][1])
+        self.assertEqual(b.gate_runs, 2)
 
     def test_nothing_to_groom_sends_no_turn(self) -> None:
         b = self.b

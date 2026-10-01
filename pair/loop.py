@@ -160,6 +160,15 @@ def other(role: str) -> str:
     return ROLES[1 - ROLES.index(role)]
 
 
+class GateFailure(str):
+    """An unmet requirement that is a failed gate, which the primary seat repairs."""
+
+
+def gate_fails(out: str) -> GateFailure:
+    """The requirement a failed gate leaves, with the tail of its output."""
+    return GateFailure(f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```")
+
+
 def home(stage: str) -> str:
     """The directory under `issues/` that holds an issue in `stage`.
 
@@ -914,6 +923,8 @@ class Loop:
                 "Both of you left this stage as it stands, "
                 f"but it is not finished yet: {missing}"
             )
+            if isinstance(missing, GateFailure):
+                st.next_role = "primary"
         difficulty = "medium" if issue is None else issue.difficulty
         cap = self.round_cap or ROUND_CAP.get(difficulty, ROUND_CAP[None])
         if st.turn >= 2 * cap and grooming:
@@ -942,7 +953,7 @@ class Loop:
                     f"- {fault}" for fault in faults
                 )
             ok, out = self.gate(self.wt)
-            return None if ok else f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```"
+            return None if ok else gate_fails(out)
         if st.stage == "backlog":
             if issue.difficulty is None:
                 return (
@@ -972,11 +983,7 @@ class Loop:
             if self.rebase(st) is None:
                 return "paused"
             ok, out = self.gate(self.wt)
-            return (
-                None
-                if ok
-                else f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```"
-            )
+            return None if ok else gate_fails(out)
         return None
 
     def flight_checked(self, st: State, issue: board.Issue) -> str | None:
@@ -1004,7 +1011,7 @@ class Loop:
             if missing:
                 return missing
             ok, out = self.gate(self.wt)
-            return None if ok else f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```"
+            return None if ok else gate_fails(out)
         briefs = board.sections(issue.body, BRIEF)
         if not gaps and briefs <= (board.sections(was.body, BRIEF) if was else 0):
             return (
@@ -1014,7 +1021,7 @@ class Loop:
                 f"`## {BRIEF}` section to {issue.path}."
             )
         ok, out = self.gate(self.wt)
-        return None if ok else f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```"
+        return None if ok else gate_fails(out)
 
     def owed_children(
         self, st: State, issue: board.Issue, was: board.Issue, gaps: list[str]
@@ -1201,7 +1208,7 @@ class Loop:
                         )
                     st.approvals, st.note = (
                         [],
-                        f"`just gate` fails:\n```\n{out[-GATE_TAIL:]}\n```",
+                        gate_fails(out),
                     )
                     self.save(st)
                     return None

@@ -52,7 +52,9 @@ Issue will be known done in behaviour and tests, never as a gate
    | `desk-check/` | `just pair-accept` | landing; `just pair-resume` sends it back to `in-progress/`, as does an accept whose gate fails or whose rebase conflicts. No turn runs in this stage. A Flight here holds nothing: see below |
 
    If the requirement does not hold, acceptance is cleared and the next turn is
-   told what is missing, with the gate's output where the gate failed.
+   told what is missing. Where the gate failed, that turn goes to the primary
+   seat with the gate's output, whichever seat went quiet last; otherwise it
+   goes to the seat that did not take the settling turn.
 3. **Sending back.** An Issue file that gains a `Needs elaboration` section, or
    a stage that runs past its round cap, sends the Issue to `issues/backlog/` on
    `main` with that section, without its code. It sits out of the running order
