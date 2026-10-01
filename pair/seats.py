@@ -4,7 +4,16 @@ A seat adapter hides how a harness is held. The loop only calls `send` and
 `stop`, and reads `session_id` so that a crashed or stopped seat can be
 resumed. `ClaudeSeat` holds Claude Code headless: one `claude -p` process in
 stream-json mode for the whole issue, one user message per turn, and the turn
-ends at the `result` event.
+ends at the first `result` event that leaves no background task outstanding.
+
+A background task is a command, subagent or monitor that the session runs while
+its turn goes on. Claude Code reports one with a `system` event of subtype
+`task_started` and, once the task has finished or been stopped, one of subtype
+`task_notification`, both carrying its `task_id` (read from the seats' logs on
+2026-10-01; not a documented contract). A task that finishes after its turn's
+`result` wakes the session, which runs a turn of its own and ends it with
+another `result`. Ending the turn at the first `result` let that later turn
+edit the worktree after the loop had judged and committed the turn.
 """
 
 from __future__ import annotations
@@ -47,6 +56,13 @@ DISALLOWED = [
     "Bash(git stash*)",
 ]
 """The git commands the loop owns, refused even inside a compound command."""
+
+SETTLE = (
+    "Your turn ends only when these background tasks have finished or been"
+    " stopped:\n\n{tasks}\n\n"
+    "Wait for any you still need, and stop any you do not with `TaskStop`."
+)
+"""The message sent, once per turn, when a turn's `result` leaves background tasks running."""
 
 
 @dataclass
@@ -348,7 +364,10 @@ class ClaudeSeat:
         log_dir.mkdir(parents=True, exist_ok=True)
         (log_dir / f"{role}.pid").write_text(f"{self.proc.pid}\n")
         self.lines: queue.Queue[str | None] = queue.Queue()
-        threading.Thread(target=self._pump, daemon=True).start()
+        self.tasks: dict[str, str] = {}
+        """Each background task started and not yet reported, by id, with its description."""
+        self.pump = threading.Thread(target=self._pump, daemon=True)
+        self.pump.start()
 
     def _pump(self) -> None:
         assert self.proc.stdout is not None
@@ -365,8 +384,8 @@ class ClaudeSeat:
             with (self.log_dir / f"{self.role}.log").open("a") as log:
                 log.write(readable + "\n")
 
-    def send(self, text: str) -> TurnResult:
-        started = time.monotonic()
+    def _write(self, text: str) -> str | None:
+        """Log and send one user message; the error if the process is gone."""
         message = {
             "type": "user",
             "message": {"role": "user", "content": [{"type": "text", "text": text}]},
@@ -377,56 +396,121 @@ class ClaudeSeat:
             self.proc.stdin.write(json.dumps(message) + "\n")
             self.proc.stdin.flush()
         except (BrokenPipeError, OSError) as exc:
-            return TurnResult(
-                False, error=f"seat process is gone: {exc}", session_id=self.session_id
-            )
+            return f"seat process is gone: {exc}"
+        return None
+
+    def _take(self, line: str) -> dict[str, Any] | None:
+        """Log one line of output and note its session and tasks; the event, if it parses."""
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            return None
+        self._log(event)
+        session = event.get("session_id")
+        if session and session != self.session_id:
+            self.session_id = session
+            (self.log_dir / f"{self.role}.session").write_text(f"{session}\n")
+        task = event.get("task_id")
+        if event.get("type") == "system" and task:
+            if event.get("subtype") == "task_started":
+                self.tasks[task] = str(event.get("description") or "")
+            elif event.get("subtype") == "task_notification":
+                self.tasks.pop(task, None)
+        return event
+
+    def _exited(self, started: float) -> TurnResult:
+        err = self.proc.stderr.read() if self.proc.stderr else ""
+        return TurnResult(
+            False,
+            error=f"seat exited mid-turn: {err.strip()[-2000:]}",
+            session_id=self.session_id,
+            seconds=time.monotonic() - started,
+        )
+
+    def send(self, text: str) -> TurnResult:
+        """Send `text` as a turn, and wait until the session is idle.
+
+        Output already waiting is logged and dropped first, because a
+        `result` there answers no message of this turn. The turn then ends at
+        a `result` that leaves no background task outstanding. The first
+        `result` that leaves some outstanding is answered, once, with
+        `SETTLE`, so that the seat can stop a task it no longer needs rather
+        than hold the turn open until the timeout. `usage` is summed over
+        every `result` of the turn; the rest of the outcome is the last
+        `result`'s.
+        """
+        started = time.monotonic()
+        while True:
+            try:
+                line = self.lines.get_nowait()
+            except queue.Empty:
+                break
+            if line is None:
+                return self._exited(started)
+            self._take(line)
+        gone = self._write(text)
+        if gone:
+            return TurnResult(False, error=gone, session_id=self.session_id)
+        usage: dict[str, Any] = {}
+        settling = False
         while True:
             left = self.timeout - (time.monotonic() - started)
             try:
                 line = self.lines.get(timeout=max(left, 0.1))
             except queue.Empty:
                 self.stop()
+                running = ", ".join(self.tasks)
                 return TurnResult(
                     False,
-                    error=f"turn timed out after {self.timeout:.0f}s",
+                    error=f"turn timed out after {self.timeout:.0f}s"
+                    + (f"; background tasks still running: {running}" if running else ""),
                     session_id=self.session_id,
                     seconds=time.monotonic() - started,
                 )
             if line is None:
-                err = self.proc.stderr.read() if self.proc.stderr else ""
-                return TurnResult(
-                    False,
-                    error=f"seat exited mid-turn: {err.strip()[-2000:]}",
-                    session_id=self.session_id,
-                    seconds=time.monotonic() - started,
-                )
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
+                return self._exited(started)
+            event = self._take(line)
+            if event is None or event.get("type") != "result":
                 continue
-            self._log(event)
-            session = event.get("session_id")
-            if session and session != self.session_id:
-                self.session_id = session
-                (self.log_dir / f"{self.role}.session").write_text(f"{session}\n")
-            if event.get("type") == "result":
-                error = (
-                    str(event.get("result") or event.get("subtype"))
-                    if event.get("is_error")
-                    else None
-                )
-                return TurnResult(
-                    ok=error is None,
-                    text=str(event.get("result") or ""),
-                    session_id=self.session_id,
-                    usage=event.get("usage") or {},
-                    cost_usd=event.get("total_cost_usd"),
-                    seconds=time.monotonic() - started,
-                    error=error,
-                    refused=is_refusal(error),
-                )
+            for key, value in (event.get("usage") or {}).items():
+                if isinstance(value, int | float) and not isinstance(value, bool):
+                    usage[key] = usage.get(key, 0) + value
+                else:
+                    usage[key] = value
+            if self.tasks:
+                if not settling:
+                    settling = True
+                    self._write(SETTLE.format(tasks=self._outstanding()))
+                continue
+            error = (
+                str(event.get("result") or event.get("subtype"))
+                if event.get("is_error")
+                else None
+            )
+            return TurnResult(
+                ok=error is None,
+                text=str(event.get("result") or ""),
+                session_id=self.session_id,
+                usage=usage,
+                cost_usd=event.get("total_cost_usd"),
+                seconds=time.monotonic() - started,
+                error=error,
+                refused=is_refusal(error),
+            )
+
+    def _outstanding(self) -> str:
+        """The outstanding background tasks, one Markdown list item each."""
+        return "\n".join(
+            f"- `{task}`: {description}" if description else f"- `{task}`"
+            for task, description in self.tasks.items()
+        )
 
     def stop(self) -> None:
+        """End the process, then close its output pipes.
+
+        A child the seat left running can hold stdout open after the seat has
+        exited. Stdout is then left to the reader thread, not closed under it.
+        """
         if self.proc.poll() is None:
             try:
                 assert self.proc.stdin is not None
@@ -434,6 +518,12 @@ class ClaudeSeat:
                 self.proc.wait(timeout=10)
             except (OSError, subprocess.TimeoutExpired):
                 self.proc.kill()
+                self.proc.wait()
+        self.pump.join(timeout=5)
+        if not self.pump.is_alive() and self.proc.stdout:
+            self.proc.stdout.close()
+        if self.proc.stderr:
+            self.proc.stderr.close()
 
 
 def _readable(event: dict[str, Any]) -> str:
@@ -456,10 +546,14 @@ def _readable(event: dict[str, Any]) -> str:
                 )
                 parts.append(f"[{block.get('name')}] {str(hint)[:200]}")
         return "\n".join(parts)
+    if kind == "system" and event.get("subtype") == "task_started":
+        return f"[task {event.get('task_id')} started] {event.get('description', '')}"
+    if kind == "system" and event.get("subtype") == "task_notification":
+        return f"[task {event.get('task_id')} {event.get('status') or 'ended'}]"
     if kind == "result":
         usage = event.get("usage") or {}
         return (
-            f"<<< turn ended ({event.get('subtype')}); "
+            f"<<< result ({event.get('subtype')}); "
             f"cache read {usage.get('cache_read_input_tokens')}, "
             f"cache write {usage.get('cache_creation_input_tokens')}, "
             f"out {usage.get('output_tokens')}"

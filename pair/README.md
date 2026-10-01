@@ -25,7 +25,11 @@ that cannot happen.
 
 Each turn, a seat is told the Issue file, what the current stage is for
 (`prompts/stage-*.md`), and what changed since its last turn. The primary seat
-takes the first turn in each stage. After every turn the loop commits whatever
+takes the first turn in each stage. A turn ends when the seat's session is
+idle: its last `result` is in and no background task it started is still
+running, so a gate a seat runs in the background belongs to the turn that
+started it. A seat whose turn would end with such a task running is asked,
+once, to wait for it or stop it. After every turn the loop commits whatever
 the seat left uncommitted, with a `Seat:` trailer. An implementing seat runs
 only the gate of each Project its change touches: `just gate meta` always, and
 `just gate pair` when it changes `pair/`, for example

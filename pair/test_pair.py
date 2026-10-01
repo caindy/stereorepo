@@ -29,6 +29,7 @@ from loop import Loop, State, append_event, event_log, status, status_json, stat
 from seats import (
     ALLOWED,
     DISALLOWED,
+    ClaudeSeat,
     Confinement,
     TurnResult,
     command,
@@ -3359,6 +3360,137 @@ class ConfinementTest(unittest.TestCase):
             self.assertTrue(self.denied(gnupg / name, confined.deny), name)
         for name in ("S.gpg-agent", "trustdb.gpg.lock", ".#lk0x1.host.1"):
             self.assertFalse(self.denied(gnupg / name, confined.deny), name)
+
+
+STAND_IN = """\
+import json, os, sys, time
+from pathlib import Path
+
+script = json.loads(Path(os.environ["STAND_IN_SCRIPT"]).read_text())
+
+
+def play(steps):
+    for step in steps:
+        if "sleep" in step:
+            time.sleep(step["sleep"])
+        elif "write" in step:
+            Path(step["write"]).write_text("late\\n")
+        else:
+            print(json.dumps(step["emit"]), flush=True)
+
+
+play(script["start"])
+turns = iter(script["turns"])
+for _line in sys.stdin:
+    play(next(turns, []))
+"""
+"""A `claude` that plays scripted stream-json: `start` at once, then one list of steps per message."""
+
+
+def task(subtype: str, task_id: str, description: str = "") -> dict[str, object]:
+    return {"emit": {"type": "system", "subtype": subtype, "task_id": task_id,
+                     "description": description, "session_id": "s1"}}
+
+
+def result(text: str, output: int = 1) -> dict[str, object]:
+    return {"emit": {"type": "result", "subtype": "success", "is_error": False,
+                     "result": text, "session_id": "s1", "total_cost_usd": 0.5,
+                     "usage": {"input_tokens": 1, "output_tokens": output}}}
+
+
+class ClaudeSeatTest(unittest.TestCase):
+    """`ClaudeSeat.send` returns only when the session is idle, against a stand-in `claude`."""
+
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp()).resolve()
+        self.addCleanup(subprocess.run, ["rm", "-rf", str(self.tmp)], check=True)
+        repo = self.tmp / "repo"
+        repo.mkdir()
+        sh(repo, "init", "-q", "-b", "main")
+        sh(repo, "config", "user.email", "t@example.com")
+        sh(repo, "config", "user.name", "t")
+        sh(repo, "config", "commit.gpgsign", "false")
+        sh(repo, "commit", "-q", "--allow-empty", "-m", "a")
+        self.wt = self.tmp / "wt"
+        sh(repo, "worktree", "add", "-q", "-b", "pair/x", str(self.wt))
+        bin_dir = self.tmp / "bin"
+        bin_dir.mkdir()
+        claude = bin_dir / "claude"
+        claude.write_text(f"#!{sys.executable}\n{STAND_IN}")
+        claude.chmod(0o755)
+        self.script = self.tmp / "script.json"
+        self.log = self.tmp / "log"
+        path = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
+        patched = mock.patch.dict(
+            os.environ, {"PATH": path, "STAND_IN_SCRIPT": str(self.script)}
+        )
+        patched.start()
+        self.addCleanup(patched.stop)
+
+    def seat(self, start: list[object], *turns: list[object], timeout: float = 30) -> ClaudeSeat:
+        self.script.write_text(json.dumps({"start": start, "turns": list(turns)}))
+        seat = ClaudeSeat("primary", self.wt, "p", self.log, timeout=timeout)
+        self.addCleanup(seat.stop)
+        return seat
+
+    def logged(self) -> list[dict[str, Any]]:
+        lines = (self.log / "primary.jsonl").read_text().splitlines()
+        return [json.loads(line) for line in lines]
+
+    def test_a_background_task_holds_the_turn_until_the_session_is_idle(self) -> None:
+        seat = self.seat(
+            [],
+            [
+                task("task_started", "t1", "Run the pair gate"),
+                result("first", output=2),
+                {"sleep": 0.3},
+                task("task_notification", "t1"),
+                {"write": "late.txt"},
+                result("second", output=3),
+            ],
+        )
+        turn = seat.send("go")
+        self.assertTrue(turn.ok, turn.error)
+        self.assertEqual(turn.text, "second")
+        self.assertTrue((self.wt / "late.txt").exists())
+        self.assertEqual(turn.usage, {"input_tokens": 2, "output_tokens": 5})
+        self.assertEqual(seat.tasks, {})
+        kinds = [(e["type"], e.get("result") or e.get("text", "")) for e in self.logged()]
+        sent = [text for kind, text in kinds if kind == "pair/sent"]
+        self.assertEqual(len(sent), 2)
+        self.assertIn("`t1`: Run the pair gate", sent[1])
+        self.assertLess(kinds.index(("result", "first")), kinds.index(("pair/sent", sent[1])))
+        readable = (self.log / "primary.log").read_text()
+        self.assertIn("[task t1 started] Run the pair gate", readable)
+        self.assertIn("[task t1 ended]", readable)
+
+    def test_a_result_waiting_before_the_message_is_not_the_turns(self) -> None:
+        seat = self.seat([result("stale")], [result("answer")])
+        deadline = time.monotonic() + 10
+        while seat.lines.empty() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        turn = seat.send("go")
+        self.assertEqual(turn.text, "answer")
+        kinds = [e["type"] for e in self.logged()]
+        self.assertEqual(kinds, ["result", "pair/sent", "result"])
+
+    def test_a_task_started_in_waiting_output_still_holds_the_turn(self) -> None:
+        seat = self.seat(
+            [task("task_started", "t2"), result("stale")],
+            [result("early"), task("task_notification", "t2"), result("answer")],
+        )
+        deadline = time.monotonic() + 10
+        while seat.lines.qsize() < 2 and time.monotonic() < deadline:
+            time.sleep(0.01)
+        turn = seat.send("go")
+        self.assertEqual(turn.text, "answer")
+
+    def test_a_task_that_never_finishes_times_the_turn_out(self) -> None:
+        seat = self.seat([], [task("task_started", "t9", "Serve"), result("done")], timeout=1)
+        turn = seat.send("go")
+        self.assertFalse(turn.ok)
+        self.assertIn("t9", turn.error or "")
+        self.assertIsNotNone(seat.proc.poll())
 
 
 if __name__ == "__main__":
