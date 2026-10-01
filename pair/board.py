@@ -274,24 +274,37 @@ def backlog_parents(kin: dict[str, dict[str, str]]) -> dict[str, str]:
     }
 
 
-def running_order(repo: Path, ref: str) -> list[str]:
-    """Every backlog slug at `ref`, in the order the loop reaches it.
+@dataclass
+class Node:
+    """One entry of the running order: a backlog slug and, for a Flight, its backlog parts in run order."""
+
+    slug: str
+    parts: list[Node] = field(default_factory=list)
+
+    def flat(self) -> list[str]:
+        """The slugs this entry runs, in order: each part's, then its own."""
+        return [x for part in self.parts for x in part.flat()] + [self.slug]
+
+
+def running_tree(
+    repo: Path, ref: str, kin: dict[str, dict[str, str]] | None = None
+) -> list[Node]:
+    """The backlog at `ref` as the loop reaches it: top-level entries, each Flight holding its parts.
 
     The top-level slugs, those `ORDER` names first to last and then the rest in
-    filename order, each stand for themselves or for a Flight. A Flight expands
-    in place into its backlog parts, each part after any sibling its
-    `waits_on` names and otherwise in filename order, a part that is a Flight
-    expanded the same way, and then the Flight itself. A `waits_on` cycle among
-    siblings falls back to filename order.
+    filename order, each stand for themselves or for a Flight. A Flight holds
+    its backlog parts, each part after any sibling its `waits_on` names and
+    otherwise in filename order, a part that is a Flight holding its own the
+    same way. A `waits_on` cycle among siblings falls back to filename order.
     """
-    kin = families(repo, ref)
+    kin = families(repo, ref) if kin is None else kin
     backlog = listed(repo, ref, "backlog")
     inner = parts(backlog_parents(kin), backlog)
     top = [s for s in dict.fromkeys(order(repo, ref)) if s in backlog and s not in inner]
     top += [s for s in backlog if s not in top and s not in inner]
     seen: set[str] = set()
 
-    def expand(slug: str) -> list[str]:
+    def expand(slug: str) -> Node:
         seen.add(slug)
         kids = sorted(
             c for c, stage in kin.get(slug, {}).items() if stage == "backlog" and c not in seen
@@ -308,9 +321,41 @@ def running_order(repo: Path, ref: str) -> list[str]:
             )
             kids.remove(kid)
             placed.append(kid)
-        return [x for kid in placed if kid not in seen for x in expand(kid)] + [slug]
+        return Node(slug, [expand(kid) for kid in placed if kid not in seen])
 
-    return [x for slug in top for x in expand(slug)]
+    return [expand(slug) for slug in top]
+
+
+def running_order(repo: Path, ref: str) -> list[str]:
+    """Every backlog slug at `ref`, in the order the loop reaches it.
+
+    `running_tree` flattened: a Flight runs its parts in place, and then itself.
+    """
+    return [x for node in running_tree(repo, ref) for x in node.flat()]
+
+
+def holds(
+    repo: Path, ref: str, slug: str, done: Collection[str], kin: dict[str, dict[str, str]]
+) -> list[str]:
+    """What holds a backlog item at `ref` back; an empty list means it is ripe.
+
+    An item is held by a `Needs elaboration` section, which marks a send-back
+    the developer has yet to answer (`elaboration`); by each `waits_on`
+    not in `done`; and by each Issue naming it in `parent:` that is not in
+    `done/` (`part <slug>`). `done` and `kin` (from `families`) are passed in
+    so that a caller asking about many items reads the board once.
+    """
+    issue = at_ref(repo, ref, "backlog", slug)
+    if issue is None:
+        return ["not in backlog/"]
+    held = ["elaboration"] if needs_elaboration(issue.body) else []
+    held += [
+        w
+        for w in (w.split(":")[-1] for w in as_list(issue.front.get("waits_on")))
+        if w not in done
+    ]
+    held += [f"part {kid}" for kid, stage in sorted(kin.get(slug, {}).items()) if stage != "done"]
+    return held
 
 
 def next_ripe(
@@ -322,35 +367,21 @@ def next_ripe(
     """The backlog item at `ref` the loop takes next: a ripe Flight, else the first ripe item.
 
     The items are taken in `running_order`, so a Flight's parts run where its
-    line in `ORDER` is. An item is ripe when its `waits_on` are all done,
-    every Issue naming it in `parent:` is done, and it has no `Needs
-    elaboration` section, which marks a send-back the developer has yet to
-    answer. A ripe Flight, one with children, is taken before any other ripe
+    line in `ORDER` is. An item is ripe when nothing `holds` it back. A ripe
+    Flight, one with children, is taken before any other ripe
     item, so a Flight is checked as soon as its last child lands; among ripe
     Flights, and among the rest, the running order decides. Slugs in `skip`,
     and with `within` those outside it, are passed over.
     """
     done = set(listed(repo, ref, "done"))
     kin = families(repo, ref)
-
-    def ripe(slug: str) -> bool:
-        issue = at_ref(repo, ref, "backlog", slug)
-        return bool(
-            issue
-            and not needs_elaboration(issue.body)
-            and all(stage == "done" for stage in kin.get(slug, {}).values())
-            and all(
-                w.split(":")[-1] in done for w in as_list(issue.front.get("waits_on"))
-            )
-        )
-
     first = None
-    for slug in running_order(repo, ref):
+    for slug in (x for node in running_tree(repo, ref, kin) for x in node.flat()):
         if slug in skip or (within is not None and slug not in within):
             continue
         if first is not None and slug not in kin:
             continue
-        if ripe(slug):
+        if not holds(repo, ref, slug, done, kin):
             if slug in kin:
                 return slug
             first = slug

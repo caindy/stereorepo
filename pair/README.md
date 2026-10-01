@@ -176,7 +176,7 @@ checkout still pause it at once.
 | groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | run one Flight | `just pair --flight <slug>` |
-| watch | `just pair-status`; `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
+| watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway, the running order with each Flight's parts and what holds each item back, and the counts per stage; `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
 | steer an Issue or a pass underway | edit files in `worktrees/pair`, or `worktrees/groom` for a pass, between turns; the next seat sees the change |
 | take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` (`worktrees/groom` for a pass) with the id `just pair-status` prints; `just pair` or `just groom` again afterwards |
 | desk check | test in `worktrees/pair`, then `just pair-accept`, or write notes in the Issue file and `just pair-resume` |

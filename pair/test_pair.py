@@ -1641,6 +1641,123 @@ class AlongsideTest(unittest.TestCase):
             lock.close()
 
 
+class StatusTest(unittest.TestCase):
+    """`just pair-status`: what waits on the developer, what runs next, and the counts."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+
+    def waiting(self) -> str:
+        """The `waits on you` block of the screen, or "" when it is absent."""
+        shown = status(self.b.repo)
+        if not shown.startswith("waits on you:"):
+            return ""
+        return shown.split("\n\n", 1)[0]
+
+    def test_nothing_waits_on_an_empty_board(self) -> None:
+        shown = status(self.b.repo)
+        self.assertNotIn("waits on you", shown)
+        self.assertIn("nothing underway", shown)
+        self.assertIn("next: nothing in backlog/", shown)
+        self.assertIn("desk-check     0", shown)
+
+    def test_a_send_back_waits_with_its_first_line(self) -> None:
+        self.b.issue("backlog", "c", "C\n\n# Needs elaboration\n\nWhich C?\n\nMore.")
+        self.assertIn("c", self.waiting())
+        self.assertIn("needs elaboration: Which C?", self.waiting())
+        self.assertNotIn("More.", self.waiting())
+        self.assertRegex(status(self.b.repo), r"\n  c +waits on elaboration\n")
+
+    def test_a_flight_at_its_desk_check_waits_with_its_latest_brief(self) -> None:
+        b = self.b
+        b.issue("done", "part", "Part", parent="big")
+        b.issue("desk-check", "big", "Big\n\n## Desk-check brief\n\n**First round.** Done.")
+        self.assertIn("desk check: First round. Done.", self.waiting())
+        self.assertIn("just pair-accept big, or just pair-resume big", self.waiting())
+        b.issue(
+            "desk-check",
+            "big",
+            "Big\n\n## Desk-check brief\n\nFirst round.\n\n"
+            "## Desk-check notes\n\n- fix\n\n## Desk-check brief\n\nSecond round.",
+        )
+        self.assertIn("desk check: Second round.", self.waiting())
+        self.assertNotIn("First round.", self.waiting())
+
+    def test_an_issue_at_its_desk_check_waits_once(self) -> None:
+        b = self.b
+        b.issue("underway", "x", "X", difficulty="developer")
+        b.loop.save(
+            State(
+                slug="x",
+                stage="desk-check",
+                paused="ready for your desk check",
+                retry="desk-check",
+            )
+        )
+        waiting = self.waiting()
+        self.assertIn("desk check in worktrees/pair", waiting)
+        self.assertIn("just pair-accept, or just pair-resume", waiting)
+        self.assertNotIn("paused", status(b.repo))
+
+    def test_a_paused_loop_and_pass_wait_with_their_reasons(self) -> None:
+        b = self.b
+        b.loop.save(
+            State(slug="x", stage="todo", paused="the primary seat failed twice", retry="merge")
+        )
+        b.groomer.save(
+            State(slug="grooming", stage="grooming", paused="past its round cap", retry="merge")
+        )
+        shown = status(b.repo)
+        waiting = self.waiting()
+        self.assertIn("x", waiting)
+        self.assertIn("paused: the primary seat failed twice", waiting)
+        self.assertIn("grooming pass", waiting)
+        self.assertIn("paused: past its round cap", waiting)
+        self.assertEqual(shown.count("failed twice"), 1)
+        self.assertEqual(shown.count("round cap"), 1)
+
+    def test_take_over_lines_follow_the_counts(self) -> None:
+        b = self.b
+        b.issue("underway", "x", "X", difficulty="easy")
+        b.loop.save(
+            State(slug="x", stage="todo", turn=2, approvals=["primary"], sessions={"primary": "s1"})
+        )
+        shown = status(b.repo)
+        self.assertIn("underway: x in todo/, turn 2, next primary, accepted by primary\n", shown)
+        self.assertLess(shown.index("done           0"), shown.index("session s1"))
+        self.assertIn("cd worktrees/pair && claude --resume s1", shown)
+
+    def test_the_running_order_shows_ripeness_and_flights(self) -> None:
+        b = self.b
+        b.issue("backlog", "a", "A", difficulty="easy", waits_on="[z]")
+        b.issue("backlog", "b", "B", difficulty="easy")
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("done", "p1", "P1", parent="big")
+        b.issue("backlog", "p3", "P3", difficulty="easy", parent="big", waits_on="[p2]")
+        b.issue("backlog", "p2", "P2", difficulty="easy", parent="big")
+        b.issue("backlog", "q", "Q")
+        b.issue("backlog", "t", "T")
+        (b.repo / board.ORDER).write_text("# groomed below\na\nb\nbig\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+        b.groomer.save(State(slug="grooming", stage="grooming", targets=["t"]))
+        shown = status(b.repo)
+        self.assertRegex(shown, r"\n  a +waits on z\n")
+        self.assertRegex(shown, r"\n  b +ripe\n")
+        self.assertRegex(
+            shown,
+            r"\n  big \(Flight\)\n"
+            r"    p1 +done\n"
+            r"    p2 +ripe\n"
+            r"    p3 +waits on p2\n"
+            r"    big check +waits on part p2, part p3\n",
+        )
+        self.assertRegex(shown, r"\n  t +being groomed\n")
+        self.assertIn("to groom: q, t  (just groom)", shown)
+        self.assertNotIn("waits on you", shown)
+
+
 class BoardTest(unittest.TestCase):
     def test_section_reads_headings_and_bold_leads(self) -> None:
         body = "# T\n\n**The plan.** \nDo it.\n\n**Other.**\nno\n"

@@ -1342,22 +1342,146 @@ class Loop:
         return "\n\n".join(parts)
 
 
-def status(repo: Path, main: str = "main") -> str:
-    """A plain-text view of the board on `main`, the Issue underway and the grooming pass."""
-    lines = []
-    for stage in ("roadmap", "backlog", "underway", "done"):
-        slugs = board.listed(repo, main, stage)
-        lines.append(
-            f"{stage:12} {len(slugs):3}  {', '.join(slugs[:6])}"
-            f"{' ...' if len(slugs) > 6 else ''}"
-        )
-    underway = False
+SHOWN = ("roadmap", "backlog", "underway", "desk-check", "done")
+"""The stages `status` counts. `todo/` and `in-progress/` only ever hold files on a pair branch."""
+
+
+def first_line(text: str | None) -> str:
+    """The first non-blank line of a section's text, without bold markers, or "" when it has none.
+
+    A brief often opens with a bold lead (`**What was delivered.**`), whose
+    markers are noise on a terminal.
+    """
+    line = next((line.strip() for line in (text or "").splitlines() if line.strip()), "")
+    return line.replace("**", "")
+
+
+def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
+    """What `status` shows, as plain data derived from `main` and `.pair/`, and stored nowhere.
+
+    - `waiting`: what waits on the developer, each `{slug, why, answer}`: a
+      backlog Issue with a `Needs elaboration` section, a Flight in
+      `desk-check/` with its latest brief, the Issue underway at its desk
+      check, and the loop or grooming pass if paused for any other reason.
+      A desk check is recorded as a pause; it is listed once.
+    - `underway`: each loop with a state, `{kind, slug, stage, turn,
+      next_role, approvals}`.
+    - `order`: `board.running_tree`, each node `{slug, mark, flight, out,
+      parts}`, where `out` holds a Flight's children already out of the
+      backlog with their stage.
+    - `to_groom`: the backlog Issues with no `difficulty`.
+    - `counts`: the slugs in each stage of `SHOWN`.
+    - `sessions`: each seat session, `{kind, role, id}`.
+    - `turns`: the last four turns of both loops, oldest first.
+    """
+    states: dict[str, dict[str, Any]] = {}
     for kind in ("pair", "groom"):
-        state = runtime_dir(repo, kind) / "state.json"
-        if not state.is_file():
+        path = runtime_dir(repo, kind) / "state.json"
+        if path.is_file():
+            states[kind] = json.loads(path.read_text())
+    done = set(board.listed(repo, main, "done"))
+    kin = board.families(repo, main)
+    targets = groom_targets(repo)
+
+    waiting: list[dict[str, Any]] = []
+    for slug in board.listed(repo, main, "backlog"):
+        issue = board.at_ref(repo, main, "backlog", slug)
+        if issue and board.needs_elaboration(issue.body):
+            why = first_line(board.section(issue.body, "Needs elaboration"))
+            waiting.append(
+                {"slug": slug, "why": f"needs elaboration: {why}", "answer": []}
+            )
+    for slug in board.listed(repo, main, "desk-check"):
+        issue = board.at_ref(repo, main, "desk-check", slug)
+        if issue is None or not kin.get(slug):
             continue
-        underway = True
-        st: dict[str, Any] = json.loads(state.read_text())
+        brief = first_line(board.last_section(issue.body, BRIEF))
+        waiting.append(
+            {
+                "slug": slug,
+                "why": f"desk check: {brief}",
+                "answer": [f"just pair-accept {slug}", f"just pair-resume {slug}"],
+            }
+        )
+    for kind, st in states.items():
+        slug = "grooming pass" if st.get("stage") == GROOMING else st.get("slug", "?")
+        if kind == "pair" and st.get("retry") == "desk-check":
+            waiting.append(
+                {
+                    "slug": slug,
+                    "why": "desk check in worktrees/pair",
+                    "answer": ["just pair-accept", "just pair-resume"],
+                }
+            )
+        elif st.get("paused"):
+            waiting.append({"slug": slug, "why": f"paused: {st['paused']}", "answer": []})
+
+    def entry(node: board.Node) -> dict[str, Any]:
+        held = board.holds(repo, main, node.slug, done, kin)
+        mark = (
+            "being groomed"
+            if node.slug in targets
+            else f"waits on {', '.join(held)}"
+            if held
+            else "ripe"
+        )
+        out = sorted(
+            (kid, stage) for kid, stage in kin.get(node.slug, {}).items() if stage != "backlog"
+        )
+        return {
+            "slug": node.slug,
+            "mark": mark,
+            "flight": node.slug in kin,
+            "out": [{"slug": kid, "stage": stage} for kid, stage in out],
+            "parts": [entry(part) for part in node.parts],
+        }
+
+    rows: list[dict[str, Any]] = []
+    for kind in ("pair", "groom"):
+        turns = runtime_dir(repo, kind) / "turns.jsonl"
+        if turns.is_file():
+            rows += [json.loads(row) for row in turns.read_text().splitlines()[-4:]]
+    return {
+        "waiting": waiting,
+        "underway": [
+            {
+                "kind": kind,
+                "slug": st.get("slug", "?"),
+                "stage": st.get("stage", "?"),
+                "turn": st.get("turn", 0),
+                "next_role": st.get("next_role", "?"),
+                "approvals": st.get("approvals", []),
+            }
+            for kind, st in states.items()
+        ],
+        "order": [entry(node) for node in board.running_tree(repo, main, kin)],
+        "to_groom": board.to_groom(repo, main),
+        "counts": {stage: board.listed(repo, main, stage) for stage in SHOWN},
+        "sessions": [
+            {"kind": kind, "role": role, "id": sid}
+            for kind, st in states.items()
+            for role, sid in st.get("sessions", {}).items()
+        ],
+        "turns": sorted(rows, key=lambda row: row.get("at", ""))[-4:],
+    }
+
+
+WIDTH = 34
+"""The column the marks in `status` start at."""
+
+
+def status(repo: Path, main: str = "main") -> str:
+    """A plain-text rendering of `status_view`, with what waits on the developer first."""
+    view = status_view(repo, main)
+    lines: list[str] = []
+    if view["waiting"]:
+        lines.append("waits on you:")
+        for item in view["waiting"]:
+            lines.append(f"  {item['slug']:{WIDTH - 2}} {item['why']}")
+            if item["answer"]:
+                lines.append(f"  {'':{WIDTH - 2}} {', or '.join(item['answer'])}")
+        lines.append("")
+    for st in view["underway"]:
         what = (
             "grooming pass"
             if st["stage"] == GROOMING
@@ -1368,27 +1492,48 @@ def status(repo: Path, main: str = "main") -> str:
             else f"{st['slug']} in {st['stage']}/"
         )
         lines.append(
-            f"\nunderway: {what}, turn {st['turn']}, "
+            f"underway: {what}, turn {st['turn']}, "
             f"next {st['next_role']}, "
-            f"accepted by {st['approvals'] or 'nobody yet'}"
+            f"accepted by {', '.join(st['approvals']) or 'nobody yet'}"
         )
-        if st.get("paused"):
-            lines.append(f"paused: {st['paused']}")
-        for role, sid in st.get("sessions", {}).items():
-            lines.append(
-                f"{role:9} session {sid}  "
-                f"(take over: cd worktrees/{kind} && claude --resume {sid})"
-            )
-    if not underway:
-        lines.append("\nnothing underway")
-    rows = []
-    for kind in ("pair", "groom"):
-        turns = runtime_dir(repo, kind) / "turns.jsonl"
-        if turns.is_file():
-            rows += [json.loads(row) for row in turns.read_text().splitlines()[-4:]]
-    if rows:
+    if not view["underway"]:
+        lines.append("nothing underway")
+
+    def show(node: dict[str, Any], depth: int) -> None:
+        pad = "  " * depth
+        if not node["flight"]:
+            lines.append(f"{pad}{node['slug']:{WIDTH - len(pad)}} {node['mark']}")
+            return
+        lines.append(f"{pad}{node['slug']} (Flight)")
+        inner = "  " * (depth + 1)
+        for kid in node["out"]:
+            lines.append(f"{inner}{kid['slug']:{WIDTH - len(inner)}} {kid['stage']}")
+        for part in node["parts"]:
+            show(part, depth + 1)
+        check = f"{node['slug']} check"
+        lines.append(f"{inner}{check:{WIDTH - len(inner)}} {node['mark']}")
+
+    lines.append("\nnext:" if view["order"] else "\nnext: nothing in backlog/")
+    for node in view["order"]:
+        show(node, 1)
+    if view["to_groom"]:
+        lines.append(f"to groom: {', '.join(view['to_groom'])}  (just groom)")
+    lines.append("")
+    for stage, slugs in view["counts"].items():
+        lines.append(
+            f"{stage:12} {len(slugs):3}  {', '.join(slugs[:6])}"
+            f"{' ...' if len(slugs) > 6 else ''}"
+        )
+    if view["sessions"]:
+        lines.append("")
+    for s in view["sessions"]:
+        lines.append(
+            f"{s['role']:9} session {s['id']}  "
+            f"(take over: cd worktrees/{s['kind']} && claude --resume {s['id']})"
+        )
+    if view["turns"]:
         lines.append("\nlast turns:")
-        for row in sorted(rows, key=lambda row: row["at"])[-4:]:
+        for row in view["turns"]:
             lines.append(
                 f"  {row['slug']} {row['stage']} #{row['turn']} {row['role']:8} "
                 f"{'quiet' if row['quiet'] else 'changed'}  {row['seconds']}s  "

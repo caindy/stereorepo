@@ -169,7 +169,10 @@ def main() -> int:
     groom.add_argument(
         "--push", action="store_true", help="push main to origin after the pass lands"
     )
-    sub.add_parser("status", help="the board on main and the issue underway")
+    sub.add_parser(
+        "status",
+        help="what waits on you, what is underway, the running order and the counts",
+    )
     accept = sub.add_parser(
         "accept", parents=[seats], help="pass the desk check and merge"
     )
