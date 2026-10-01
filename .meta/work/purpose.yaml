@@ -54,7 +54,9 @@ slots:
   waits_on:
     description: >-
       Issues that must be done before this one is ripe, by slug. A slug in
-      another repository is written `<repository>:<slug>`.
+      another repository is written `<repository>:<slug>`; the loop cannot
+      see that board, so such an entry holds the Issue until the developer
+      removes it (stereorepo's DR-301).
     multivalued: true
 
   parent:

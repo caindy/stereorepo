@@ -32,6 +32,10 @@ parent: flight-slug     # the Flight this Issue is a part of
 What is wanted, what is out of scope, and how anyone will know it is done.
 ```
 
+The loop cannot see another repository's board, so a `<repository>:<slug>`
+entry in `waits_on` holds the Issue until you remove it, once that Issue has
+landed (DR-301).
+
 An Issue is groomed once its front matter sets a `difficulty` and it has no
 `Needs elaboration` section. `just groom` grooms each Issue with neither a
 `difficulty` nor such a section, and places it in the running order, unless it

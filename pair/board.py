@@ -22,6 +22,8 @@ ISSUES = "issues"
 ORDER = f"{ISSUES}/backlog/ORDER"
 """The backlog's running order: one slug per line, the developer's above `# groomed below`."""
 MARKER = "# groomed below"
+ELSEWHERE = ":"
+"""What marks a `waits_on` entry as `<repository>:<slug>`, an Issue on another repository's board."""
 
 _FRONT = re.compile(r"\A---\n(?P<block>.*?)\n---(?:\n|\Z)", re.DOTALL)
 _HEADING = re.compile(r"^(?:#{1,6}\s*|\*\*)(?P<name>[^*\n]+?)\.?(?:\*\*)?\s*$")
@@ -296,6 +298,8 @@ def running_tree(
     its backlog parts, each part after any sibling its `waits_on` names and
     otherwise in filename order, a part that is a Flight holding its own the
     same way. A `waits_on` cycle among siblings falls back to filename order.
+    An entry naming another repository (`ELSEWHERE`) names no sibling, so it
+    does not order parts.
     """
     kin = families(repo, ref) if kin is None else kin
     backlog = listed(repo, ref, "backlog")
@@ -313,7 +317,7 @@ def running_tree(
         for kid in kids:
             issue = at_ref(repo, ref, "backlog", kid)
             front = issue.front if issue else {}
-            waits[kid] = {w.split(":")[-1] for w in as_list(front.get("waits_on"))}
+            waits[kid] = {w for w in as_list(front.get("waits_on")) if ELSEWHERE not in w}
         placed: list[str] = []
         while kids:
             kid = next(
@@ -342,17 +346,18 @@ def holds(
     An item is held by a `Needs elaboration` section, which marks a send-back
     the developer has yet to answer (`elaboration`); by each `waits_on`
     not in `done`; and by each Issue naming it in `parent:` that is not in
-    `done/` (`part <slug>`). `done` and `kin` (from `families`) are passed in
-    so that a caller asking about many items reads the board once.
+    `done/` (`part <slug>`). A `waits_on` entry naming another repository
+    (`ELSEWHERE`) always holds, because the loop cannot see that board; the
+    developer removes it once that Issue has landed (DR-301). `done` and `kin`
+    (from `families`) are passed in so that a caller asking about many items
+    reads the board once.
     """
     issue = at_ref(repo, ref, "backlog", slug)
     if issue is None:
         return ["not in backlog/"]
     held = ["elaboration"] if needs_elaboration(issue.body) else []
     held += [
-        w
-        for w in (w.split(":")[-1] for w in as_list(issue.front.get("waits_on")))
-        if w not in done
+        w for w in as_list(issue.front.get("waits_on")) if ELSEWHERE in w or w not in done
     ]
     held += [f"part {kid}" for kid, stage in sorted(kin.get(slug, {}).items()) if stage != "done"]
     return held

@@ -1,0 +1,45 @@
+decisions:
+  - id: work:decision/301
+    name: "DR-301 · A `waits_on` entry naming another repository holds its Issue until the developer removes it"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+    context: >-
+      A `waits_on` entry naming an Issue in another repository is written
+      `<repository>:<slug>`. The loop stripped the repository and looked the
+      bare slug up in this board's `done/`, so an unrelated local Issue with
+      the same slug satisfied the entry, and without one the Issue waited
+      forever under a name that read as a local wait. The loop cannot see
+      another repository's board, because it does not know where that
+      repository is checked out. The question was what the loop should do
+      with such an entry.
+    alternatives:
+      - name: Match the bare slug against this board
+        chosen: false
+        reason: >-
+          A local Issue that happens to share the slug releases the wait, and
+          nothing tells the developer that the slug was read as local.
+      - name: Ignore the entry
+        chosen: false
+        reason: >-
+          Work starts before the thing it depends on exists.
+      - name: Hold the Issue until the developer removes the entry
+        chosen: true
+        reason: >-
+          The developer is the one party who can see both boards, and
+          `just pair-status` names the entry, so the wait is visible.
+    consequences:
+      - >-
+        `board.holds` reports the entry whole, so `just pair-status` shows
+        `waits on <repository>:<slug>`; the entry never orders a Flight's
+        parts.
+      - >-
+        Once the other repository's Issue lands, the developer deletes the
+        entry from the Issue's front matter on `main`.
+    falsifier: >-
+      The developer routinely forgets to remove such entries, so Issues sit
+      held after what they waited on has landed.
+    rationale: |-
+      The loop acts only on what it can observe. Another repository's board
+      is not observable from here, so the decision goes to the developer
+      until the cockpit, which will know every repository's board, can make it.

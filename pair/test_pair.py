@@ -2266,6 +2266,11 @@ class StatusTest(unittest.TestCase):
         self.assertIn("to groom: q, t  (just groom)", shown)
         self.assertNotIn("waits on you", shown)
 
+    def test_a_wait_on_another_repository_shows_whole(self) -> None:
+        self.b.issue("backlog", "a", "A", difficulty="easy", waits_on="[elsewhere:b]")
+        self.b.issue("done", "b", "B")
+        self.assertRegex(status(self.b.repo), r"\n  a +waits on elsewhere:b\n")
+
     def test_json_holds_what_the_screen_shows(self) -> None:
         b = self.b
         b.issue("backlog", "c", "C\n\n# Needs elaboration\n\nWhich C?")
@@ -2327,6 +2332,29 @@ class BoardTest(unittest.TestCase):
         self.assertEqual(board.next_ripe(b.repo, "main"), "b")
         b.issue("done", "z", "Z")
         self.assertEqual(board.next_ripe(b.repo, "main"), "a")
+
+    def test_a_waits_on_elsewhere_is_not_met_by_a_local_slug(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A", waits_on="[elsewhere:b]")
+        b.issue("done", "b", "B")
+        self.assertIsNone(board.next_ripe(b.repo, "main"))
+        self.assertEqual(board.holds(b.repo, "main", "a", {"b"}, {}), ["elsewhere:b"])
+
+    def test_a_waits_on_elsewhere_holds_with_no_local_slug(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A", waits_on="[elsewhere:b]")
+        self.assertIsNone(board.next_ripe(b.repo, "main"))
+        self.assertEqual(board.holds(b.repo, "main", "a", set(), {}), ["elsewhere:b"])
+
+    def test_a_waits_on_elsewhere_does_not_order_parts(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "big", "Big")
+        b.issue("backlog", "a", "A", parent="big", waits_on="[elsewhere:b]")
+        b.issue("backlog", "b", "B", parent="big")
+        self.assertEqual(board.running_order(b.repo, "main"), ["a", "b", "big"])
 
     def test_order_runs_the_backlog(self) -> None:
         b = Bench()
