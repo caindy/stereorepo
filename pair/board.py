@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import re
 import subprocess
+import threading
+from collections import OrderedDict
 from collections.abc import Collection
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -215,50 +217,166 @@ def locations(tree: Path, slug: str) -> list[str]:
     return [s for s in STAGES if (tree / ISSUES / s / f"{slug}.md").is_file()]
 
 
+@dataclass(frozen=True)
+class Reading:
+    """The board as one commit holds it: what each stage lists, and each file's text.
+
+    `texts` holds every file directly inside a stage directory, `ORDER` among
+    them, keyed by its path from the repository root. A commit never changes,
+    so a reading of one never goes stale.
+    """
+
+    sha: str
+    listing: dict[str, list[str]]
+    texts: dict[str, str]
+
+
+_SHA = re.compile(r"[0-9a-f]{40}")
+_PARENT = re.compile(r"^parent:", re.MULTILINE)
+_KEPT_READINGS = 64
+_KEPT_TEXTS = 4096
+_readings: OrderedDict[str, Reading] = OrderedDict()
+"""Readings by commit SHA, the least recently used first. A SHA fixes the whole
+tree, so the key needs no repository, and a checkout and its worktrees share
+what one of them read."""
+_texts: OrderedDict[str, str] = OrderedDict()
+"""File texts by blob id, so a new commit reads only the files it changed."""
+_lock = threading.Lock()
+
+
+def resolve(repo: Path, ref: str) -> str:
+    """The commit SHA `ref` names, or `ref` itself where it names none.
+
+    A full SHA costs no git process. A reader that calls others resolves once
+    and passes the SHA on, so a moving ref such as `HEAD` is read once per call
+    and every reader in that call sees one commit.
+    """
+    if _SHA.fullmatch(ref):
+        return ref
+    done = git_run(repo, "rev-parse", "--verify", "-q", f"{ref}^{{commit}}")
+    return done.stdout.strip() if done.returncode == 0 else ref
+
+
+def _stage_file(path: str) -> bool:
+    """Whether `path` lies directly inside a stage directory, where a reading holds it."""
+    parts = path.split("/")
+    return len(parts) == 3 and parts[0] == ISSUES and parts[1] in STAGES
+
+
+def _decoded(data: bytes) -> str:
+    """A blob's bytes as `subprocess.run(..., text=True)` would have given them."""
+    return data.decode("utf-8", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
+
+
+def _blobs(repo: Path, oids: Collection[str]) -> dict[str, str]:
+    """The texts of these blob ids, from one `git cat-file --batch`.
+
+    The output is read by the byte size each header gives, since a text holds
+    newlines of its own. A blob git cannot give raises `GitError`, so no
+    reading is kept with a file missing from it.
+    """
+    done = subprocess.run(
+        ["git", "cat-file", "--batch"],
+        cwd=repo,
+        input="".join(f"{oid}\n" for oid in oids).encode(),
+        capture_output=True,
+    )
+    out, at, found = done.stdout, 0, {}
+    while at < len(out):
+        end = out.index(b"\n", at)
+        header = out[at:end].split()
+        at = end + 1
+        if len(header) != 3:
+            continue
+        size = int(header[2])
+        found[header[0].decode()] = _decoded(out[at : at + size])
+        at += size + 1
+    lost = set(oids) - found.keys()
+    if done.returncode != 0 or lost:
+        raise GitError(
+            f"git cat-file --batch (in {repo}): "
+            f"{done.stderr.decode(errors='replace').strip() or 'missing ' + ', '.join(sorted(lost))}"
+        )
+    return found
+
+
+def reading(repo: Path, ref: str) -> Reading | None:
+    """The board at `ref`, read once per commit, or None where `ref` names no commit.
+
+    A ref that names nothing yet, such as a branch not made, is not kept, so
+    the first read after it is made sees its board.
+    """
+    sha = resolve(repo, ref)
+    with _lock:
+        if sha in _readings:
+            _readings.move_to_end(sha)
+            return _readings[sha]
+    tree = subprocess.run(
+        ["git", "ls-tree", "-r", "-z", sha, "--", f"{ISSUES}/"],
+        cwd=repo,
+        capture_output=True,
+    )
+    if tree.returncode != 0:
+        return None
+    oid_of: dict[str, str] = {}
+    for entry in tree.stdout.split(b"\0"):
+        meta, _, name = entry.partition(b"\t")
+        fields = meta.split()
+        path = name.decode("utf-8", errors="surrogateescape")
+        if len(fields) == 3 and fields[1] == b"blob" and _stage_file(path):
+            oid_of[path] = fields[2].decode()
+    with _lock:
+        known = {oid: _texts[oid] for oid in oid_of.values() if oid in _texts}
+    missing = sorted(set(oid_of.values()) - known.keys())
+    fetched = _blobs(repo, missing) if missing else {}
+    listing: dict[str, list[str]] = {stage: [] for stage in STAGES}
+    for path in oid_of:
+        name = Path(path)
+        if name.suffix == ".md" and name.name != "README.md":
+            listing[name.parent.name].append(name.stem)
+    taken = Reading(
+        sha,
+        {stage: sorted(slugs) for stage, slugs in listing.items()},
+        {path: {**known, **fetched}[oid] for path, oid in oid_of.items()},
+    )
+    with _lock:
+        for oid, text in fetched.items():
+            _texts[oid] = text
+        while len(_texts) > _KEPT_TEXTS:
+            _texts.popitem(last=False)
+        _readings[sha] = taken
+        while len(_readings) > _KEPT_READINGS:
+            _readings.popitem(last=False)
+    return taken
+
+
 def listed(repo: Path, ref: str, stage: str) -> list[str]:
     """Slugs in one stage directory at a git ref, in filename order."""
-    names = git(repo, "ls-tree", "--name-only", ref, f"{ISSUES}/{stage}/", check=False)
-    slugs = [
-        Path(n).stem
-        for n in names.splitlines()
-        if n.endswith(".md") and Path(n).name != "README.md"
-    ]
-    return sorted(slugs)
+    board = reading(repo, ref)
+    return list(board.listing.get(stage, [])) if board else []
 
 
 def listed_by_stage(repo: Path, ref: str) -> dict[str, list[str]]:
-    """`listed` for every stage at once, from one `git ls-tree`."""
-    names = git(repo, "ls-tree", "-r", "--name-only", ref, f"{ISSUES}/", check=False)
-    found: dict[str, list[str]] = {stage: [] for stage in STAGES}
-    for name in names.splitlines():
-        path = Path(name)
-        stage = path.parent.name
-        if (
-            path.parent.parent == Path(ISSUES)
-            and stage in found
-            and path.suffix == ".md"
-            and path.name != "README.md"
-        ):
-            found[stage].append(path.stem)
-    return {stage: sorted(slugs) for stage, slugs in found.items()}
+    """`listed` for every stage at once."""
+    board = reading(repo, ref)
+    return {stage: list(board.listing[stage]) if board else [] for stage in STAGES}
 
 
 def show(repo: Path, ref: str, path: str) -> str:
-    """A file's text as committed at a ref, or '' where it is missing."""
-    return git(repo, "show", f"{ref}:{path}", check=False)
+    """A file's text as committed at a ref, stripped, or '' where it is missing."""
+    if not _stage_file(path):
+        return git(repo, "show", f"{ref}:{path}", check=False)
+    board = reading(repo, ref)
+    return board.texts.get(path, "").strip() if board else ""
 
 
 def at_ref(repo: Path, ref: str, stage: str, slug: str) -> Issue | None:
     """An issue as committed at a ref, or None."""
-    text = subprocess.run(
-        ["git", "show", f"{ref}:{ISSUES}/{stage}/{slug}.md"],
-        cwd=repo,
-        capture_output=True,
-        text=True,
-    )
-    if text.returncode != 0:
+    board = reading(repo, ref)
+    text = board.texts.get(f"{ISSUES}/{stage}/{slug}.md") if board else None
+    if text is None:
         return None
-    front, body = parse(text.stdout)
+    front, body = parse(text)
     return Issue(slug, stage, front, body)
 
 
@@ -269,14 +387,13 @@ def order(repo: Path, ref: str) -> list[str]:
     grooming's ranking below it, so the file's own line order is the running
     order. Blank lines and `#` lines name nothing; a missing file names nothing.
     """
-    text = subprocess.run(
-        ["git", "show", f"{ref}:{ORDER}"], cwd=repo, capture_output=True, text=True
-    )
-    if text.returncode != 0:
+    board = reading(repo, ref)
+    text = board.texts.get(ORDER) if board else None
+    if text is None:
         return []
     return [
         line.strip()
-        for line in text.stdout.splitlines()
+        for line in text.splitlines()
         if line.strip() and not line.strip().startswith("#")
     ]
 
@@ -333,6 +450,7 @@ def running_tree(
     An entry naming another repository (`ELSEWHERE`) names no sibling, so it
     does not order parts.
     """
+    ref = resolve(repo, ref)
     kin = families(repo, ref) if kin is None else kin
     backlog = listed(repo, ref, "backlog")
     inner = parts(backlog_parents(kin), backlog)
@@ -410,6 +528,7 @@ def next_ripe(
     Flights, and among the rest, the running order decides. Slugs in `skip`,
     and with `within` those outside it, are passed over.
     """
+    ref = resolve(repo, ref)
     done = set(listed(repo, ref, "done"))
     kin = families(repo, ref)
     first = None
@@ -432,6 +551,7 @@ def to_groom(repo: Path, ref: str) -> list[str]:
     has no `Needs elaboration` section. One with such a section waits on the
     developer instead, so a pass takes up only those with neither.
     """
+    ref = resolve(repo, ref)
     slugs = []
     for slug in listed(repo, ref, "backlog"):
         issue = at_ref(repo, ref, "backlog", slug)
@@ -445,6 +565,7 @@ def unnamed(repo: Path, ref: str) -> list[str]:
 
     A part of a Flight in the backlog runs at its Flight's line and needs none.
     """
+    ref = resolve(repo, ref)
     named = set(order(repo, ref))
     backlog = listed(repo, ref, "backlog")
     inner = parts(backlog_parents(families(repo, ref)), backlog)
@@ -547,6 +668,7 @@ def grooming_faults(
     The Issue in `underway/` may keep its line, since its landing drops it, and
     is never asked for one; a part of a Flight in the backlog has none there either.
     """
+    ref = resolve(repo, ref)
     faults = []
     backlog = sorted(
         p.stem for p in (tree / ISSUES / "backlog").glob("*.md") if p.name != "README.md"
@@ -589,10 +711,9 @@ def grooming_faults(
     for path in git(tree, "diff", "--name-only", ref, "HEAD").splitlines():
         if not path.startswith(f"{ISSUES}/") or path.startswith(f"{ISSUES}/roadmap/"):
             faults.append(f"{path} changed; the pass changes only issues/, and not issues/roadmap/.")
-    was = subprocess.run(
-        ["git", "show", f"{ref}:{ORDER}"], cwd=repo, capture_output=True, text=True
-    )
-    kept, ranked = split_order(was.stdout) if was.returncode == 0 else ([], None)
+    board = reading(repo, ref)
+    was = board.texts.get(ORDER) if board else None
+    kept, ranked = split_order(was) if was is not None else ([], None)
     path = tree / ORDER
     above, below = split_order(path.read_text()) if path.is_file() else ([], None)
     if below is None:
@@ -645,18 +766,17 @@ def families(repo: Path, ref: str) -> dict[str, dict[str, str]]:
     """Every Issue at `ref` that names a parent, grouped by that parent.
 
     Each parent maps to its children and the stage each sits in. A roadmap
-    file is no one's child. `git grep` finds the candidate files, so the cost
-    does not grow with the files that name no parent.
+    file is no one's child. Only a file with a line starting `parent:` is
+    parsed, so the cost of parsing does not grow with the files that name none.
     """
-    hits = git(repo, "grep", "-l", "-E", "^parent:", ref, "--", f"{ISSUES}/", check=False)
+    board = reading(repo, ref)
     found: dict[str, dict[str, str]] = {}
-    for hit in hits.splitlines():
-        path = Path(hit.removeprefix(f"{ref}:"))
+    for name, text in board.texts.items() if board else ():
+        path = Path(name)
         stage = path.parent.name
-        if stage not in STAGES or stage == "roadmap" or path.suffix != ".md":
+        if stage == "roadmap" or path.suffix != ".md" or not _PARENT.search(text):
             continue
-        issue = at_ref(repo, ref, stage, path.stem)
-        parent = issue and issue.front.get("parent")
+        parent = parse(text)[0].get("parent")
         if parent:
             found.setdefault(str(parent), {})[path.stem] = stage
     return found

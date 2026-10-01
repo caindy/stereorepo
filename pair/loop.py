@@ -289,19 +289,20 @@ class Loop:
                 return "refused"
         while True:
             if st is None:
+                main = board.resolve(self.repo, self.main)
                 within = None
                 if flight is not None:
-                    below = board.descendants(self.repo, self.main, flight)
+                    below = board.descendants(self.repo, main, flight)
                     within = frozenset(below | {flight})
                 slug = board.next_ripe(
-                    self.repo, self.main, skip=groom_targets(self.repo), within=within
+                    self.repo, main, skip=groom_targets(self.repo), within=within
                 )
                 if slug is None:
                     message = self.nothing_ripe(flight)
                     self.event("empty", message=message)
                     self.say(message)
                     return "empty"
-                kids = board.children(self.repo, self.main, slug)
+                kids = board.children(self.repo, main, slug)
                 st = self.start(
                     State(slug=slug, stage=FLIGHT_CHECK if kids else "backlog")
                 )
@@ -336,26 +337,28 @@ class Loop:
         can only be in its backlog stage or its Flight check then, since the
         later stages live on its branch alone.
         """
-        underway = board.listed(self.repo, self.main, "underway")
+        main = board.resolve(self.repo, self.main)
+        underway = board.listed(self.repo, main, "underway")
         if not underway:
             return None
         slug = underway[0]
-        kids = board.children(self.repo, self.main, slug)
+        kids = board.children(self.repo, main, slug)
         return State(slug=slug, stage=FLIGHT_CHECK if kids else "backlog")
 
     def flight_refusal(self, flight: str, st: State | None) -> str | None:
         """Why `run` cannot work `flight` from here, or None when it can."""
-        if flight in board.listed(self.repo, self.main, "desk-check"):
+        main = board.resolve(self.repo, self.main)
+        if flight in board.listed(self.repo, main, "desk-check"):
             return (
                 f"{flight} is waiting for your desk check: "
                 f"`just pair-accept {flight}` or `just pair-resume {flight}`"
             )
-        queued = board.listed(self.repo, self.main, "backlog") + board.listed(
-            self.repo, self.main, "underway"
+        queued = board.listed(self.repo, main, "backlog") + board.listed(
+            self.repo, main, "underway"
         )
-        if flight not in queued or not board.children(self.repo, self.main, flight):
+        if flight not in queued or not board.children(self.repo, main, flight):
             return f"{flight} is not a Flight in issues/backlog/ or issues/underway/"
-        below = board.descendants(self.repo, self.main, flight)
+        below = board.descendants(self.repo, main, flight)
         if st is not None and st.slug != flight and st.slug not in below:
             finish = (
                 "`just pair-accept` or `just pair-resume`"
@@ -372,9 +375,10 @@ class Loop:
         """What `run` says when no issue it may work is ripe."""
         if flight is None:
             return "backlog is empty (or nothing in it is ripe)"
-        desk = set(board.listed(self.repo, self.main, "desk-check"))
-        kin = board.families(self.repo, self.main)
-        below = board.descendants(self.repo, self.main, flight)
+        main = board.resolve(self.repo, self.main)
+        desk = set(board.listed(self.repo, main, "desk-check"))
+        kin = board.families(self.repo, main)
+        below = board.descendants(self.repo, main, flight)
         held = sorted(slug for slug in below & desk if kin.get(slug))
         if held:
             return f"nothing in {flight} is ripe; it waits on the desk check of " + (
@@ -402,8 +406,9 @@ class Loop:
                     f"{'with' if st.rerank else 'without'} --rerank as it started"
                 )
             return self.work(st)
-        targets = board.to_groom(self.repo, self.main)
-        if not (targets or board.unnamed(self.repo, self.main) or rerank):
+        main = board.resolve(self.repo, self.main)
+        targets = board.to_groom(self.repo, main)
+        if not (targets or board.unnamed(self.repo, main) or rerank):
             self.event("empty", message="nothing to groom")
             self.say("nothing to groom")
             return "nothing"
@@ -515,8 +520,9 @@ class Loop:
                 "switch back, then run again"
             )
             return None
-        if board.at_ref(self.repo, self.main, "desk-check", slug) is None or not (
-            board.children(self.repo, self.main, slug)
+        main = board.resolve(self.repo, self.main)
+        if board.at_ref(self.repo, main, "desk-check", slug) is None or not (
+            board.children(self.repo, main, slug)
         ):
             self.say(f"no Flight named {slug} is waiting for a desk check")
             return None
@@ -557,12 +563,13 @@ class Loop:
             return "none"
         order = self.repo / board.ORDER
         text = order.read_text() if order.is_file() else f"{board.MARKER}\n"
-        for part in board.descendants(self.repo, self.main, slug):
+        main = board.resolve(self.repo, self.main)
+        for part in board.descendants(self.repo, main, slug):
             text = board.without(text, part)
         text = board.without(text, slug)
-        flight = board.at_ref(self.repo, self.main, "desk-check", slug)
+        flight = board.at_ref(self.repo, main, "desk-check", slug)
         parent = flight and flight.front.get("parent")
-        if not (parent and str(parent) in board.listed(self.repo, self.main, "backlog")):
+        if not (parent and str(parent) in board.listed(self.repo, main, "backlog")):
             text = f"{slug}\n" + text
         order.write_text(text)
         paths = self.commit_move(
@@ -1433,8 +1440,9 @@ class Loop:
         landed = "moved"
         for _ in range(LAND_TRIES):
             git(self.wt, "checkout", "-q", "--detach", "--force", self.main)
+            main = board.resolve(self.wt, "HEAD")
             for stage in board.STAGES:
-                if board.at_ref(self.repo, self.main, stage, st.slug):
+                if board.at_ref(self.repo, main, stage, st.slug):
                     git(self.wt, "rm", "-q", f"{board.ISSUES}/{stage}/{st.slug}.md")
             home = self.wt / board.ISSUES / "backlog" / f"{st.slug}.md"
             home.parent.mkdir(parents=True, exist_ok=True)
@@ -1539,6 +1547,7 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
         path = runtime_dir(repo, kind) / "state.json"
         if path.is_file():
             states[kind] = json.loads(path.read_text())
+    main = board.resolve(repo, main)
     listed = board.listed_by_stage(repo, main)
     done = set(listed["done"])
     kin = board.families(repo, main)

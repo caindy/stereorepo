@@ -2687,6 +2687,64 @@ class BoardTest(unittest.TestCase):
         self.assertEqual(board.listed_by_stage(b.repo, "main"), each)
         self.assertEqual(each["backlog"], ["a", "b"])
 
+    def test_a_commit_is_read_once_and_a_moved_ref_reads_its_new_commit(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "big", "Big")
+        b.issue("backlog", "a", "A", parent="big")
+        b.issue("done", "b", "B", parent="big")
+        b.issue("roadmap", "r", "R", parent="big")
+        b.issue("todo", "t", "T")
+        (b.repo / board.ORDER).write_text("big\r\n# groomed below\r\nt\r\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+
+        def round_(ref: str) -> tuple[Any, ...]:
+            return (
+                board.listed_by_stage(b.repo, ref),
+                board.at_ref(b.repo, ref, "backlog", "a"),
+                board.order(b.repo, ref),
+                board.families(b.repo, ref),
+                board.show(b.repo, ref, board.ORDER),
+            )
+
+        sha = sh(b.repo, "rev-parse", "main")
+        first = round_(sha)
+        with mock.patch("board.subprocess.run", wraps=subprocess.run) as run:
+            again = round_(sha)
+        self.assertEqual(run.call_count, 0)
+        self.assertEqual(again, first)
+        self.assertEqual(first[3], {"big": {"a": "backlog", "b": "done"}})
+        self.assertEqual(first[2], ["big", "t"])
+        self.assertEqual(first[4], "big\n# groomed below\nt")
+        sh(b.repo, "mv", "issues/todo/t.md", "issues/done/t.md")
+        (b.repo / board.ORDER).write_text("t\n")
+        sh(b.repo, "commit", "-q", "-am", "move t")
+        listed, _, order, _, _ = round_("main")
+        self.assertEqual((listed["todo"], listed["done"], order), ([], ["b", "t"], ["t"]))
+
+    def test_a_ref_not_yet_made_reads_as_an_empty_board_until_it_is(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A", parent="big")
+        later = "pair/later"
+        self.assertEqual(
+            board.listed_by_stage(b.repo, later), {stage: [] for stage in board.STAGES}
+        )
+        self.assertEqual(board.order(b.repo, later), [])
+        self.assertIsNone(board.at_ref(b.repo, later, "backlog", "a"))
+        self.assertEqual(board.families(b.repo, later), {})
+        self.assertEqual(board.show(b.repo, later, board.ORDER), "")
+        sh(b.repo, "branch", later, "main")
+        self.assertEqual(board.listed(b.repo, later, "backlog"), ["a"])
+        self.assertEqual(board.families(b.repo, later), {"big": {"a": "backlog"}})
+
+    def test_a_blob_git_cannot_give_raises_rather_than_reading_short(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        with self.assertRaisesRegex(board.GitError, "missing"):
+            board._blobs(b.repo, ["0" * 40])
+
     def test_head_and_dirty_reads_a_worktree_in_one_status(self) -> None:
         b = Bench()
         self.addCleanup(b.close)
