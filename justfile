@@ -52,6 +52,10 @@ pair-accept *args:
 pair-resume *args:
     uv run --quiet --script pair/pair.py resume {{args}}
 
+# print the loop's events until --until landed, developer, or flight SLUG
+pair-watch *args:
+    uv run --quiet --script pair/pair.py watch {{args}}
+
 # Specialization, end to end, in a scratch repository (stereorepo's DR-239, DR-244)
 test-specialization *args:
     uvx --python 3.13 --with pyyaml python .meta/test_specialization.py {{args}}

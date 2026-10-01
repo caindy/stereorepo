@@ -39,7 +39,9 @@ observe. There are no pull requests.
   to its desk check; `just groom` grooms the Issues that have no
   `difficulty` and places them in the running order; `just pair-status` shows
   the board and the Issue underway; `just pair-accept` and `just pair-resume`
-  answer a desk check.
+  answer a desk check; `just pair-watch --until landed` (or `developer`, or
+  `flight <slug>`) follows the loop's event log and exits when that happens,
+  or non-zero when the loop ends first.
 - A seat that finds work outside its Issue writes it as a new file in
   `issues/backlog/` instead of doing it.
 

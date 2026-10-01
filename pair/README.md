@@ -177,6 +177,7 @@ checkout still pause it at once.
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | run one Flight | `just pair --flight <slug>` |
 | watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway, the running order with each Flight's parts and what holds each item back, and the counts per stage; `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
+| wait for the loop | `just pair-watch --until landed`, `--until developer` (a desk check, a pause or a send-back) or `--until flight <slug>` (that Flight reaches `desk-check/`); see [The event log](#the-event-log) |
 | steer an Issue or a pass underway | edit files in `worktrees/pair`, or `worktrees/groom` for a pass, between turns; the next seat sees the change |
 | take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` (`worktrees/groom` for a pass) with the id `just pair-status` prints; `just pair` or `just groom` again afterwards |
 | desk check | test in `worktrees/pair`, then `just pair-accept`, or write notes in the Issue file and `just pair-resume` |
@@ -184,15 +185,50 @@ checkout still pause it at once.
 
 In a portfolio, run the same commands through the script, from the portfolio's
 root: `uv run --script <stereorepo>/pair/pair.py run`, `groom`, `status`,
-`accept` or `resume`, each with a Flight's slug where it has one.
+`accept`, `resume` or `watch`, each with a Flight's slug where it has one.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
 `state.json` is the Issue underway, `turns.jsonl` has one row per turn with
-tokens and cache reads, `<seat>.log` and `<seat>.jsonl` are each seat's
+tokens and cache reads, `events.jsonl` is the event log below, `<seat>.log` and `<seat>.jsonl` are each seat's
 output, and `run.lock` holds the pid of the loop working Issues. A grooming
 pass keeps the same files in `.pair/groom/`, and its lock in
 `.pair/groom.lock`. A pass left paused in `.pair/state.json` by a loop older
 than this layout is dropped by the next `just pair` or `just groom`.
+
+## The event log
+
+The supervisor appends one JSON object per line to `.pair/events.jsonl` for
+each transition between turns, so a session running the loop learns what
+happened without scraping its printed lines. The loop working Issues and a
+grooming pass write the one file. The log holds nothing that the board,
+`.pair/` and git do not; it records when things happened.
+
+Every event carries `at` (local time, as in `turns.jsonl`), `kind`, `loop`
+(`pair` or `groom`) and, where there is one, `slug` (`grooming` for a pass).
+
+| `kind` | When | Other fields |
+|---|---|---|
+| `started` | an Issue or a grooming pass starts on its branch | `stage` |
+| `moved` | the Issue's file moves from one stage to the next on its branch | `from`, `to` |
+| `landed` | an Issue's branch lands on `main` | `sha`, and `stage`: where the file now sits (`done`, `desk-check` for a Flight, `backlog` for a split) |
+| `groomed` | a grooming pass lands | `sha` |
+| `sent-back` | an Issue lands back in `backlog/` with `Needs elaboration` | `reason`, null when a seat wrote the section |
+| `desk-check` | a `developer` Issue waits for its desk check, or a Flight has landed in `desk-check/` | `stage` |
+| `paused` | the loop pauses for any other reason | `reason`, `retry` |
+| `stopped` | the loop stops after a Ctrl-C | `reason`, `retry` |
+| `empty` | nothing is ripe, or there is nothing to groom; no `slug` | `message` |
+| `ended` | the supervisor process ends; no `slug` | `outcome`, as `pair:` prints it, or `abandoned` (a second Ctrl-C) or `crashed` |
+
+`just pair-watch --until <condition>` prints each event appended after it
+starts, one line apiece, and exits 0 when its condition is met: `landed`,
+`developer` (`desk-check`, `paused`, `sent-back`, or an `ended` whose outcome
+is `desk-check` or `paused`), or `flight <slug>` (a `desk-check` event for
+that Flight). It watches the supervisors whose pid is in `run.lock` or
+`groom.lock` when it starts. It exits 1 once each of them has logged
+`ended` or died without a match, and 2 at once if none is running. A watcher
+therefore never outlives the loop it watches. Answering a Flight's desk check
+with `just pair-accept <slug>` or `just pair-resume <slug>` holds no lock and
+logs nothing.
 
 The loop's tests run as the `pair` Project's gate, `just gate pair`, against
 fake seats over a temporary git repository.

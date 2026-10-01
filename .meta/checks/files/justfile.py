@@ -47,7 +47,7 @@ TOOL_ROOTS = (".meta/", "pair/")
 """Where a recipe's tool may live: the staging ground, or the scaffold-only pair loop."""
 
 SCAFFOLD_RECIPES = ("test-specialization", "adapt", "pair", "groom", "pair-status",
-                    "pair-accept", "pair-resume")
+                    "pair-accept", "pair-resume", "pair-watch")
 """Recipes rendered only in the scaffold, which a portfolio's surface does not hold."""
 
 IDENTIFIER = "identifier"
@@ -68,6 +68,7 @@ CONTRACT: Contract = {
     "pair-status": (),
     "pair-accept": (("args", FLAGS),),
     "pair-resume": (("args", FLAGS),),
+    "pair-watch": (("args", FLAGS),),
 }
 """The declared shape of every root recipe: each parameter in signature order, paired with
 the kind of value it carries. There is no prose kind to declare, so a recipe taking a bare

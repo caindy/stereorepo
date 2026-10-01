@@ -12,6 +12,7 @@ stays wherever this file is, outside that repository's tree (see README.md):
     uv run --script <stereorepo>/pair/pair.py status
     uv run --script <stereorepo>/pair/pair.py accept [SLUG]
     uv run --script <stereorepo>/pair/pair.py resume [SLUG]
+    uv run --script <stereorepo>/pair/pair.py watch --until landed|developer|flight SLUG
 
 With `--flight`, `run` works only that Flight and the Issues below it, and
 stops when the Flight reaches its desk check.
@@ -22,8 +23,11 @@ With SLUG, `accept` and `resume` answer the desk check of that Flight on
 `groom` runs in its own worktree and holds its own lock, so a grooming pass
 runs alongside `run`.
 
+`watch` prints the events both log to `.pair/events.jsonl` until its
+condition is met, and exits non-zero if the loops it watches end first.
+
 In stereorepo itself, `just pair`, `just groom`, `just pair-status`,
-`just pair-accept` and `just pair-resume` run the same.
+`just pair-accept`, `just pair-resume` and `just pair-watch` run the same.
 """
 
 from __future__ import annotations
@@ -34,11 +38,13 @@ import os
 import signal
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 from typing import IO
 
-from loop import Loop, status
+from loop import Loop, append_event, status
 from seats import ClaudeSeat
+from watch import CONDITIONS, watch
 
 HERE = Path(__file__).resolve().parent
 
@@ -187,12 +193,29 @@ def main() -> int:
             nargs="?",
             help="a Flight in issues/desk-check/, answered on main without the loop",
         )
+    follow = sub.add_parser(
+        "watch",
+        help="print the loop's events until a condition is met; non-zero if the loop ends first",
+    )
+    follow.add_argument(
+        "--until",
+        nargs="+",
+        required=True,
+        metavar="CONDITION",
+        help="landed, developer (a desk check, a pause or a send-back), or flight SLUG",
+    )
     args = parser.parse_args()
+    if args.command == "watch":
+        until = args.until
+        if until[0] not in CONDITIONS or len(until) != (2 if until[0] == "flight" else 1):
+            parser.error("--until takes landed, developer, or flight SLUG")
 
     repo = repo_root()
     if args.command == "status":
         print(status(repo))
         return 0
+    if args.command == "watch":
+        return watch(repo, args.until, out=lambda line: print(line, flush=True))
 
     kind = "groom" if args.command == "groom" else "pair"
     model = getattr(args, "model", None)
@@ -236,16 +259,32 @@ def main() -> int:
         )
 
     signal.signal(signal.SIGINT, stop)
-    if args.command == "run":
-        outcome = loop.run(once=args.once, flight=args.flight)
-    elif args.command == "groom":
-        outcome = loop.groom(rerank=args.rerank)
-    elif args.command == "accept":
-        outcome = loop.accept()
-    else:
-        outcome = loop.resume()
-    print(f"pair: {outcome}")
+    work = {
+        "run": lambda: loop.run(once=args.once, flight=args.flight),
+        "groom": lambda: loop.groom(rerank=args.rerank),
+        "accept": loop.accept,
+        "resume": loop.resume,
+    }[args.command]
+    print(f"pair: {supervise(repo, kind, work)}")
     return 0
+
+
+def supervise(repo: Path, kind: str, work: Callable[[], str]) -> str:
+    """Run a supervisor's `work` and log its end, which a watcher waits for.
+
+    The `ended` event carries the outcome `work` answers, `abandoned` on a
+    second Ctrl-C, and `crashed` on any other exception, which is raised
+    again.
+    """
+    outcome = "crashed"
+    try:
+        outcome = work()
+    except KeyboardInterrupt:
+        outcome = "abandoned"
+        raise
+    finally:
+        append_event(repo, kind, "ended", outcome=outcome)
+    return outcome
 
 
 if __name__ == "__main__":

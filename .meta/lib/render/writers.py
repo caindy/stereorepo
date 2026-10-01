@@ -87,6 +87,10 @@ def justfile() -> str:
             "# fail the desk check: the pair picks up your notes (a Flight's slug: to backlog/)",
             "pair-resume *args:",
             "    uv run --quiet --script pair/pair.py resume {{args}}",
+            "",
+            "# print the loop's events until --until landed, developer, or flight SLUG",
+            "pair-watch *args:",
+            "    uv run --quiet --script pair/pair.py watch {{args}}",
         ]
 
     if "work:artifact/meta-test-specialization" in artifacts:

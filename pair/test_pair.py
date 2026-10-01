@@ -6,15 +6,22 @@ Run: uv run --with pyyaml python -m unittest discover -s pair -p 'test_*.py'
 from __future__ import annotations
 
 import collections
+import json
+import os
 import subprocess
+import sys
 import tempfile
+import threading
+import time
 import unittest
 from collections.abc import Callable
 from pathlib import Path
+from typing import Any
 
 import board
-from loop import Loop, State, status
+from loop import Loop, State, append_event, event_log, status
 from seats import ALLOWED, TurnResult, command
+from watch import watch
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
 Action = Callable[[Path], None]
@@ -1639,6 +1646,276 @@ class AlongsideTest(unittest.TestCase):
         for lock in (run, groom):
             assert lock is not None
             lock.close()
+
+
+class EventLogTest(unittest.TestCase):
+    """`.pair/events.jsonl`: one event for each transition, written once."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+
+    def events(self, kind: str | None = None) -> list[dict[str, Any]]:
+        path = event_log(self.b.repo)
+        if not path.is_file():
+            return []
+        rows = [json.loads(line) for line in path.read_text().splitlines()]
+        return [row for row in rows if kind is None or row["kind"] == kind]
+
+    def kinds(self) -> list[tuple[str, str, str | None]]:
+        return [(e["loop"], e["kind"], e.get("slug")) for e in self.events()]
+
+    def test_an_easy_issue_starts_moves_and_lands(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.script(*easy_turns("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(
+            self.kinds(),
+            [("pair", "started", "x"), *[("pair", "moved", "x")] * 3, ("pair", "landed", "x")],
+        )
+        self.assertEqual(
+            [(e["from"], e["to"]) for e in self.events("moved")],
+            [("backlog", "todo"), ("todo", "in-progress"), ("in-progress", "done")],
+        )
+        landed = self.events("landed")[0]
+        self.assertEqual(
+            (landed["sha"], landed["stage"]), (sh(b.repo, "rev-parse", "main"), "done")
+        )
+
+    def test_a_developer_issue_logs_its_desk_check_and_not_a_pause(self) -> None:
+        b = self.b
+        b.issue("backlog", "h", "Developer", difficulty="developer")
+        b.script(*easy_turns("h"))
+        self.assertEqual(b.loop.run(), "paused")
+        self.assertEqual(
+            self.kinds()[-2:], [("pair", "moved", "h"), ("pair", "desk-check", "h")]
+        )
+        self.assertEqual(self.events("paused"), [])
+        self.assertEqual(b.loop.run(), "desk-check")
+        self.assertEqual(len(self.events("desk-check")), 1)
+        self.assertEqual(b.loop.accept(), "landed")
+        self.assertEqual(
+            self.kinds()[-2:], [("pair", "moved", "h"), ("pair", "landed", "h")]
+        )
+
+    def test_a_send_back_is_logged(self) -> None:
+        b = self.b
+        b.issue("backlog", "vague", "Vague")
+        b.script(("primary", append("vague", "\n# Needs elaboration\n\nWhich?\n")))
+        self.assertEqual(b.loop.run(once=True), "kicked")
+        self.assertEqual(
+            self.kinds(), [("pair", "started", "vague"), ("pair", "sent-back", "vague")]
+        )
+
+    def test_a_flight_lands_then_reaches_its_desk_check(self) -> None:
+        b = self.b
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("backlog", "big-a", "Big A", difficulty="easy", parent="big")
+        b.script(*easy_turns("big-a"), *flight_check_turns("big"))
+        self.assertEqual(b.loop.run(flight="big"), "desk-check")
+        self.assertEqual(
+            self.kinds()[-2:], [("pair", "landed", "big"), ("pair", "desk-check", "big")]
+        )
+        self.assertEqual(self.events("landed")[-1]["stage"], "desk-check")
+        self.assertEqual(len(self.events("desk-check")), 1)
+
+    def test_a_paused_landing_logs_the_pause_and_one_landing(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+
+        def developer_has_a_local_file(_cwd: Path) -> None:
+            (b.repo / "x.txt").write_text("mine")
+
+        b.script(
+            *easy_turns("x")[:4],
+            ("primary", both(write("x.txt", "x"), developer_has_a_local_file)),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(), "paused")
+        self.assertEqual([e["retry"] for e in self.events("paused")], ["merge"])
+        (b.repo / "x.txt").unlink()
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual((len(self.events("moved")), len(self.events("landed"))), (3, 1))
+
+    def test_a_landing_the_other_process_beats_is_logged_once(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+
+        def other_lands(repo: Path) -> None:
+            (repo / "z.txt").write_text("z\n")
+            sh(repo, "add", "z.txt")
+            sh(repo, "commit", "-q", "-m", "the other process lands")
+
+        b.before_land = [lambda _repo: None, other_lands]
+        b.script(*easy_turns("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.before_land, [])
+        self.assertEqual((len(self.events("moved")), len(self.events("landed"))), (3, 1))
+
+    def test_a_stop_is_logged_as_stopped(self) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertEqual(
+            self.kinds(), [("pair", "started", "x"), ("pair", "stopped", "x")]
+        )
+
+    def test_nothing_ripe_is_logged_without_a_slug(self) -> None:
+        self.assertEqual(self.b.loop.run(), "empty")
+        self.assertEqual(self.kinds(), [("pair", "empty", None)])
+
+    def test_a_grooming_pass_logs_as_groom(self) -> None:
+        b = self.b
+        b.issue("backlog", "a", "A")
+        b.script(
+            ("primary", both(front("a", difficulty="easy"), order("# groomed below\na\n"))),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertEqual(b.groomer.groom(), "nothing")
+        self.assertEqual(
+            self.kinds(),
+            [
+                ("groom", "started", "grooming"),
+                ("groom", "groomed", "grooming"),
+                ("groom", "empty", None),
+            ],
+        )
+
+    def test_a_supervisor_logs_its_end_and_its_crash(self) -> None:
+        from pair import supervise
+
+        repo = self.b.repo
+        self.assertEqual(supervise(repo, "pair", lambda: "landed"), "landed")
+
+        def crash() -> str:
+            raise RuntimeError("boom")
+
+        def interrupted() -> str:
+            raise KeyboardInterrupt
+
+        with self.assertRaises(RuntimeError):
+            supervise(repo, "groom", crash)
+        with self.assertRaises(KeyboardInterrupt):
+            supervise(repo, "pair", interrupted)
+        self.assertEqual(
+            [(e["loop"], e["outcome"]) for e in self.events("ended")],
+            [("pair", "landed"), ("groom", "crashed"), ("pair", "abandoned")],
+        )
+
+
+class WatchTest(unittest.TestCase):
+    """`just pair-watch`: it exits when its condition is met, and never outlives the loop."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.repo = Path(tmp.name)
+        (self.repo / ".pair").mkdir()
+        self.out: list[str] = []
+
+    def supervisor(self, lock: str = "run.lock") -> subprocess.Popen[bytes]:
+        """A process standing in for a supervisor, with `pair.py` in its command line."""
+        proc = subprocess.Popen(
+            [sys.executable, "-c", "import time; time.sleep(60)", "pair.py"]
+        )
+        self.addCleanup(proc.wait)
+        self.addCleanup(proc.kill)
+        (self.repo / ".pair" / lock).write_text(f"{proc.pid}\n")
+        return proc
+
+    def later(self, *steps: Callable[[], object]) -> None:
+        """Run each step a moment apart, after the watcher has started."""
+
+        def go() -> None:
+            for step in steps:
+                time.sleep(0.2)
+                step()
+
+        thread = threading.Thread(target=go, daemon=True)
+        thread.start()
+        self.addCleanup(thread.join, 10)
+
+    def emit(self, kind: str, **fields: Any) -> Callable[[], None]:
+        return lambda: append_event(self.repo, "pair", kind, **fields)
+
+    def watch(self, *until: str) -> int:
+        result: list[int] = []
+        thread = threading.Thread(
+            target=lambda: result.append(
+                watch(self.repo, list(until), poll=0.02, out=self.out.append)
+            ),
+            daemon=True,
+        )
+        thread.start()
+        thread.join(10)
+        self.assertFalse(thread.is_alive(), "the watcher did not exit")
+        return result[0]
+
+    def test_each_condition_is_met(self) -> None:
+        cases = [
+            (("landed",), [self.emit("moved", slug="x"), self.emit("landed", slug="x")]),
+            (("developer",), [self.emit("paused", slug="x", reason="r")]),
+            (("developer",), [self.emit("sent-back", slug="x")]),
+            (("developer",), [self.emit("ended", outcome="desk-check")]),
+            (
+                ("flight", "big"),
+                [self.emit("desk-check", slug="other"), self.emit("desk-check", slug="big")],
+            ),
+        ]
+        self.supervisor()
+        for until, steps in cases:
+            with self.subTest(until=until):
+                self.later(*steps)
+                self.assertEqual(self.watch(*until), 0)
+
+    def test_a_supervisor_that_ends_first_fails_the_watch(self) -> None:
+        self.supervisor()
+        self.later(self.emit("landed", slug="x"), self.emit("ended", outcome="empty"))
+        self.assertEqual(self.watch("flight", "big"), 1)
+        self.assertEqual(len(self.out), 3)
+
+    def test_a_killed_supervisor_fails_the_watch(self) -> None:
+        proc = self.supervisor("groom.lock")
+        self.later(proc.kill)
+        self.assertEqual(self.watch("landed"), 1)
+
+    def test_no_supervisor_fails_the_watch_at_once(self) -> None:
+        self.assertEqual(self.watch("landed"), 2)
+        gone = subprocess.Popen(["true"])
+        gone.wait()
+        other = subprocess.Popen(["sleep", "60"])
+        self.addCleanup(other.wait)
+        self.addCleanup(other.kill)
+        for pid in (gone.pid, other.pid, os.getpid()):
+            with self.subTest(pid=pid):
+                (self.repo / ".pair" / "run.lock").write_text(f"{pid}\n")
+                self.assertEqual(self.watch("landed"), 2)
+
+    def test_events_from_before_the_watch_are_not_read(self) -> None:
+        self.supervisor()
+        append_event(self.repo, "pair", "landed", "x")
+        self.later(self.emit("ended", outcome="empty"))
+        self.assertEqual(self.watch("landed"), 1)
+
+    def test_a_line_written_in_two_pieces_is_read_once_whole(self) -> None:
+        self.supervisor()
+        line = json.dumps({"at": "t", "kind": "landed", "loop": "pair", "slug": "x"})
+        log = event_log(self.repo)
+
+        def piece(text: str) -> Callable[[], None]:
+            def write_it() -> None:
+                with log.open("a") as f:
+                    f.write(text)
+
+            return write_it
+
+        self.later(piece(line[:20]), piece(line[20:] + "\n"))
+        self.assertEqual(self.watch("landed"), 0)
+        self.assertEqual(self.out, ["t pair landed x"])
 
 
 class StatusTest(unittest.TestCase):

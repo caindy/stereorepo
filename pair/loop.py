@@ -118,6 +118,33 @@ def runtime_dir(repo: Path, kind: str) -> Path:
     return repo / ".pair" if kind == "pair" else repo / ".pair" / kind
 
 
+def event_log(repo: Path) -> Path:
+    """`.pair/events.jsonl`, where both loops log their transitions, one JSON object a line."""
+    return runtime_dir(repo, "pair") / "events.jsonl"
+
+
+def append_event(
+    repo: Path, loop: str, kind: str, slug: str | None = None, **fields: Any
+) -> None:
+    """Append one event to the log, as one line in one write.
+
+    An append this small to a local file is not split, so the loop working
+    Issues and a grooming pass write the one file without interleaving.
+    """
+    row: dict[str, Any] = {
+        "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "kind": kind,
+        "loop": loop,
+    }
+    if slug is not None:
+        row["slug"] = slug
+    row.update(fields)
+    path = event_log(repo)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a") as f:
+        f.write(json.dumps(row) + "\n")
+
+
 def groom_targets(repo: Path) -> frozenset[str]:
     """The Issues a grooming pass underway took up, which the loop leaves alone.
 
@@ -204,9 +231,21 @@ class Loop:
     def clear(self) -> None:
         self.state_file.unlink(missing_ok=True)
 
-    def pause(self, st: State, reason: str, retry: str | None) -> str:
+    def event(self, kind: str, slug: str | None = None, **fields: Any) -> None:
+        """Log a transition of this loop to `.pair/events.jsonl` (`append_event`)."""
+        append_event(self.repo, self.kind, kind, slug, **fields)
+
+    def pause(
+        self, st: State, reason: str, retry: str | None, kind: str = "paused"
+    ) -> str:
+        """Pause with `reason`, logged as one event of `kind`.
+
+        A desk check and a stop are pauses too, logged as `desk-check` and
+        `stopped` rather than also as `paused`.
+        """
         st.paused, st.retry = reason, retry
         self.save(st)
+        self.event(kind, st.slug, reason=reason, retry=retry)
         self.notify(f"{st.slug}: {reason}")
         self.say(f"paused: {reason}")
         return "paused"
@@ -246,7 +285,9 @@ class Loop:
                     self.repo, self.main, skip=groom_targets(self.repo), within=within
                 )
                 if slug is None:
-                    self.say(self.nothing_ripe(flight))
+                    message = self.nothing_ripe(flight)
+                    self.event("empty", message=message)
+                    self.say(message)
                     return "empty"
                 kids = board.children(self.repo, self.main, slug)
                 st = self.start(
@@ -351,6 +392,7 @@ class Loop:
             return self.work(st)
         targets = board.to_groom(self.repo, self.main)
         if not (targets or board.unnamed(self.repo, self.main) or rerank):
+            self.event("empty", message="nothing to groom")
             self.say("nothing to groom")
             return "nothing"
         st = self.start(
@@ -543,6 +585,7 @@ class Loop:
             (self.dir / f"{role}.session").unlink(missing_ok=True)
         st.head = st.base = git(self.wt, "rev-parse", "HEAD")
         self.save(st)
+        self.event("started", st.slug, stage=st.stage)
         self.say(f"started {st.slug}")
         return st
 
@@ -587,7 +630,9 @@ class Loop:
             st.retry = st.paused = None
             while True:
                 if self.stop_requested:
-                    self.pause(st, "stopped by the developer", retry=None)
+                    self.pause(
+                        st, "stopped by the developer", retry=None, kind="stopped"
+                    )
                     return "stopped"
                 role = st.next_role
                 restarted = st.in_turn == role
@@ -957,6 +1002,7 @@ class Loop:
                 f"ready for your desk check in {self.tree} "
                 "(`just pair-accept`, or leave notes and `just pair-resume`)",
                 retry="desk-check",
+                kind="desk-check",
             )
         return self.merge(st)
 
@@ -977,6 +1023,7 @@ class Loop:
             "-m",
             "Seat: loop",
         )
+        self.event("moved", st.slug, **{"from": st.stage, "to": to})
         self.say(f"{st.slug}: {st.stage} -> {to}")
         st.stage, st.turn, st.approvals, st.next_role = to, 0, [], "primary"
         st.head = git(self.wt, "rev-parse", "HEAD")
@@ -1057,6 +1104,10 @@ class Loop:
 
         When the other process lands first, the branch is rebased onto the new
         `main` and landed again, up to `LAND_TRIES` times.
+
+        A landing logs `landed` once it is on `main`. Only a Flight lands in
+        `desk-check/`, so that landing also logs `desk-check`; a `developer`
+        Issue waits there on its branch, and `advance` logs it.
         """
         for _ in range(LAND_TRIES):
             moved = self.rebase(st)
@@ -1103,6 +1154,9 @@ class Loop:
             git(self.wt, "checkout", "-q", "--detach", self.main)
             git(self.wt, "branch", "-q", "-D", f"pair/{st.slug}", check=False)
             self.clear()
+            self.event("landed", st.slug, sha=sha, stage=st.stage)
+            if st.stage == "desk-check":
+                self.event("desk-check", st.slug, stage=st.stage)
             self.notify(f"landed {st.slug}")
             self.say(f"landed {st.slug}: {title} ({sha[:8]})")
             return "landed"
@@ -1200,6 +1254,7 @@ class Loop:
         git(self.wt, "checkout", "-q", "--detach", self.main)
         git(self.wt, "branch", "-q", "-D", f"pair/{GROOMING}", check=False)
         self.clear()
+        self.event("groomed", GROOMING, sha=sha)
         self.notify("groomed the backlog")
         self.say(f"groomed the backlog ({sha[:8]})")
         return "groomed"
@@ -1300,6 +1355,7 @@ class Loop:
             self.save(st)
             return "paused"
         self.clear()
+        self.event("sent-back", st.slug, reason=reason)
         self.notify(f"{st.slug} went back to backlog/ for elaboration")
         self.say(f"sent {st.slug} back to backlog/")
         return "kicked"
