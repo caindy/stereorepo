@@ -193,10 +193,12 @@ pass is squashed before it rebases, and keeps only its changes under
 `issues/backlog/`. A conflict in `ORDER` alone does not stop a landing: the
 loop rebuilds the file from `main`'s, with the pass's placements put back
 after the line they followed, and without the line of any slug that has left
-`backlog/` and is not underway. When the other process lands first, or holds
-the index of the developer's checkout, the landing is tried again on the new
-`main`, a few times, before the loop pauses; local edits in the developer's
-checkout still pause it at once.
+`backlog/` and is not underway. When the other process lands first, the
+landing is built again on the new `main`; when git refuses the fast-forward for
+any other reason, such as a commit in flight holding the index or `main`'s
+ref, it is tried again. Either way it goes round a few times before the loop
+pauses with git's error. Only local edits in the developer's checkout to a
+path the landing changes pause it at once.
 
 ## Using it
 

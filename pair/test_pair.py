@@ -269,6 +269,9 @@ class Bench:
             def wait_for_lock(self) -> None:
                 bench.lock_waits += 1
                 (bench.repo / ".git" / "index.lock").unlink(missing_ok=True)
+                (bench.repo / ".git" / "refs" / "heads" / "main.lock").unlink(
+                    missing_ok=True
+                )
 
         def factory(kind: str) -> Callable[[str, Path, str | None], FakeSeat]:
             def make(role: str, cwd: Path, resume: str | None) -> FakeSeat:
@@ -2115,8 +2118,54 @@ class AlongsideTest(unittest.TestCase):
         b.before_land = [lambda _repo: None, lock]
         b.script(("primary", quiet), *land_the_issue("x"))
         self.assertEqual(b.loop.run(once=True), "paused")
-        self.assertIn(".git/index.lock stayed", b.state().paused or "")
+        reason = b.state().paused or ""
+        self.assertIn(".git/index.lock stayed", reason)
+        self.assertIn("(git: ", reason)
+        self.assertIn("index.lock': File exists", reason)
         (b.repo / ".git" / "index.lock").unlink()
+
+    def test_a_lock_on_mains_ref_is_waited_out(self) -> None:
+        b = self.b
+
+        def other_holds_main(repo: Path) -> None:
+            (repo / ".git" / "refs" / "heads" / "main.lock").write_text("")
+
+        b.before_land = [lambda _repo: None, other_holds_main]
+        b.script(("primary", quiet), *land_the_issue("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.lock_waits, 1)
+        self.assertTrue(b.on_main("issues/done/x.md"))
+
+    def test_a_refusal_with_nothing_in_the_way_is_tried_again(self) -> None:
+        b = self.b
+        refusals = [subprocess.CompletedProcess([], 1, "", "fatal: a passing race\n")]
+
+        def refuse_once(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+            if args[:2] == ("merge", "--ff-only") and refusals:
+                return refusals.pop()
+            return board.git_run(cwd, *args)
+
+        b.script(("primary", quiet), *land_the_issue("x"))
+        with mock.patch("loop.git_run", refuse_once):
+            self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual((refusals, b.lock_waits), ([], 1))
+        self.assertTrue(b.on_main("issues/done/x.md"))
+
+    def test_edits_the_landing_does_not_touch_do_not_stop_it(self) -> None:
+        b = self.b
+
+        def unrelated_edits(repo: Path) -> None:
+            (repo / "notes.txt").write_text("mine\n")
+            with (repo / ".gitignore").open("a") as ignore:
+                ignore.write("scratch/\n")
+
+        b.before_land = [lambda _repo: None, unrelated_edits]
+        b.script(("primary", quiet), *land_the_issue("x"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.lock_waits, 0)
+        self.assertTrue(b.on_main("issues/done/x.md"))
+        self.assertEqual((b.repo / "notes.txt").read_text(), "mine\n")
+        self.assertIn("scratch/", (b.repo / ".gitignore").read_text())
 
     def test_a_refused_fast_forward_is_tried_again(self) -> None:
         b = self.b
@@ -2152,7 +2201,10 @@ class AlongsideTest(unittest.TestCase):
         b.before_land = [lambda _repo: None, local_edits]
         b.script(("primary", quiet), *land_the_issue("x"))
         self.assertEqual(b.loop.run(once=True), "paused")
-        self.assertIn("local edits in the way", b.state().paused or "")
+        reason = b.state().paused or ""
+        self.assertIn("local edits in the way: x.txt", reason)
+        self.assertIn("(git: ", reason)
+        self.assertEqual(b.lock_waits, 0)
 
     def test_a_pass_left_in_the_issue_worktree_is_dropped(self) -> None:
         b = self.b

@@ -76,7 +76,9 @@ DELIVER_TAIL = 2_000
 LAND_TRIES = 5
 """How many times a landing goes round when the other process lands first."""
 LOCK_WAIT = 0.5
-"""Seconds to wait for the other process to let go of the checkout's index lock."""
+"""Seconds to wait for the other process's git command (a lock, or a commit in flight)."""
+GIT_ERROR_TAIL = 300
+"""Characters of git's error that a refused landing's pause reason carries."""
 RESTARTED = (
     "(Your session was restarted after an interruption. The working tree is as you "
     "left it; check `git status` and carry on.)\n\n"
@@ -1376,11 +1378,12 @@ class Loop:
         Answers `landed` when it moved, and `moved` when `main` has moved past
         the commit `sha` was built on because the other process (a grooming
         pass, or the loop working an Issue) landed first; the caller then
-        builds again on the new `main`. A fast-forward that meets the other
-        process's `index.lock` is tried again after `wait_for_lock`, and
-        pauses, naming the lock, if the lock never goes away. Any
-        other refusal, such as local edits in the way, pauses the loop with
-        `retry` and answers `paused`.
+        builds again on the new `main`. Local edits to a path the landing
+        changes pause the loop at once with `retry` and answer `paused`. Any
+        other refusal, such as a commit on `main` in flight that holds
+        `index.lock` or the lock on `main`'s ref, is tried again after
+        `wait_for_lock`, up to `LAND_TRIES` times before it pauses. The pause
+        reason names a lock still in place, and ends with git's error.
         """
         branch = git(self.repo, "symbolic-ref", "--short", "-q", "HEAD", check=False)
         if branch != self.main:
@@ -1391,34 +1394,71 @@ class Loop:
                 retry=retry,
             )
             return "paused"
-        lock = self.repo / git(self.repo, "rev-parse", "--git-path", "index.lock")
-        locked = False
-        for _ in range(LAND_TRIES):
+        locks = [
+            self.repo / git(self.repo, "rev-parse", "--git-path", path)
+            for path in ("index.lock", f"refs/heads/{self.main}.lock")
+        ]
+        edits: list[str] = []
+        for tries in range(1, LAND_TRIES + 1):
             done = git_run(self.repo, "merge", "--ff-only", "-q", sha)
             if done.returncode == 0:
                 return "landed"
             if not git_ok(self.repo, "merge-base", "--is-ancestor", self.main, sha):
                 return "moved"
-            locked = "index.lock" in done.stderr or lock.exists()
-            if not locked:
+            edits = self.edits_in_the_way(sha)
+            if edits or tries == LAND_TRIES:
                 break
             self.wait_for_lock()
-        why = (
-            f"({lock.relative_to(self.repo)} stayed in place); "
-            "if no git process holds it, delete it"
-            if locked
-            else "(local edits in the way?); clear them"
-        )
+        held = [lock for lock in locks if lock.exists()]
+        if edits:
+            why = f"(local edits in the way: {', '.join(edits)}); clear them"
+        elif held:
+            why = (
+                f"({held[0].relative_to(self.repo)} stayed in place); "
+                "if no git process holds it, delete it"
+            )
+        else:
+            why = f"(git refused it {LAND_TRIES} times)"
         self.pause(
             st,
             f"could not fast-forward {self.main} in your checkout to {sha[:8]} "
-            f"{why}, then run again",
+            f"{why}, then run again (git: {git_error(done.stderr)})",
             retry=retry,
         )
         return "paused"
 
+    def edits_in_the_way(self, sha: str) -> list[str]:
+        """The paths the landing of `sha` changes that the checkout has local changes to.
+
+        Untracked files count, since git will not overwrite them either. A
+        tracked path whose content already matches `sha` does not: a
+        fast-forward refused by the lock on `main`'s ref has already written
+        the landing into the checkout, and the next try finishes it. A `git
+        status` that fails, as it may while the other process holds the index,
+        answers no paths, so that a lock is waited out rather than read as
+        edits. In `git status -z`, a rename or copy entry is followed by the
+        path it came from, which counts as changed too.
+        """
+        status = git_run(
+            self.repo, "status", "--porcelain=v1", "-z", "--untracked-files=all"
+        )
+        if status.returncode != 0:
+            return []
+        changed: set[str] = set()
+        untracked: set[str] = set()
+        entries = iter(status.stdout.split("\0"))
+        for entry in entries:
+            if not entry:
+                continue
+            (untracked if entry[:2] == "??" else changed).add(entry[3:])
+            if entry[0] in "RC":
+                changed.add(next(entries, ""))
+        landing = set(git(self.repo, "diff", "--name-only", "-z", self.main, sha).split("\0"))
+        unlike_sha = set(git(self.repo, "diff", "--name-only", "-z", sha).split("\0"))
+        return sorted(landing & (untracked | (changed & unlike_sha)) - {""})
+
     def wait_for_lock(self) -> None:
-        """Give the other process time to finish with the checkout's index."""
+        """Give the other process's git command (a lock, or a commit in flight) time to finish."""
         time.sleep(LOCK_WAIT)
 
     def kick_back(self, st: State, reason: str | None) -> str:
@@ -1522,6 +1562,18 @@ def first_line(text: str | None) -> str:
     """
     line = next((line.strip() for line in (text or "").splitlines() if line.strip()), "")
     return line.replace("**", "")
+
+
+def git_error(stderr: str) -> str:
+    """Git's error on one line, cut to its last `GIT_ERROR_TAIL` characters.
+
+    It keeps the last three `fatal:` or `error:` lines, or the last three
+    lines when there are none, because the advice git prints after a lock's
+    error would otherwise push out the line naming the lock.
+    """
+    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+    errors = [line for line in lines if line.startswith(("fatal:", "error:"))]
+    return " / ".join((errors or lines)[-3:])[-GIT_ERROR_TAIL:] or "no message"
 
 
 def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
