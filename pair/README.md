@@ -41,7 +41,10 @@ decision accepts that risk for the minutes the whole gate cost on every
 landing. No seat runs the whole `just gate` in any stage, even when an Issue names it
 (`prompts/primary.md`, `prompts/secondary.md`), and grooming states how an
 Issue will be known done in behaviour and tests, never as a gate
-(`prompts/stage-backlog.md`, `prompts/stage-grooming.md`).
+(`prompts/stage-backlog.md`, `prompts/stage-grooming.md`). A seat working
+on speed measures once before its change and once after, and runs no
+repeated or side-by-side comparisons (`prompts/primary.md`,
+`prompts/secondary.md`).
 
 1. **Acceptance.** A turn that changes nothing is a quiet turn: that seat
    accepts the state it found. A turn that changes something makes its author
