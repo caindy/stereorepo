@@ -1,0 +1,99 @@
+decisions:
+  - id: work:decision/302
+    name: "DR-302 · A seat's shell commands run in Claude Code's sandbox, not under an allow-list"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+    context: >-
+      The seats ran with an allow-list of command prefixes and a deny list of
+      the git commands the loop owns. In the booktutor spike (hypothesis H9)
+      the allow-list produced 75 permission denials in 81 turns, none of which
+      blocked anything dangerous: 62 were compound shell commands built from
+      allowed parts, which a prefix rule cannot express, and 6 were the
+      secondary seat breaking code on purpose to show that a test fails
+      without the fix. The guarantees that mattered were held by the loop's
+      own checks after each turn. The question was how to bound what an
+      unattended seat can do on the developer's machine without denying the
+      work.
+    alternatives:
+      - name: Keep the allow-list and add prefixes as denials turn up
+        chosen: false
+        reason: >-
+          No list of prefixes admits a compound command, so the denials never
+          stop, and each new prefix widens what a seat may run anywhere on the
+          machine.
+      - name: An OS-level sandbox around the seat (`sandbox-exec` or a container)
+        chosen: false
+        reason: >-
+          It needs a profile or an image maintained beside the loop, and a
+          container needs software installed on the developer's machine.
+          Claude Code's sandbox uses the same Seatbelt framework on macOS with
+          nothing installed.
+      - name: Claude Code's sandbox, set on the seat's command line
+        chosen: true
+        reason: >-
+          Every shell command runs without a prompt, writes are confined by
+          the operating system rather than by matching command text, and the
+          deny list still applies to each part of a compound command.
+    consequences:
+      - >-
+        `pair/seats.py` passes `--settings` with the sandbox enabled, Bash
+        auto-allowed, unsandboxed retries refused, and a session that fails
+        rather than runs when the sandbox is unavailable. `DISALLOWED` is
+        unchanged.
+      - >-
+        Claude Code grants a worktree's git common directory to the sandbox
+        on its own, less `hooks/` and `config`, and a denied path wins over an
+        allowed one. So `seats.confinement` denies, by name, every entry of
+        the common directory except the object store, the refs and reflogs
+        of `pair/` branches and the seat's own worktree directory; every
+        local branch outside `pair/`, including one held only in
+        `packed-refs`; and every other worktree. Those run code in, or move
+        the branches of, git commands run outside the sandbox by the loop and
+        by the developer in the main checkout.
+      - >-
+        The caches `just gate` writes to are allowed: `uv`'s cache, with
+        `UV_TOOL_DIR` pointed inside it so the seat cannot change a tool the
+        developer installed, and `cargo`'s registry and git sources but not
+        its `bin/`. A seat can still put something in those caches that a
+        later run outside the sandbox uses.
+      - >-
+        When the repository signs commits, the GnuPG home is allowed so that
+        `gpg` can write its lock files there, and its agent and `keyboxd`
+        sockets are allowed as Unix sockets. Every other entry in it is
+        denied by name: the existing ones, the configuration and key files
+        whether or not they exist, and the versioned `gpg.conf-<version>`
+        names `gpg` reads before `gpg.conf`. Its configuration can name a
+        program for `gpg` to run, and the developer's own signing runs it.
+      - >-
+        The sandbox's network allows every domain, as the allow-list did.
+      - >-
+        Edit, Write and NotebookEdit are not in `ALLOWED`, because a bare
+        entry allows them anywhere. Without one, `acceptEdits` holds them to
+        the working directory, since in `-p` mode the prompt a write
+        elsewhere needs is a denial.
+      - >-
+        Claude Code still refuses, before running it, a shell command it
+        cannot analyse statically, such as `x=$(git rev-parse HEAD)` or a
+        redirect to `"$TMPDIR/f"`. Those denials remain; the sandbox removes
+        the ones a prefix list caused.
+      - >-
+        The sandbox confines the seat's session, not the code it writes. The
+        loop runs `just gate` and `just deliver` in the worktree outside the
+        sandbox, so code a seat writes there runs unsandboxed when the loop
+        gates it.
+      - >-
+        When `just gate` starts writing somewhere new, a seat's own gate run
+        fails with a sandbox denial naming the path, and the fix is one more
+        entry in `seats.confinement`.
+    falsifier: >-
+      A seat writes outside the worktree and the paths `seats.confinement`
+      allows, moves `main`, or pushes; or seats keep hitting sandbox denials
+      on ordinary work.
+    rationale: |-
+      What a seat may change is a question about paths, and the operating
+      system answers it exactly. A command-prefix list answers a different
+      question, about the text of a command, and answers it badly for the
+      compound commands agents write. The loop's checks after each turn
+      remain the guarantee for what lands; the sandbox bounds what a seat can
+      touch on the way.

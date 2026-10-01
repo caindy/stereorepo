@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import os
 import queue
+import shutil
 import subprocess
 import threading
 import time
@@ -21,45 +22,18 @@ from typing import Any, Protocol
 
 ALLOWED = [
     "Read",
-    "Edit",
-    "Write",
     "Glob",
     "Grep",
-    "NotebookEdit",
     "TodoWrite",
     "WebSearch",
     "WebFetch",
-    "Bash(just *)",
-    "Bash(uv *)",
-    "Bash(uvx *)",
-    "Bash(cargo *)",
-    "Bash(python3 *)",
-    "Bash(python *)",
-    "Bash(.venv/bin/*)",
-    "Bash(ruff *)",
-    "Bash(grep *)",
-    "Bash(rg *)",
-    "Bash(ls *)",
-    "Bash(cat *)",
-    "Bash(head *)",
-    "Bash(tail *)",
-    "Bash(wc *)",
-    "Bash(find *)",
-    "Bash(sed -n *)",
-    "Bash(cd *)",
-    "Bash(git status*)",
-    "Bash(git diff*)",
-    "Bash(git log*)",
-    "Bash(git show*)",
-    "Bash(git add *)",
-    "Bash(git commit *)",
-    "Bash(git restore *)",
-    "Bash(git stash list*)",
-    "Bash(git grep *)",
-    "Bash(git blame *)",
-    "Bash(git ls-files*)",
-    "Bash(git ls-tree*)",
 ]
+"""The tools a seat uses without a prompt.
+
+Bash is not listed, because it runs in the sandbox. Edit, Write and
+NotebookEdit are not listed either: a bare entry allows them anywhere, while
+`acceptEdits` allows them only in the working directory.
+"""
 DISALLOWED = [
     "Bash(git push*)",
     "Bash(git merge*)",
@@ -72,6 +46,7 @@ DISALLOWED = [
     "Bash(git mv *)",
     "Bash(git stash*)",
 ]
+"""The git commands the loop owns, refused even inside a compound command."""
 
 
 @dataclass
@@ -131,8 +106,168 @@ but it drops the project's skills too.
 """
 
 
-def command(system_prompt: str, model: str | None = None, resume: str | None = None) -> list[str]:
-    """The command line that starts a Claude Code seat in stream-json mode."""
+GIT_DENIED = ["HEAD", "config", "hooks", "info", "index", "packed-refs", "modules"]
+"""Entries of the git common directory a seat may not write, whether or not they exist yet."""
+
+GIT_ALLOWED = {"objects", "refs", "logs", "worktrees"}
+"""Entries of the git common directory a commit in a worktree writes under."""
+
+GNUPG_DENIED = [
+    "common.conf",
+    "dirmngr.conf",
+    "gpg-agent.conf",
+    "gpg.conf",
+    "gpgsm.conf",
+    "keyboxd.conf",
+    "scdaemon.conf",
+    "sshcontrol",
+    "private-keys-v1.d",
+    "public-keys.d",
+    "pubring.kbx",
+    "trustdb.gpg",
+]
+"""Entries of the GnuPG home a seat may not write: its configuration and its keys."""
+
+
+def versioned_gpg_conf() -> list[str]:
+    """The versioned names `gpg` reads its options from before `gpg.conf`.
+
+    For version 2.5.21, `gpg` reads `gpg.conf-2.5.21`, `gpg.conf-2.5` or
+    `gpg.conf-2` in preference to `gpg.conf` (observed 2026-10-01), so denying
+    `gpg.conf` alone leaves its options, among them `agent-program`, writable.
+    """
+    try:
+        first = subprocess.run(
+            ["gpg", "--version"], capture_output=True, text=True, check=True
+        ).stdout.splitlines()[0]
+    except (OSError, subprocess.CalledProcessError, IndexError):
+        return []
+    parts = first.split()[-1].split(".")
+    return [f"gpg.conf-{'.'.join(parts[:n])}" for n in range(1, len(parts) + 1)]
+
+
+@dataclass
+class Confinement:
+    """Where a seat's shell commands may write, beyond the working directory.
+
+    `allow` and `deny` become the sandbox's `filesystem.allowWrite` and
+    `filesystem.denyWrite`; a denied path wins over an allowed one that holds
+    it. `sockets` become `network.allowUnixSockets`, and `env` is added to the
+    seat's environment.
+    """
+
+    allow: list[Path]
+    deny: list[Path]
+    env: dict[str, str]
+    sockets: list[Path] = field(default_factory=list)
+
+
+def confinement(cwd: Path) -> Confinement:
+    """The write confinement for a seat whose working directory is the worktree `cwd`.
+
+    Claude Code's sandbox grants a worktree's git common directory on its own,
+    less `hooks/` and `config`, so that `git commit` works (observed with
+    Claude Code on 2026-10-01). Everything else there is code or state that
+    git commands outside the sandbox act on: the loop's in this worktree, and
+    the developer's in the main checkout. So `deny` names every entry of the
+    common directory except the object store, the refs and reflogs of `pair/`
+    branches, and this worktree's own git directory; every local branch
+    outside `pair/` (read from git, so a branch held only in `packed-refs` is
+    covered); and every other worktree.
+
+    `allow` names the caches `just gate` writes to. `uv`'s tool directory is
+    moved into its cache through `UV_TOOL_DIR`, so the seat cannot change a
+    tool the developer installed. Of `cargo`'s home, only the downloaded
+    registry and git sources are allowed, not its `bin/`.
+
+    When the repository signs commits with GnuPG, `gpg` must reach its agent
+    and `keyboxd` through their sockets and write lock files in the root of
+    its home directory. That root is allowed, and every entry in it is
+    denied except the sockets, so that its configuration (which can name a
+    program for the agent to run) and its keys stay out of reach.
+    """
+
+    def out(*argv: str) -> str:
+        return subprocess.run(
+            argv, cwd=cwd, capture_output=True, text=True, check=True
+        ).stdout.strip()
+
+    common = Path(out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"))
+    gitdir = Path(out("git", "rev-parse", "--absolute-git-dir"))
+    if gitdir == common:
+        raise ValueError(f"{cwd} is not a linked worktree; a seat runs in one")
+    refs = common / "refs"
+    deny = {common / name for name in GIT_DENIED}
+    deny |= {p for p in common.iterdir() if p.name not in GIT_ALLOWED}
+    deny |= {refs / "tags", refs / "remotes"}
+    deny |= {p for p in refs.iterdir() if p.name != "heads"}
+    branches = out("git", "for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads")
+    deny |= {refs / "heads" / b.split("/")[0] for b in branches.splitlines()}
+    deny |= {p for p in (refs / "heads").iterdir()}
+    deny.discard(refs / "heads" / "pair")
+    deny |= {p for p in (common / "worktrees").iterdir() if p != gitdir}
+
+    allow = [
+        common / "objects",
+        gitdir,
+        refs / "heads" / "pair",
+        common / "logs" / "refs" / "heads" / "pair",
+    ]
+    env = {}
+    if shutil.which("uv"):
+        cache = Path(out("uv", "cache", "dir"))
+        allow.append(cache)
+        env["UV_TOOL_DIR"] = str(cache / "seat-tools")
+    cargo = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
+    allow += [cargo / "registry", cargo / "git"]
+
+    sockets = []
+    signs = subprocess.run(
+        ["git", "config", "--bool", "commit.gpgsign"], cwd=cwd, capture_output=True, text=True
+    ).stdout.strip()
+    if signs == "true":
+        gnupg = Path(os.environ.get("GNUPGHOME", Path.home() / ".gnupg"))
+        allow.append(gnupg)
+        deny |= {gnupg / name for name in GNUPG_DENIED}
+        deny |= {gnupg / name for name in versioned_gpg_conf()}
+        if gnupg.is_dir():
+            deny |= {p for p in gnupg.iterdir() if not p.name.startswith(("S.", ".#lk"))}
+            deny -= {p for p in deny if p.name.endswith(".lock")}
+        sockets += [gnupg / "S.gpg-agent", gnupg / "S.keyboxd"]
+    return Confinement(allow, sorted(deny), env, sockets)
+
+
+def command(
+    system_prompt: str,
+    confined: Confinement,
+    model: str | None = None,
+    resume: str | None = None,
+) -> list[str]:
+    """The command line that starts a Claude Code seat in stream-json mode.
+
+    Bash runs in Claude Code's sandbox rather than under an allow-list of
+    command prefixes, which cannot express a compound command built from
+    allowed parts (DR-302). The sandbox lets every command run without a
+    prompt, confines its writes as `confined` says, and lets it reach any
+    domain, as the allow-list did. `DISALLOWED` still
+    applies to each part of a compound command. Edit and Write are not in
+    `ALLOWED`, so `acceptEdits` holds them to the working directory: in `-p`
+    mode, the prompt a write elsewhere needs is a denial.
+    """
+    sandbox = {
+        "enabled": True,
+        "autoAllowBashIfSandboxed": True,
+        "allowUnsandboxedCommands": False,
+        "failIfUnavailable": True,
+        "filesystem": {
+            "allowWrite": [str(p) for p in confined.allow],
+            "denyWrite": [str(p) for p in confined.deny],
+        },
+        "network": {
+            "allowedDomains": ["*"],
+            "allowUnixSockets": [str(p) for p in confined.sockets],
+        },
+    }
     argv = [
         "claude",
         "-p",
@@ -144,6 +279,8 @@ def command(system_prompt: str, model: str | None = None, resume: str | None = N
         "--permission-mode",
         "acceptEdits",
         *CONTEXT,
+        "--settings",
+        json.dumps({"sandbox": sandbox}),
         "--append-system-prompt",
         system_prompt,
         "--allowedTools",
@@ -182,8 +319,10 @@ class ClaudeSeat:
         self.session_id = resume
         self.timeout = timeout
         self.log_dir = log_dir
-        argv = command(system_prompt, model=model, resume=resume)
+        confined = confinement(cwd)
+        argv = command(system_prompt, confined, model=model, resume=resume)
         env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+        env.update(confined.env)
         self.proc = subprocess.Popen(
             argv,
             cwd=cwd,

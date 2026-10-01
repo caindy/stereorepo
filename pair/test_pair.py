@@ -20,7 +20,16 @@ from typing import Any
 
 import board
 from loop import Loop, State, append_event, event_log, status, status_json, status_view
-from seats import ALLOWED, TurnResult, command, is_refusal
+from seats import (
+    ALLOWED,
+    DISALLOWED,
+    Confinement,
+    TurnResult,
+    command,
+    confinement,
+    is_refusal,
+    versioned_gpg_conf,
+)
 from watch import ENDED_FIRST, NOT_RUNNING, watch
 
 PROMPTS = Path(__file__).resolve().parent / "prompts"
@@ -31,6 +40,19 @@ def sh(cwd: Path, *args: str) -> str:
     return subprocess.run(
         ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
     ).stdout.strip()
+
+
+def inspects_processes() -> bool:
+    """Whether `ps` runs here. A seat's sandbox refuses it (DR-302)."""
+    try:
+        subprocess.run(["ps", "-p", str(os.getpid())], capture_output=True, check=True)
+    except (OSError, subprocess.CalledProcessError):
+        return False
+    return True
+
+
+NO_PS = "`ps` cannot run in a seat's sandbox; the loop's own gate runs this test"
+INSPECTS = inspects_processes()
 
 
 def quiet(_cwd: Path) -> None:
@@ -453,6 +475,7 @@ class LoopTest(unittest.TestCase):
         self.assertIn("primary: backlog turn on x", log)
         self.assertNotIn("developer:", log)
 
+    @unittest.skipUnless(INSPECTS, NO_PS)
     def test_reap_stops_only_an_orphaned_seat_in_this_worktree(self) -> None:
         b = self.b
         b.loop.ensure_worktree()
@@ -2033,6 +2056,7 @@ class EventLogTest(unittest.TestCase):
         )
 
 
+@unittest.skipUnless(INSPECTS, NO_PS)
 class WatchTest(unittest.TestCase):
     """`just pair-watch`: it exits when its condition is met, and never outlives the loop."""
 
@@ -2699,16 +2723,153 @@ class BoardTest(unittest.TestCase):
 
 
 class SeatCommandTest(unittest.TestCase):
+    CONFINED = Confinement(
+        [Path("/r/.git/objects"), Path("/c/uv")],
+        [Path("/r/.git/hooks")],
+        {},
+        [Path("/g/S.gpg-agent")],
+    )
+
     def test_a_seat_loads_the_project_settings_alone(self) -> None:
-        argv = command("seat prompt", model="sonnet", resume="abc")
+        argv = command("seat prompt", self.CONFINED, model="sonnet", resume="abc")
         at = argv.index("--setting-sources")
         self.assertEqual(argv[at + 1], "project")
         self.assertIn("--strict-mcp-config", argv)
         self.assertNotIn("--disable-slash-commands", argv)
         self.assertEqual(argv[argv.index("--append-system-prompt") + 1], "seat prompt")
         self.assertEqual(argv[-4:], ["--model", "sonnet", "--resume", "abc"])
+
+    def test_bash_runs_in_a_sandbox_and_the_loops_git_commands_are_refused(self) -> None:
+        argv = command("p", self.CONFINED)
+        sandbox = json.loads(argv[argv.index("--settings") + 1])["sandbox"]
+        self.assertIs(sandbox["enabled"], True)
+        self.assertIs(sandbox["autoAllowBashIfSandboxed"], True)
+        self.assertIs(sandbox["failIfUnavailable"], True)
+        self.assertIs(sandbox["allowUnsandboxedCommands"], False)
+        self.assertEqual(sandbox["filesystem"]["allowWrite"], ["/r/.git/objects", "/c/uv"])
+        self.assertEqual(sandbox["filesystem"]["denyWrite"], ["/r/.git/hooks"])
+        self.assertEqual(sandbox["network"]["allowedDomains"], ["*"])
+        self.assertEqual(sandbox["network"]["allowUnixSockets"], ["/g/S.gpg-agent"])
         allowed = argv.index("--allowedTools") + 1
         self.assertEqual(argv[allowed : allowed + len(ALLOWED)], ALLOWED)
+        for tool in ("Bash", "Edit", "Write", "NotebookEdit"):
+            self.assertFalse([t for t in ALLOWED if t.split("(")[0] == tool], tool)
+        denied = argv.index("--disallowedTools") + 1
+        self.assertEqual(argv[denied : denied + len(DISALLOWED)], DISALLOWED)
+        self.assertIn("Bash(git push*)", DISALLOWED)
+
+
+def snapshot(root: Path) -> dict[Path, tuple[int, int, int]]:
+    """Every path under `root`, with what a write to it changes."""
+    return {
+        p: (s.st_mtime_ns, s.st_size, s.st_ino)
+        for p in [root, *root.rglob("*")]
+        for s in [p.lstat()]
+    }
+
+
+class ConfinementTest(unittest.TestCase):
+    """`confinement` lets a commit through and keeps the rest of the git common directory."""
+
+    def setUp(self) -> None:
+        self.tmp = Path(tempfile.mkdtemp()).resolve()
+        self.repo = self.tmp / "repo"
+        self.repo.mkdir()
+        sh(self.repo, "init", "-q", "-b", "main")
+        sh(self.repo, "config", "user.email", "t@example.com")
+        sh(self.repo, "config", "user.name", "t")
+        sh(self.repo, "config", "commit.gpgsign", "false")
+        (self.repo / "a").write_text("a\n")
+        sh(self.repo, "add", "a")
+        sh(self.repo, "commit", "-qm", "a")
+        sh(self.repo, "branch", "dev")
+        sh(self.repo, "branch", "claude/side")
+        sh(self.repo, "pack-refs", "--all")
+        self.wt = self.tmp / "wt"
+        sh(self.repo, "worktree", "add", "-q", "-b", "pair/x", str(self.wt))
+        sh(self.repo, "worktree", "add", "-q", "--detach", str(self.tmp / "other"))
+        self.common = self.repo / ".git"
+
+    def tearDown(self) -> None:
+        subprocess.run(["rm", "-rf", str(self.tmp)], check=True)
+
+    def denied(self, path: Path, deny: list[Path]) -> bool:
+        return any(path.is_relative_to(d) for d in deny)
+
+    def test_a_commit_writes_only_allowed_paths_and_none_denied(self) -> None:
+        """The root itself is left out: a commit creates and removes a lock file there.
+
+        The sandbox grants the root, and the commit leaves no entry behind.
+        """
+        confined = confinement(self.wt)
+        before = snapshot(self.common)
+        (self.wt / "b").write_text("b\n")
+        sh(self.wt, "add", "b")
+        sh(self.wt, "commit", "-qm", "b")
+        after = snapshot(self.common)
+        written = {p for p in before.keys() | after.keys() if before.get(p) != after.get(p)}
+        self.assertEqual(
+            {p for p in before if p.parent == self.common},
+            {p for p in after if p.parent == self.common},
+        )
+        written.discard(self.common)
+        self.assertTrue(written)
+        for path in written:
+            self.assertFalse(self.denied(path, confined.deny), path)
+            self.assertTrue(any(path.is_relative_to(a) for a in confined.allow), path)
+
+    def test_what_moves_code_or_other_branches_is_denied(self) -> None:
+        confined = confinement(self.wt)
+        heads = self.common / "refs" / "heads"
+        for path in [
+            self.common / "hooks",
+            self.common / "config",
+            self.common / "HEAD",
+            self.common / "packed-refs",
+            self.common / "index",
+            heads / "main",
+            heads / "dev",
+            heads / "claude" / "side",
+            self.common / "refs" / "tags",
+            self.common / "worktrees" / "other",
+        ]:
+            self.assertTrue(self.denied(path, confined.deny), path)
+        self.assertFalse((heads / "dev").exists(), "dev should be held only in packed-refs")
+        for path in confined.allow:
+            self.assertFalse(self.denied(path, confined.deny), path)
+        self.assertNotIn(self.common, confined.allow)
+
+    def test_uv_tools_and_cargo_binaries_stay_out_of_reach(self) -> None:
+        confined = confinement(self.wt)
+        cargo = Path(os.environ.get("CARGO_HOME", Path.home() / ".cargo"))
+        self.assertNotIn(cargo, confined.allow)
+        self.assertFalse(any((cargo / "bin").is_relative_to(a) for a in confined.allow))
+        if "UV_TOOL_DIR" in confined.env:
+            tools = Path(confined.env["UV_TOOL_DIR"])
+            self.assertTrue(any(tools.is_relative_to(a) for a in confined.allow))
+
+    def test_the_main_checkout_is_refused(self) -> None:
+        with self.assertRaises(ValueError):
+            confinement(self.repo)
+
+    def test_gnupg_is_reachable_only_for_signing_and_never_its_configuration(self) -> None:
+        self.assertEqual(confinement(self.wt).sockets, [])
+        gnupg = self.tmp / "gnupg"
+        gnupg.mkdir()
+        for name in ("gpg-agent.conf", "trustdb.gpg", "S.gpg-agent", "trustdb.gpg.lock"):
+            (gnupg / name).write_text("")
+        sh(self.repo, "config", "commit.gpgsign", "true")
+        os.environ["GNUPGHOME"] = str(gnupg)
+        self.addCleanup(os.environ.pop, "GNUPGHOME")
+        confined = confinement(self.wt)
+        self.assertIn(gnupg, confined.allow)
+        self.assertIn(gnupg / "S.gpg-agent", confined.sockets)
+        for name in ("gpg-agent.conf", "gpg.conf", "trustdb.gpg", "private-keys-v1.d"):
+            self.assertTrue(self.denied(gnupg / name, confined.deny), name)
+        for name in versioned_gpg_conf():
+            self.assertTrue(self.denied(gnupg / name, confined.deny), name)
+        for name in ("S.gpg-agent", "trustdb.gpg.lock", ".#lk0x1.host.1"):
+            self.assertFalse(self.denied(gnupg / name, confined.deny), name)
 
 
 if __name__ == "__main__":
