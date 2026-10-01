@@ -119,7 +119,8 @@ adopted Python at all.
 This section describes a Project workspace, and only a Project workspace.
 
 **In a stereorepo portfolio the canonical configuration is the seed's**
-(`bootstraps/python/seed/pyproject.toml`), which arrives with the Project and
+(the `pyproject.toml` that `just bootstrap python <path>` lays down), which
+arrives with the Project and
 already selects the rule set stereorepo's DR-096 settled, pins the gate's tools exactly while
 letting the test tools float (stereorepo's DR-097), and targets the support floor rather than
 the development interpreter (stereorepo's DR-095). Under Ratchet it is raised and never

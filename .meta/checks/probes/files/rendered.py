@@ -71,12 +71,23 @@ def _probe_fallbacks() -> list[str]:
     if not isinstance(snap_default, dict) or not snap_default:
         problems.append("snapshot() returned empty or non-dict result")
     rendered_default = targets.rendered(None)
-    if not rendered_default or "../SPECIALIZE.md" not in rendered_default:
+    if not rendered_default or "../.gitattributes" not in rendered_default:
         problems.append("rendered(None) fallback failed to render default targets")
     gitattr_default = targets.gitattributes(None)
     if "merge=union" not in gitattr_default:
         problems.append("gitattributes(None) fallback failed to generate union entries")
     return problems
+
+
+def _probe_fallbacks_without_specialize() -> list[str]:
+    """The fallbacks judged over default targets holding no `../SPECIALIZE.md`, as a portfolio's."""
+    saved = targets.TARGETS
+    targets.TARGETS = {"probe_page.md": lambda: "page", "../.gitattributes": targets.gitattributes}
+    try:
+        problems = _probe_fallbacks()
+    finally:
+        targets.TARGETS = saved
+    return [f"without ../SPECIALIZE.md: {problem}" for problem in problems]
 
 
 @check("rendered artifact probes", pre=True)
@@ -118,4 +129,5 @@ def rendered_artifact_probes() -> list[str]:
     problems.extend(_probe_gitattributes(gitattr))
     problems.extend(_probe_unrendered())
     problems.extend(_probe_fallbacks())
+    problems.extend(_probe_fallbacks_without_specialize())
     return problems

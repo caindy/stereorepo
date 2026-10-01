@@ -14,7 +14,7 @@ import tempfile
 
 import yaml
 
-from checks.collect import META, check
+from checks.collect import META, CouldNotRun, Found, Passed, StepOutcome, check
 from checks.probes.harness import load_module
 from lib.adapt import (
     PathClassification,
@@ -324,8 +324,23 @@ def _check_cli_and_formats(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> lis
     return problems
 
 
+NO_TEMPLATE = "no template/ to adopt from: brownfield adoption is planned from the scaffold"
+"""Why the step could not run in a repository without the scaffold's `template/`: a portfolio."""
+
+
+def _check_without_template(tmp: pathlib.Path) -> list[str]:
+    """Validates that the step reports it could not run, rather than passing, without template/."""
+    bare = tmp / "no_template"
+    bare.mkdir()
+    shown = test_brownfield_probes(bare)
+    if not isinstance(shown, CouldNotRun) or shown.why != NO_TEMPLATE:
+        return [f"brownfield: a repository without template/ reported {shown!r}, "
+                f"expected could-not-run {NO_TEMPLATE!r}"]
+    return []
+
+
 @check("brownfield adoption probes", pre=True)
-def test_brownfield_probes() -> list[str]:
+def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutcome:
     """Probes brownfield adoption planning and CLI dispatcher (stereorepo's DR-217).
 
     Validates that:
@@ -335,8 +350,20 @@ def test_brownfield_probes() -> list[str]:
     4. ProductConfig overrides (retain, integrations, ignore, tokens) are honoured.
     5. Target directory trees remain strictly unmodified (read-only invariant).
     6. Formats (text, JSON, YAML) and CLI execution exit codes adhere to specification.
+    7. A repository without `template/` is reported as could-not-run.
+
+    The plan is drawn from the scaffold's `template/`, which a portfolio does
+    not have, so there the step could not run and says so rather than passing.
+
+    Args:
+        scaffold_dir: The repository whose bundle and `template/` the plans are drawn from.
+
+    Returns:
+        StepOutcome: `CouldNotRun` where `scaffold_dir` has no `template/`,
+        otherwise `Found` with one line per failed case, or `Passed`.
     """
-    scaffold_dir = META.parent
+    if not (scaffold_dir / "template").is_dir():
+        return CouldNotRun(NO_TEMPLATE)
     problems: list[str] = []
 
     with tempfile.TemporaryDirectory() as tmp_str:
@@ -347,5 +374,6 @@ def test_brownfield_probes() -> list[str]:
         problems.extend(_check_product_config(scaffold_dir, tmp))
         problems.extend(_check_readonly_invariant(scaffold_dir, tmp))
         problems.extend(_check_cli_and_formats(scaffold_dir, tmp))
+        problems.extend(_check_without_template(tmp))
 
-    return problems
+    return Found(problems) if problems else Passed("7 adoption cases")

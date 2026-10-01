@@ -13,7 +13,8 @@ def dereference_probes() -> list[str]:
     The sample scope, asked for four pairs of the durable set, answers four,
     each carrying its path, citation, sentence and body; asked twice for
     three, it answers the same sentences both times, because the rotation is
-    keyed to the commit count and not to a clock. The report, handed one pair
+    keyed to the commit count and not to a clock. Over a record holding fewer
+    pairs than that, as a portfolio's does, it answers each pair once. The report, handed one pair
     marked as ground moved, heads itself with what this branch wrote or
     affected; handed the same pair as a sample, with a rotating sample. The
     report's printing is captured, and what it exited with, if it did, is
@@ -23,8 +24,11 @@ def dereference_probes() -> list[str]:
     """
     deref = load_module(META / "dereference.py", "dereference", register=False)
     citations_mod = deref.citations()
-    sample_durable = {META / "assertions" / "decisions" / f"DR-00{i}.yaml" for i in range(1, 10)}
-    problems = []
+    decisions = META / "assertions" / "decisions"
+    sample_durable = {path for i in range(1, 10)
+                      if (path := decisions / f"DR-00{i}.yaml").is_file()}
+    problems = _sample_problems(deref, citations_mod, sample_durable)
+    problems += _sample_problems(deref, citations_mod, {decisions / "DR-001.yaml"})
 
     def heading(case: str, call: Any, header: str) -> None:
         """One problem naming `case` unless the report `call` prints carries `header`."""
@@ -34,17 +38,6 @@ def dereference_probes() -> list[str]:
             problems.append(
                 f"dereference: the report of {case} expected {header!r}, got {shown.out!r}{exited}"
             )
-
-    four = deref.scope(citations_mod, "origin/main", False, sample=4, durable=sample_durable)
-    if len(four) != 4:
-        problems.append(f"dereference: sample=4 expected 4 pairs, got {len(four)}")
-    for pair in four:
-        if not ("path" in pair and "cite" in pair and "sentence" in pair and "body" in pair):
-            problems.append(f"dereference: sample pair missing required keys: {pair}")
-    first = deref.scope(citations_mod, "origin/main", False, sample=3, durable=sample_durable)
-    again = deref.scope(citations_mod, "origin/main", False, sample=3, durable=sample_durable)
-    if [p["sentence"] for p in first] != [p["sentence"] for p in again]:
-        problems.append("dereference: identical sample queries produced different results")
 
     pairs = [
         {
@@ -73,6 +66,37 @@ def dereference_probes() -> list[str]:
     )
 
     problems.extend(_ask_problems(deref, pairs[0]))
+    return problems
+
+
+def _sample_problems(deref: Any, citations_mod: Any, durable: set[Any]) -> list[str]:
+    """Return failures in the sample scope over `durable`, which may hold fewer pairs than asked.
+
+    Asked for four pairs, the scope answers four, or every pair the record
+    holds where it holds fewer, each once and each carrying its path,
+    citation, sentence and body. Asked twice for three, it answers the same
+    sentences both times.
+    """
+    names = ", ".join(sorted(path.name for path in durable))
+    available = len(deref.scope(citations_mod, "origin/main", True, durable=durable))
+    if not available:
+        return [f"dereference: {names} holds no pair to sample"]
+    problems = []
+    four = deref.scope(citations_mod, "origin/main", False, sample=4, durable=durable)
+    if len(four) != min(4, available):
+        held = f"{available} pair{'s' if available != 1 else ''}"
+        problems.append(f"dereference: sample=4 over {names}, which holds {held}, "
+                        f"expected {min(4, available)}, got {len(four)}")
+    if len({(p["cite"], p["sentence"]) for p in four}) != len(four):
+        problems.append(f"dereference: sample=4 over {names} answered a pair twice")
+    for pair in four:
+        if not ("path" in pair and "cite" in pair and "sentence" in pair and "body" in pair):
+            problems.append(f"dereference: sample pair missing required keys: {pair}")
+    first = deref.scope(citations_mod, "origin/main", False, sample=3, durable=durable)
+    again = deref.scope(citations_mod, "origin/main", False, sample=3, durable=durable)
+    if [p["sentence"] for p in first] != [p["sentence"] for p in again]:
+        problems.append(f"dereference: identical sample queries over {names} "
+                        "produced different results")
     return problems
 
 

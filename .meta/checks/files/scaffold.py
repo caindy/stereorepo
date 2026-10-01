@@ -13,6 +13,28 @@ SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/", "pair/")
 """Paths the scaffold has and a portfolio does not."""
 
 
+def scaffold_only_lines(path: pathlib.Path, names: Sequence[str],
+                        root: pathlib.Path = ROOT) -> list[str]:
+    """One problem per line of `path` naming one of `names`, unless the line names stereorepo.
+
+    Args:
+        path: The file to read.
+        names: The scaffold-only paths to look for.
+        root: What the problem's path is given relative to.
+
+    Returns:
+        list[str]: `<path>:<line> names '<name>', which a portfolio does not have`
+        for each occurrence.
+    """
+    problems: list[str] = []
+    for number, line in enumerate(path.read_text().splitlines(), 1):
+        if "stereorepo" in line.lower():
+            continue
+        problems.extend(f"{path.relative_to(root)}:{number} names '{name}', "
+                        "which a portfolio does not have" for name in names if name in line)
+    return problems
+
+
 @check("scaffold-only paths")
 def scaffold_only_paths() -> StepOutcome:
     """Validate that files copied during Specialization contain no scaffold-only paths.
@@ -32,13 +54,7 @@ def scaffold_only_paths() -> StepOutcome:
             if path.suffix not in (".md", ".yaml", ".yml") or not path.is_file():
                 continue
             scanned.add(path)
-            for number, line in enumerate(path.read_text().splitlines(), 1):
-                if "stereorepo" in line.lower():
-                    continue
-                for name in names:
-                    if name in line:
-                        problems.append(f"{path.relative_to(ROOT)}:{number} names "
-                                        f"'{name}', which a portfolio does not have")
+            problems.extend(scaffold_only_lines(path, names))
 
     for token in sources.inherited():
         base = ROOT / token if (ROOT / token).exists() else META / token

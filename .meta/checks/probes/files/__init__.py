@@ -13,6 +13,7 @@ what registers its step, which is why this package suppresses nothing.
 """
 from checks.probes.files.board import board_front_matter_probes, board_order_probes
 from checks.probes.files.rendered import rendered_artifact_probes
+from checks.probes.files.scaffold import scaffold_only_path_probes
 from checks.probes.files.sizes import SIZE_CASES, SizeCase, file_size_ceiling_probes
 
 __all__ = [
@@ -22,5 +23,6 @@ __all__ = [
     "board_order_probes",
     "file_size_ceiling_probes",
     "rendered_artifact_probes",
+    "scaffold_only_path_probes",
 ]
 """The package's whole surface, so `from checks.probes import files` finds every probe's cases."""

@@ -19,3 +19,16 @@ reading, to be answered rather than asked again, which is the re-run habit
 DR-134 names as the cost of a provisional red.
 
 Evidence: `.meta/checks/probes/tools/dereference.py::dereference_probes`
+
+### A sample wider than the record asked the same pair twice
+
+A freshly specialized portfolio's `dereference probes` asked `--sample 4` and
+got 2 pairs. Its record held one. The rotation fills its window from the pool
+written out twice, so a window wider than the pool wrapped back onto the pair
+it had already taken. The window is now as wide as the pool where the pool is
+the narrower, so each pair is asked once. A pool at least as large as the
+sample rotates exactly as before. Established over a durable set of
+`DR-001.yaml` alone, which holds one pair: `sample=4` answered that pair
+twice before the change and once after.
+
+Evidence: `.meta/checks/probes/tools/dereference.py::dereference_probes`

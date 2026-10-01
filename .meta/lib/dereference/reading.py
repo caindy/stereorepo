@@ -195,7 +195,12 @@ def sampled(
     durable: set[pathlib.Path],
     sample: int,
 ) -> list[dict[str, Any]]:
-    """A rotating sample of `sample` pairs over every durable file, the offset turning with the commit count (stereorepo's DR-192)."""
+    """A rotating sample of `sample` pairs over every durable file, the offset turning with the commit count (stereorepo's DR-192).
+
+    A record holding fewer pairs than `sample` answers each of them once, and
+    no pair twice: the rotation wraps to fill the window, and a window wider
+    than the pool would otherwise wrap onto pairs it already holds.
+    """
     all_pairs: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
     for path in sorted(durable):
@@ -211,7 +216,7 @@ def sampled(
     commit_str = git("rev-list", "--count", "HEAD", default="0").strip()
     count = int(commit_str) if commit_str.isdigit() else 0
     offset = (count * sample) % len(all_pairs)
-    return (all_pairs + all_pairs)[offset:offset + sample]
+    return (all_pairs + all_pairs)[offset:offset + min(sample, len(all_pairs))]
 
 
 def moved_articles(base: str, path: pathlib.Path) -> set[str]:

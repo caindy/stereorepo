@@ -3,11 +3,14 @@
 import pathlib
 from typing import Any
 
-from checks.collect import ROOT, against_baseline, check
+from checks.collect import ROOT, CouldNotRun, against_baseline, check
+
+SEED_GATE = ROOT / "bootstraps" / "python" / "seed" / "gate" / "src"
+"""Where the Python seed's gate package sits in the scaffold; a portfolio has no `bootstraps/`."""
 
 
 @check("comment probes", pre=True)
-def comment_probes() -> list[str]:
+def comment_probes(seed_gate: pathlib.Path = SEED_GATE) -> list[str] | CouldNotRun:
     """`comments.py`'s three detectors, against the comments they exist to catch and the comments they must let through.
 
     A heuristic over comment text is a boundary like any other, and the cost of
@@ -38,15 +41,60 @@ def comment_probes() -> list[str]:
 
     The seed gate synchronization probe asserts that keep-exceptions, suppression
     patterns, and statement detectors in `bootstraps/python/seed/gate/` remain
-    in lockstep with `comments.py` (stereorepo's DR-250).
+    in lockstep with `comments.py` (stereorepo's DR-250). Where the seed gate is
+    absent, as in a portfolio, that probe cannot run: the step reports what the
+    others found, and if they found nothing, that it could not run, naming the
+    missing seed, rather than passing.
+
+    Args:
+        seed_gate: The directory the Python seed's `gate` package is imported from.
+
+    Returns:
+        list[str] | CouldNotRun: One line per wrong answer, or `CouldNotRun`
+        where every probe that ran passed and the seed gate is absent.
     """
     from checks import comments
     here = pathlib.Path(__file__).relative_to(ROOT).as_posix()
     blocks_found, sites = _blocks_and_sites(comments, here)
-    return (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
-            + _causes(comments) + blocks_found + _ratchet(comments, here, sites)
-            + _type_errors(here) + _ruff_findings(here) + _rust_comments(comments)
-            + _repeats(comments) + _repeat_ratchet(comments) + _seed_gate_sync(comments))
+    problems = (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
+                + _causes(comments) + blocks_found + _ratchet(comments, here, sites)
+                + _type_errors(here) + _ruff_findings(here) + _rust_comments(comments)
+                + _repeats(comments) + _repeat_ratchet(comments) + _seed_absent(comments))
+    return _verdict(problems, _seed_gate_sync(comments, seed_gate), seed_gate)
+
+
+def _verdict(problems: list[str], synced: list[str] | None,
+             seed_gate: pathlib.Path) -> list[str] | CouldNotRun:
+    """What the step comes to: every problem found, or `CouldNotRun` where there is none.
+
+    `CouldNotRun` only where the seed gate's `synced` is `None`, its absence.
+    """
+    if synced is not None:
+        return problems + synced
+    if problems:
+        return problems
+    where = seed_gate.relative_to(ROOT) if seed_gate.is_relative_to(ROOT) else seed_gate
+    return CouldNotRun(f"{where} is absent, so the Python seed gate's lockstep with comments.py "
+                       "was not checked; every other comment probe passed")
+
+
+def _seed_absent(comments: Any) -> list[str]:
+    """Asserts that an absent seed gate makes the step say it could not run, naming the seed."""
+    import tempfile
+    problems = []
+    with tempfile.TemporaryDirectory() as tmp_str:
+        missing = pathlib.Path(tmp_str) / "gate" / "src"
+        synced = _seed_gate_sync(comments, missing)
+        if synced is not None:
+            problems.append(f"comment probes: an absent seed gate answered {synced!r}, "
+                            "expected None")
+        shown = _verdict([], None, missing)
+        if not isinstance(shown, CouldNotRun) or str(missing) not in shown.why:
+            problems.append(f"comment probes: an absent seed gate came to {shown!r}, "
+                            f"expected could-not-run naming {missing}")
+        if _verdict(["found"], None, missing) != ["found"]:
+            problems.append("comment probes: an absent seed gate hid what the other probes found")
+    return problems
 
 
 def _expecting(kind: Any) -> tuple[Any, list[str]]:
@@ -350,11 +398,17 @@ def _repeat_ratchet(comments: Any) -> list[str]:
     return problems
 
 
-def _seed_gate_sync(comments: Any) -> list[str]:
-    """Asserts that keep-exceptions, statements and suppression patterns in the Python seed gate match comments.py."""
+def _seed_gate_sync(comments: Any, seed_gate_src: pathlib.Path = SEED_GATE) -> list[str] | None:
+    """Asserts that keep-exceptions, statements and suppression patterns in the Python seed gate match comments.py.
+
+    `None` where `seed_gate_src` is absent, checked before anything is
+    imported, since a `gate` module already imported would otherwise answer
+    for a seed that is not there.
+    """
+    if not seed_gate_src.is_dir():
+        return None
     problems = []
     import sys
-    seed_gate_src = ROOT / "bootstraps" / "python" / "seed" / "gate" / "src"
     if str(seed_gate_src) not in sys.path:
         sys.path.insert(0, str(seed_gate_src))
     try:

@@ -19,7 +19,8 @@ differently in each.
   `pyproject.toml`, no `[dependency-groups]`, and no `tests/`.
 - **A Project workspace** — the directory of any Project that
   `assertions/structure.yaml` declares with a `gate:` of its own, such as
-  `bootstraps/python/seed`. It owns its `pyproject.toml` and its dependency
+  the one `just bootstrap python <path>` lays down. It owns its
+  `pyproject.toml` and its dependency
   groups, and is held by `uv run gate` run from its own directory.
 
 Which one you are in is settled by `assertions/structure.yaml`, not by the path:
