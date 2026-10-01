@@ -11,6 +11,8 @@ Products built from them. The cost is the catch-all itself: a change that
 breaks a Project through something the mapping does not see, such as a shared
 tool or a generated file, would land unchecked.
 
-This waits for evidence that it is safe: the "defects found after landing"
-measure from the pair-versus-single-seat evaluation, with the targeted gate
-the seats run (`seats-run-the-targeted-gate`) as the first step.
+On 2026-10-01 the developer decided not to wait for evidence that this is
+safe, such as the "defects found after landing" measure from
+`pair-versus-single-seat`: the loop needs to move faster, and the risk is
+accepted. The full gate before each landing cost 2 to 2.5 minutes an Issue
+that day. Record the decision and the risk it accepts in a Decision Record.
