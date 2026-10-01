@@ -1,5 +1,10 @@
 fast-pair-tests
 seat-git-signature-check-hangs
+seat-background-work-outlives-turn
+seat-gpg-stuck-in-sandbox
+seat-unanalysable-command-denials
+seat-cache-write-per-session
+seat-models-per-stage
 # groomed below
 pair-notes
 why-fork-delivery-records
@@ -8,8 +13,6 @@ why-fork-harness-survey
 why-fork-inherited-terms
 why-fork-remove-file
 cockpit-status-convention
-seat-cache-write-per-session
-seat-models-per-stage
 release-apm-package
 trim-decision-records-002-048
 trim-decision-records-065-177
