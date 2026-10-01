@@ -461,7 +461,7 @@ class Loop:
         self.move(st, "in-progress")
         st.note = (
             "The developer sent this back from the desk check. "
-            "Their notes are in the changes below, not in the Pair notes."
+            "Their notes are in the issue file."
         )
         return self.work(st)
 
@@ -646,7 +646,6 @@ class Loop:
                 if result is None:
                     return "paused"
                 quiet = self.settle(st, role)
-                self.note(st, role, result)
                 st.in_turn = None
                 self.record(st, role, result, quiet)
                 outcome = self.decide(st, role, quiet)
@@ -798,33 +797,6 @@ class Loop:
             st.seats_used.append(role)
         st.head = st.seen[role] = head
         return quiet
-
-    def note(self, st: State, role: str, result: TurnResult) -> None:
-        """Keep the turn's closing message in the issue file, under `## Pair notes`.
-
-        It runs after `settle` has judged the turn, so a turn whose only change
-        is its note is still quiet. Moving `st.head` and the seat's own mark to
-        the note's commit keeps `absorb_developer` from taking it for the
-        developer's edit, and leaves it in the other seat's diff alone.
-        """
-        text = result.text.strip()
-        issue = None if st.stage == GROOMING else board.read(self.wt, st.slug)
-        if issue is None or not (result.ok and text):
-            return
-        path = self.wt / issue.path
-        label = f"{role} · {st.stage} · turn {st.turn + 1}"
-        path.write_text(board.with_note(path.read_text(), label, text))
-        git(self.wt, "add", issue.path)
-        git(
-            self.wt,
-            "commit",
-            "-q",
-            "-m",
-            f"{role}: note on {st.stage} turn {st.turn + 1}",
-            "-m",
-            f"Seat: {role}",
-        )
-        st.head = st.seen[role] = git(self.wt, "rev-parse", "HEAD")
 
     def record(self, st: State, role: str, result: TurnResult, quiet: bool) -> None:
         usage = result.usage
@@ -1217,7 +1189,7 @@ class Loop:
         """Run `just deliver` for a Flight about to go to `desk-check/`.
 
         Where the repository defines the recipe and it passes, a line recording
-        it is added at the end of the Flight's last brief, and staged
+        it is appended to the Flight file, which ends in the brief, and staged
         so `move` commits it. Where it fails, the loop pauses with
         `retry: merge`, before `move`, so a rerun delivers again. Once `move`
         has run, `retirement` no longer answers `desk-check`, so another pass
@@ -1239,10 +1211,7 @@ class Loop:
         path = self.wt / flight
         sha = git(self.wt, "rev-parse", "--short", self.main)
         line = f"Delivered by `just deliver` from {self.main} at {sha}."
-        text = path.read_text()
-        path.write_text(
-            board.append_under(text, BRIEF, line) or text.rstrip() + f"\n\n{line}\n"
-        )
+        path.write_text(path.read_text().rstrip() + f"\n\n{line}\n")
         git(self.wt, "add", flight)
         self.say(f"{st.slug}: delivered")
         return True
@@ -1424,9 +1393,7 @@ class Loop:
                         + f"\n... (truncated; run `git diff {since[:12]}..HEAD`)"
                     )
                 parts.append(f"Changes since your last turn:\n```diff\n{diff}\n```")
-        parts.append(
-            "If you would change nothing, change nothing, and end with your findings."
-        )
+        parts.append("If you would change nothing, change nothing and say so.")
         return "\n\n".join(parts)
 
 

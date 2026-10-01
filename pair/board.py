@@ -168,62 +168,6 @@ def last_of(body: str, names: tuple[str, ...]) -> str | None:
     return last
 
 
-def append_under(text: str, name: str, block: str, *, nested: bool = True) -> str | None:
-    """`text` with `block` added at the end of the last section named `name`, or None if there is none.
-
-    With `nested`, the section keeps its deeper headings, as `section` reads
-    it. Without, it ends at the next heading or bold lead of any level, so a
-    section a seat writes below it never gains `block` as its own text.
-    """
-    lines = text.splitlines()
-    starts = [
-        i
-        for i, line in enumerate(lines)
-        if (head := _HEADING.match(line.strip()))
-        and head["name"].strip().lower() == name.lower()
-    ]
-    if not starts:
-        return None
-    start = starts[-1]
-    level = _level(lines[start]) if nested else 7
-    end = next(
-        (
-            j
-            for j in range(start + 1, len(lines))
-            if _HEADING.match(lines[j].strip()) and _level(lines[j]) <= level
-        ),
-        len(lines),
-    )
-    while end > start + 1 and not lines[end - 1].strip():
-        end -= 1
-    rest = lines[end:]
-    while rest and not rest[0].strip():
-        rest.pop(0)
-    after = ["", *rest] if rest else []
-    return "\n".join([*lines[:end], "", block.strip("\n"), *after]) + "\n"
-
-
-PAIR_NOTES = "Pair notes"
-"""The section of an Issue file where the loop keeps each turn's closing message."""
-
-
-def with_note(text: str, label: str, note: str) -> str:
-    """`text`, an Issue file, with `note` quoted under `label` at the end of its Pair notes.
-
-    Every line is quoted (`> `), and no heading or bold lead the loop reads
-    matches a quoted line, so a note that names `Needs elaboration` or
-    `The plan` steers nothing. The first note adds the `## Pair notes` heading
-    at the end of the file.
-    """
-    quote = "\n".join(
-        f"> {line}".rstrip() for line in [f"**{label}**", "", *note.strip().splitlines()]
-    )
-    under = append_under(text, PAIR_NOTES, quote, nested=False)
-    if under is not None:
-        return under
-    return text.rstrip("\n") + f"\n\n## {PAIR_NOTES}\n\n{quote}\n"
-
-
 def bullets(text: str) -> list[str]:
     """The top-level bullet items of a Markdown block, stripped of their markers
     and of backticks."""

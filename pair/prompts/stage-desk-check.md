@@ -1,1 +1,1 @@
-{path} is waiting for the developer's desk check. Their notes are in the changes below, not in the Pair notes; address them.
+{path} is waiting for the developer's desk check. Read the notes in the issue file and address them.

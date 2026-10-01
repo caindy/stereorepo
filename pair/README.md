@@ -28,17 +28,6 @@ Each turn, a seat is told the Issue file, what the current stage is for
 takes the first turn in each stage. After every turn the loop commits whatever
 the seat left uncommitted, with a `Seat:` trailer.
 
-A seat ends its turn with what the diff cannot show: its rationale for what it
-changed, and its findings on what it checked (`prompts/primary.md`,
-`prompts/secondary.md`). The loop keeps that closing message in the Issue file,
-at the end of a `## Pair notes` section, as a block quote labelled with the
-seat, the stage and the turn, and commits it after judging the turn, so a turn
-whose only change is its note is still quiet. Every line is quoted, so a note
-that names `Needs elaboration` or `The plan` steers nothing. The other seat
-reads the note in its diff, and the notes land in `done/` with the Issue. A
-grooming pass, a turn that leaves no text, and a turn whose Issue file is gone
-keep no note.
-
 1. **Acceptance.** A turn that changes nothing is a quiet turn: that seat
    accepts the state it found. A turn that changes something makes its author
    the only seat that has accepted the new state. An edit the developer makes
@@ -95,7 +84,7 @@ a fresh `worktrees/pair`, so the gate tests the branch in its own environment.
 `just deliver` runs in the worktree just before a Flight goes to `desk-check/`,
 and delivers what `main` holds, for example a redeployment to a UAT
 environment, so the developer desk-checks the Flight where it runs. A passing
-delivery adds a `Delivered by` line at the end of the latest brief. A failing one pauses the
+delivery adds a `Delivered by` line after the brief. A failing one pauses the
 loop with the tail of its output and leaves the Flight where it was; running
 the loop again delivers again. Each desk-check round delivers once.
 
