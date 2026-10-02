@@ -281,15 +281,26 @@ def wiki_lead_paragraphs(index: Index,
     return problems
 
 
-def _domain_vocabulary_problems(wiki_map: dict[tuple[str, str], pathlib.Path]) -> list[str]:
-    """Every concept of `domain_vocabulary.yaml` with no page outside the scaffold's context, or one problem where the file will not parse or is not the shape a concept set has."""
+def domain_concepts() -> list[dict[str, object]]:
+    """The domain vocabulary's `concept_set`, empty where the file is absent.
+
+    A file that will not read or parse raises, and so does one that is not a
+    mapping; `_domain_vocabulary_problems` reports either as one problem.
+    """
     domain_vocab = ROOT / ".meta" / "assertions" / "domain_vocabulary.yaml"
     if not domain_vocab.is_file():
         return []
+    data = yaml.safe_load(domain_vocab.read_text(encoding="utf-8")) or {}
+    return data.get("concept_set") or []
+
+
+def _domain_vocabulary_problems(
+        wiki_map: dict[tuple[str, str], pathlib.Path],
+        concepts: Sequence[dict[str, object]] | None) -> list[str]:
+    """Every concept of `concepts`, or of `domain_vocabulary.yaml` where none are given, with no page outside the scaffold's context, or one problem where the file will not parse or is not the shape a concept set has."""
     problems: list[str] = []
     try:
-        data = yaml.safe_load(domain_vocab.read_text(encoding="utf-8")) or {}
-        for item in data.get("concept_set") or []:
+        for item in domain_concepts() if concepts is None else concepts:
             item_id = str(item.get("id") or "")
             slug = item_id.rsplit("/", 1)[-1].lower()
             if not any(s == slug for (c, s) in wiki_map if c != "stereorepo"):
@@ -301,7 +312,8 @@ def _domain_vocabulary_problems(wiki_map: dict[tuple[str, str], pathlib.Path]) -
 
 @check("ubiquitous language wiki parity")
 def ubiquitous_language_wiki_parity(
-        index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
+        index: Index, md_files: Sequence[pathlib.Path] | None = None,
+        concepts: Sequence[dict[str, object]] | None = None) -> list[str]:
     """Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page, and vice versa (A17, stereorepo's DR-184, stereorepo's DR-190).
 
     Enforces 1:1 parity between LinkML vocabulary assertions and Knowledge Management
@@ -314,10 +326,14 @@ def ubiquitous_language_wiki_parity(
     has a concept or a Discipline. The scaffold is separated because its wiki
     explains Disciplines as well as concepts, and a Discipline is not minted
     into the vocabulary.
+
+    `md_files` stands for the tree and `concepts` for the domain vocabulary's
+    `concept_set`; the gate gives neither, and a probe gives both, so that it
+    judges its own pages against its own concepts and never a portfolio's.
     """
     tree_files = md_files if md_files is not None else sources.tree()
     wiki_map = _build_wiki_files_map(tree_files)
-    problems = _domain_vocabulary_problems(wiki_map)
+    problems = _domain_vocabulary_problems(wiki_map, concepts)
     for (ctx, slug), path in wiki_map.items():
         if not ctx or slug == "readme":
             continue

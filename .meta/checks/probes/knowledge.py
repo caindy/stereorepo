@@ -4,11 +4,10 @@ The knowledge Knowledge Management governs is one subject in three containers,
 and each of these probes is over one of them: a history log parsed for its
 entries and the Evidence they name (stereorepo's DR-171), a withdrawn Decision of the
 record asked for the reason its `WITHDRAWN` status owes under
-`.meta/work/decisions.yaml`, and a wiki page held to closed-world wikilinks, a
-MOS:LEAD lead, vocabulary parity and synonyms its concept does not forbid
-(stereorepo's DR-185, stereorepo's DR-190, stereorepo's DR-231) —
-together with the authoring tool that scaffolds such a page, which is a probe
-over the wiki's form and not over a tool beside the gate (stereorepo's DR-187).
+`.meta/work/decisions.yaml`, and the authoring tool that scaffolds a wiki page,
+which is a probe over the wiki's form and not over a tool beside the gate
+(stereorepo's DR-187). The wiki checks themselves are probed in
+`checks/probes/wiki.py`.
 One further probe is over the form the prose in all three containers carries:
 the possessive that marks a citation as stereorepo's rather than a portfolio's
 own (stereorepo's DR-121, stereorepo's DR-132).
@@ -25,16 +24,13 @@ import types
 
 from checks import citations, files, graph
 from checks.collect import META, ROOT, check
-from checks.probes.harness import FakeWikiPath, load_module
+from checks.probes.harness import load_module
 
 WithdrawnCase = collections.namedtuple("WithdrawnCase", "name number decision refused")
 """One Decision put to `graph.withdrawn_decisions`: `number`, the last segment of its id; `decision`, its fields; `refused`, whether the check must name it."""
 
 REFUSAL = "status is WITHDRAWN but lacks 'withdrawn_because'"
 """What `graph.withdrawn_decisions` says of a withdrawal that gives no reason."""
-
-WikiCase = collections.namedtuple("WikiCase", "name reads pages says")
-"""One page or set of pages put to a wiki check: `reads`, the `files` check run; `pages`, the `(path, text)` pairs it is given as the tree; `says`, text one finding must carry, or `None` where the check must find nothing."""
 
 
 @check("history probes", pre=True)
@@ -91,154 +87,6 @@ def withdrawn_decisions_probes() -> list[str]:
             problems.append(f"withdrawn decisions: {case.name}: expected a finding saying {REFUSAL!r}, got {said!r}")
         elif not case.refused and said:
             problems.append(f"withdrawn decisions: {case.name}: expected no finding, got {said!r}")
-    return problems
-
-
-@check("wiki probes", pre=True)
-def wiki_probes() -> list[str]:
-    """Observed failure and concordance for wikilinks, MOS:LEAD lead paragraphs, vocabulary parity and forbidden synonyms (A2, stereorepo's DR-185, stereorepo's DR-190, stereorepo's DR-231).
-
-    One index stands for the record: a concept carrying an `avoid` list, a
-    discipline and a Decision. Each case gives one of `files.wikilinks`,
-    `files.wiki_lead_paragraphs`, `files.ubiquitous_language_wiki_parity` or
-    `files.wiki_synonyms_are_not_avoided` that index and a tree of
-    `FakeWikiPath` pages, and expects either a finding carrying a given text or
-    no finding at all. A wikilink resolves against the index, the pages given,
-    and the wiki on disk under `ROOT`; the case gives the scoped
-    `[[stereorepo/knowledge-management]]` its page so that it holds on a tree
-    that lacks one; a code fence and inline backticks hide a wikilink from
-    the check; `README.md` is exempt from the lead rule; frontmatter may stand
-    ahead of the heading (stereorepo's DR-187); a domain page with no minted
-    concept fails parity where stereorepo pages of a minted discipline and
-    concept pass (stereorepo's DR-190); and a page declaring an avoided word as a
-    synonym fails where one declaring an unminted word passes, since parity is
-    owed to the `avoid` list and not to `alt_labels` (stereorepo's DR-231).
-    """
-    index = {
-        "work:concept/ubiquitous-language": (
-            "Concept",
-            {"id": "work:concept/ubiquitous-language", "pref_label": "Ubiquitous Language",
-             "avoid": ["Shared Glossary"]},
-            "vocabulary.yaml",
-        ),
-        "work:discipline/knowledge-management": (
-            "Discipline",
-            {"id": "work:discipline/knowledge-management", "name": "Knowledge Management"},
-            "disciplines.yaml",
-        ),
-        "work:decision/185": (
-            "Decision",
-            {"id": "work:decision/185", "number": 185, "name": "DR-" + "185 · Wikipedia conventions"},
-            "DR-" + "185.yaml",
-        ),
-    }
-    cases = (
-        WikiCase(
-            "an unregistered wikilink",
-            files.wikilinks,
-            (("wiki/stereorepo/test.md",
-              "# Test\n\n**Test** is a probe referencing [[unregistered-floating-term]].\n"),),
-            "[[unregistered-floating-term]] resolves to nothing",
-        ),
-        WikiCase(
-            "wikilinks to a concept, a discipline, a Decision and a scoped wiki page",
-            files.wikilinks,
-            (("wiki/stereorepo/knowledge-management.md",
-              "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n"),
-             ("wiki/stereorepo/test.md",
-              "# Test\n\n**Test** is a test referencing [[knowledge-management]], "
-              "[[stereorepo/knowledge-management]], [[Ubiquitous Language]], and [[" + "DR-" + "185]].\n")),
-            None,
-        ),
-        WikiCase(
-            "wikilinks inside a code fence and inline backticks",
-            files.wikilinks,
-            (("wiki/stereorepo/test.md",
-              "# Test\n\n**Test** is a test showing `[[unregistered-inline]]` and:\n```\n[[unregistered-block]]\n```\n"),),
-            None,
-        ),
-        WikiCase(
-            "a page with no top-level heading",
-            files.wiki_lead_paragraphs,
-            (("wiki/stereorepo/test.md", "## Subheading\n\n**Test** is a test page.\n"),),
-            "must begin with a top-level heading",
-        ),
-        WikiCase(
-            "a lead with no bold copula",
-            files.wiki_lead_paragraphs,
-            (("wiki/stereorepo/test.md", "# Test\n\nTest is a test page without bold formatting.\n"),),
-            "first paragraph must open with bold copular definition",
-        ),
-        WikiCase(
-            "a bold subject that is not the title",
-            files.wiki_lead_paragraphs,
-            (("wiki/stereorepo/test.md", "# Test\n\n**Different Subject** is a test page.\n"),),
-            "does not match title",
-        ),
-        WikiCase(
-            "a subject that disagrees with the minted label",
-            files.wiki_lead_paragraphs,
-            (("wiki/stereorepo/ubiquitous-language.md",
-              "# Ubiquitous Language Alternate\n\n**Ubiquitous Language Alternate** is a discipline.\n"),),
-            "disagrees with minted label",
-        ),
-        WikiCase(
-            "a README.md, exempt from MOS:LEAD",
-            files.wiki_lead_paragraphs,
-            (("wiki/stereorepo/README.md", "# Context Index\n\nAn index of pages without bold copular lead.\n"),),
-            None,
-        ),
-        WikiCase(
-            "frontmatter ahead of a MOS:LEAD lead (stereorepo's DR-187)",
-            files.wiki_lead_paragraphs,
-            (("wiki/stereorepo/test-frontmatter.md",
-              "---\nslug: test-frontmatter\ncontext: stereorepo\nminted: 2026-09-12\n---\n\n"
-              "# Test Frontmatter\n\n**Test Frontmatter** is a test page.\n"),),
-            None,
-        ),
-        WikiCase(
-            "a domain page with no minted concept (stereorepo's DR-190)",
-            files.ubiquitous_language_wiki_parity,
-            (("wiki/billing/unminted-term.md", "# Unminted Term\n\n**Unminted Term** is a term.\n"),),
-            "has no corresponding concept in vocabulary schema",
-        ),
-        WikiCase(
-            "stereorepo pages of a minted discipline and concept (stereorepo's DR-190)",
-            files.ubiquitous_language_wiki_parity,
-            (("wiki/stereorepo/knowledge-management.md",
-              "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n"),
-             ("wiki/stereorepo/ubiquitous-language.md",
-              "# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n")),
-            None,
-        ),
-        WikiCase(
-            "a synonym on the concept's own avoid list (stereorepo's DR-231)",
-            files.wiki_synonyms_are_not_avoided,
-            (("wiki/stereorepo/ubiquitous-language.md",
-              "---\nslug: ubiquitous-language\ncontext: stereorepo\nsynonyms:\n  - shared glossary\n"
-              "minted: 2026-09-18\n---\n\n# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n"),),
-            "is on work:concept/ubiquitous-language's avoid list",
-        ),
-        WikiCase(
-            "a synonym the vocabulary neither mints nor forbids (stereorepo's DR-231)",
-            files.wiki_synonyms_are_not_avoided,
-            (("wiki/stereorepo/ubiquitous-language.md",
-              "---\nslug: ubiquitous-language\ncontext: stereorepo\nsynonyms:\n  - domain dialect\n"
-              "minted: 2026-09-18\n---\n\n# Ubiquitous Language\n\n**Ubiquitous Language** is a concept.\n"),
-             ("wiki/stereorepo/knowledge-management.md",
-              "# Knowledge Management\n\n**Knowledge Management** is a discipline.\n")),
-            None,
-        ),
-    )
-    problems = []
-    for case in cases:
-        said = case.reads(index, md_files=[FakeWikiPath(path, text) for path, text in case.pages])
-        if case.says is None and said:
-            problems.append(f"{case.reads.__name__}: {case.name}: expected no finding, got {said!r}")
-        elif case.says is not None and not any(case.says in p for p in said):
-            problems.append(
-                f"{case.reads.__name__}: {case.name}: expected a finding saying {case.says!r}, got {said!r}"
-            )
     return problems
 
 

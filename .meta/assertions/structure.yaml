@@ -457,6 +457,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-knowledge
     name: .meta/checks/probes/knowledge.py
     path: .meta/checks/probes/knowledge.py
+  - id: work:artifact/meta-checks-probes-wiki
+    name: .meta/checks/probes/wiki.py
+    path: .meta/checks/probes/wiki.py
   - id: work:artifact/meta-checks-probes-structure
     name: .meta/checks/probes/structure.py
     path: .meta/checks/probes/structure.py

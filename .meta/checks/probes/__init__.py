@@ -14,6 +14,7 @@ nothing and is what every subject module imports; it imports no sibling, so
 the package's import graph is a tree with the harness at its root.
 """
 import checks.probes.knowledge  # noqa: I001  # reason: registration order is deliberate
+import checks.probes.wiki
 import checks.probes.structure
 import checks.probes.citations
 import checks.probes.surface

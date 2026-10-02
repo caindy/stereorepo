@@ -46,7 +46,7 @@
 .meta/checks/probes/harness/acts.py: 1
 .meta/checks/probes/harness/fakes.py: 1
 .meta/checks/probes/harness/loaders.py: 2
-.meta/checks/probes/knowledge.py: 36
+.meta/checks/probes/knowledge.py: 22
 .meta/checks/probes/surface.py: 10
 .meta/checks/probes/tools/apm_compile.py: 1
 .meta/checks/probes/tools/comments.py: 28
