@@ -1,0 +1,68 @@
+decisions:
+  - id: work:decision/316
+    name: "DR-316 · A managed file marked `block` keeps a portfolio's own lines: a sync replaces only stereorepo's marked block"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-lib-bundle-sync
+      - work:artifact/meta-lib-bundle-init
+      - work:artifact/meta-bundle
+      - work:artifact/meta-lib-adapt-plan
+      - work:artifact/meta-checks-probes-tools-sync
+      - work:artifact/meta-assertions-disciplines
+    context: >-
+      `.gitignore` is a managed item, but adopting fitch-mvp meant
+      integrating it by hand, keeping fitch-mvp's own lines beside
+      stereorepo's. `just sync` (DR-315) copies a managed file over the
+      portfolio's, so every sync dropped those lines, and the adoption plan
+      reported the repository's own `.gitignore` as a conflict.
+    alternatives:
+      - name: Keep the portfolio's lines in a file the bundle never lists
+        chosen: false
+        reason: >-
+          Git reads no tracked include: a nested `.gitignore` applies only
+          below its own directory, and neither `.git/info/exclude` nor
+          `core.excludesFile` is tracked. Both sets of lines have to live in
+          the root `.gitignore`.
+      - name: A new ownership beside managed, template and symlink
+        chosen: false
+        reason: >-
+          Every reader of the managed items (the sync's copies,
+          `Bundle.manages()`, `inherited_paths()`, the Specialization test)
+          would need to learn it, and a portfolio whose own bundle still
+          lists the file as managed would need a rule to stop the sync
+          removing it.
+      - name: A `block` transformation on the managed item
+        chosen: true
+        reason: >-
+          The file stays managed, so everything that copies or counts the
+          managed items is unchanged, and the sync, the only reader that
+          must treat it differently, merges instead of copying.
+    consequences:
+      - >-
+        stereorepo's `.gitignore` holds its lines between a line starting
+        `# >>> stereorepo` and one starting `# <<< stereorepo`, and its item
+        in `.meta/bundle.yaml` carries `transformations: [block]`.
+        `validate_bundle` rejects a `block` item that is not a file or whose
+        source lacks exactly one such block.
+      - >-
+        A sync replaces the portfolio's block with the checkout's and keeps
+        every line outside it byte for byte. Where the portfolio's file has
+        no block, the sync appends the checkout's at its end; where it has
+        none at all, the block alone. It refuses a portfolio file whose
+        markers are malformed or that is a symlink or a directory.
+      - >-
+        `just adapt plan` classifies a repository's own copy of a `block`
+        file as integrate, and the Adoption Discipline's sync step merges
+        it, so it no longer waits to be integrated by hand.
+      - >-
+        A portfolio that integrated `.gitignore` by hand gains a block that
+        repeats lines it already holds on its first sync after this; the
+        developer removes the repeats once, outside the block.
+    falsifier: >-
+      After a sync, a portfolio's `.gitignore` has lost a line it held
+      outside stereorepo's block, or its block holds a line the checkout's
+      block no longer has.
+    rationale: |-
+      The portfolio and stereorepo each own part of one file, and the
+      markers say which part, so a sync can replace stereorepo's part
+      without reading the rest.

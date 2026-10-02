@@ -81,6 +81,8 @@ items:
   - path: .gitignore
     kind: file
     ownership: managed
+    transformations:
+      - block # a sync replaces only stereorepo's block (stereorepo's DR-316)
   - path: .meta/bundle.py
     kind: file
     ownership: managed

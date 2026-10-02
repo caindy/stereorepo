@@ -86,8 +86,8 @@ disciplines:
       Which of the product's own records (a decision log, a roadmap) keep their
       subjects and which give them to Decision Records and the board; which of
       the product's domain terms share a label with an inherited one; how
-      `README.md`, `AGENTS.md` and `.gitignore` carry both the product's content
-      and the conventions; and what the product's gate has to run. None of it is
+      `README.md` and `AGENTS.md` carry both the product's content and the
+      conventions; and what the product's gate has to run. None of it is
       in the plan a tool writes, which is why this is a procedure to follow
       rather than a program to run.
     steps:
@@ -116,18 +116,21 @@ disciplines:
         statement: >-
           Run `<checkout>/.meta/bundle.py --root <repository> sync <checkout>` from a clean
           working tree. It copies every managed item the checkout tracks and leaves the
-          repository's own files alone (DR-315). The repository has no `sync` recipe until this
+          repository's own files alone (DR-315). The repository's own `.gitignore` is merged, not
+          replaced: stereorepo's lines go in one marked block at its end, and every line it
+          already had stays outside that block, where later syncs leave it (DR-316). The
+          repository has no `sync` recipe until this
           first copy brings one, and the checkout's own recipe cannot be pointed at it, because
           `--root` is an option of `bundle.py` and the recipe places its arguments after `sync`.
           Every later sync is `just sync <checkout>`, run in the repository.
       - id: work:discipline-step/adoption/integrate-the-template-items
         name: Integrate the template items
         statement: >-
-          Work through the plan's integrate and conflict entries by hand: no tool applies them.
-          `README.md`, `AGENTS.md` and `.gitignore` keep the product's content beside the
-          conventions, and `.meta/assertions/` takes the template's files with the placeholders
-          filled. Then link `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` to
-          `AGENTS.md`.
+          Work through the plan's integrate and conflict entries by hand: no tool applies them,
+          except the `.gitignore` entry, which the sync has already merged. `README.md` and
+          `AGENTS.md` keep the product's content beside the conventions, and
+          `.meta/assertions/` takes the template's files with the placeholders filled. Then link
+          `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` to `AGENTS.md`.
       - id: work:discipline-step/adoption/move-harness-skills
         name: Move harness skills
         statement: >-

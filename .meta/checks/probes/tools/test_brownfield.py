@@ -226,6 +226,11 @@ def _check_tracked_files(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[
     gem_act = action_map.get("GEMINI.md")
     if not gem_act or gem_act.classification != PathClassification.CREATE:
         problems.append("brownfield: unoccupied GEMINI.md not marked CREATE in a git target")
+    ignore_act = action_map.get(".gitignore")
+    if not ignore_act or ignore_act.classification != PathClassification.INTEGRATE \
+            or "stereorepo's block" not in ignore_act.reason:
+        problems.append("brownfield: the target's own .gitignore, a block file, "
+                        "was not marked INTEGRATE for the sync to merge")
     return problems
 
 

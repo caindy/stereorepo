@@ -51,6 +51,79 @@ def scaffold_only(relative: str) -> bool:
     return any(under(relative, path) for path in SCAFFOLD_ONLY_PATHS)
 
 
+BLOCK = "block"
+"""The transformation of a managed file whose stereorepo lines sit in one block between
+`BLOCK_BEGIN` and `BLOCK_END`, beside the portfolio's own lines (stereorepo's DR-316)."""
+BLOCK_BEGIN = "# >>> stereorepo"
+"""The start of the line that opens stereorepo's block; the rest of the line is free text."""
+BLOCK_END = "# <<< stereorepo"
+"""The start of the line that closes stereorepo's block."""
+
+
+def block_span(text: str) -> tuple[int, int] | None:
+    """Finds stereorepo's block in the text of a `block` file.
+
+    Args:
+        text: The file's whole text.
+
+    Returns:
+        tuple[int, int] | None: The span from the start of the opening line to
+        the end of the closing line, its newline included, or None where the
+        text holds neither marker.
+
+    Raises:
+        ValueError: Where the text holds one marker without the other, either
+            marker more than once, or the closing marker before the opening one.
+    """
+    begins: list[int] = []
+    ends: list[int] = []
+    offset = 0
+    for line in text.splitlines(keepends=True):
+        if line.startswith(BLOCK_BEGIN):
+            begins.append(offset)
+        elif line.startswith(BLOCK_END):
+            ends.append(offset + len(line))
+        offset += len(line)
+    if not begins and not ends:
+        return None
+    if len(begins) != 1 or len(ends) != 1 or ends[0] <= begins[0]:
+        found = (f"{len(begins)} and {len(ends)}" if len(begins) != 1 or len(ends) != 1
+                 else "the closing line first")
+        reason = (f"expected one '{BLOCK_BEGIN}' line followed by one '{BLOCK_END}' line, "
+                  f"found {found}")
+        raise ValueError(reason)
+    return begins[0], ends[0]
+
+
+def merge_block(current: str | None, source: str) -> str:
+    """Puts the block of `source` into `current`, keeping every line outside the block.
+
+    Args:
+        current: The portfolio's text of the file, or None where it has none.
+        source: The checkout's text of the file, which holds the block.
+
+    Returns:
+        str: `current` with its block replaced by the source's; where `current`
+        has no block, `current` followed by the source's block.
+
+    Raises:
+        ValueError: Where either text's markers are malformed, or `source` has none.
+    """
+    found = block_span(source)
+    if found is None:
+        reason = f"the source holds no '{BLOCK_BEGIN}' block"
+        raise ValueError(reason)
+    block = source[found[0]:found[1]]
+    if current is None:
+        return block
+    span = block_span(current)
+    if span is not None:
+        return current[:span[0]] + block + current[span[1]:]
+    if current and not current.endswith("\n"):
+        current += "\n"
+    return current + block
+
+
 class BundleError(Exception):
     """Base exception for installation bundle errors."""
 
@@ -314,8 +387,23 @@ def _validate_item(item: BundleItem, root: pathlib.Path) -> list[str]:
             problems.append(
                 f"bundle: item {item.path} declared kind 'dir' but is not a directory"
             )
+        elif item.has_transformation(BLOCK):
+            problems.extend(_validate_block(item, src))
 
     return problems
+
+
+def _validate_block(item: BundleItem, src: pathlib.Path) -> list[str]:
+    """Checks that a `block` item is a file whose source holds one well-formed block."""
+    if item.kind != "file":
+        return [f"bundle: {BLOCK} item {item.path} must be kind 'file', not '{item.kind}'"]
+    try:
+        found = block_span(src.read_text(encoding="utf-8"))
+    except ValueError as exc:
+        return [f"bundle: {BLOCK} item {item.path}: {exc}"]
+    if found is None:
+        return [f"bundle: {BLOCK} item {item.path} holds no '{BLOCK_BEGIN}' block"]
+    return []
 
 
 def validate_bundle(

@@ -1,3 +1,4 @@
+# >>> stereorepo: `just sync` replaces this block; add your own lines outside it.
 __pycache__/
 *.py[cod]
 .mypy_cache/
@@ -30,3 +31,4 @@ apm_modules/
 # log, each seat's output, and the checkout the seats work in.
 .pair/
 worktrees/
+# <<< stereorepo

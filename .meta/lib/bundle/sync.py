@@ -9,7 +9,10 @@ holds, one under a managed item the checkout's bundle dropped, and one under
 `.meta/bundle.yaml` before the copy replaces that file. Template items, symlink
 items, untracked and ignored files, and every path no bundle manages are left
 alone, and so is a path the old bundle managed that the new one lists as a
-template or symlink item. Nothing is committed.
+template or symlink item. A managed file with the `block` transformation, such as
+`.gitignore`, is merged rather than copied: only stereorepo's block is replaced, or
+appended where the portfolio's file has none, and the portfolio's own lines are
+kept (stereorepo's DR-316). Nothing is committed.
 """
 
 from __future__ import annotations
@@ -21,7 +24,15 @@ import shutil
 import stat
 import subprocess
 
-from lib.bundle import Bundle, BundleError, load_bundle, scaffold_only, under
+from lib.bundle import (
+    BLOCK,
+    Bundle,
+    BundleError,
+    load_bundle,
+    merge_block,
+    scaffold_only,
+    under,
+)
 
 BUNDLE = pathlib.PurePosixPath(".meta", "bundle.yaml")
 """Where a repository keeps its bundle manifest, relative to its root."""
@@ -41,12 +52,15 @@ class Changes:
     Attributes:
         copies: Each destination path paired with the checkout path it is
             copied from, for every file that is added or differs.
+        writes: Each `block` destination paired with its merged content, for
+            every one whose bytes change.
         added: Destinations the portfolio does not hold yet, sorted.
         updated: Destinations the portfolio holds with other content, sorted.
         removed: Tracked portfolio paths the sync deletes, sorted.
     """
 
     copies: tuple[tuple[str, str], ...] = ()
+    writes: tuple[tuple[str, bytes], ...] = ()
     added: tuple[str, ...] = ()
     updated: tuple[str, ...] = ()
     removed: tuple[str, ...] = ()
@@ -114,6 +128,38 @@ def _copies(bundle: Bundle, tracked: set[str]) -> dict[str, str]:
     return copies
 
 
+def _blocks(bundle: Bundle, copies: dict[str, str], source: pathlib.Path,
+            portfolio: pathlib.Path) -> dict[str, bytes]:
+    """The merged content of each `block` destination whose bytes the merge changes.
+
+    Raises:
+        SyncRefusedError: Where the portfolio's file is a symlink, which a write
+            would follow, is not a regular file, or its markers are malformed.
+    """
+    writes: dict[str, bytes] = {}
+    for item in bundle.items_with_transformation(BLOCK):
+        dest = item.dest_path()
+        if dest not in copies:
+            continue
+        target = portfolio / dest
+        if target.is_symlink():
+            reason = f"{dest} is a symlink, so merging stereorepo's block would write through it"
+            raise SyncRefusedError(reason)
+        if target.exists() and not target.is_file():
+            reason = f"{dest} is not a regular file, so stereorepo's block cannot be merged into it"
+            raise SyncRefusedError(reason)
+        current = target.read_text(encoding="utf-8", newline="") if target.is_file() else None
+        block = (source / copies[dest]).read_text(encoding="utf-8", newline="")
+        try:
+            merged = merge_block(current, block)
+        except ValueError as exc:
+            reason = f"{dest}: {exc}; fix its stereorepo markers and sync again"
+            raise SyncRefusedError(reason) from exc
+        if merged != current:
+            writes[dest] = merged.encode("utf-8")
+    return writes
+
+
 def plan(source: pathlib.Path, portfolio: pathlib.Path) -> Changes:
     """Works out what syncing `portfolio` from the checkout at `source` changes.
 
@@ -128,7 +174,8 @@ def plan(source: pathlib.Path, portfolio: pathlib.Path) -> Changes:
         SyncRefusedError: Where `source` has no bundle, either root is not a git
             work tree, `portfolio` is the scaffold (it holds `template/`), or
             the portfolio has uncommitted changes, untracked files included,
-            at any path the sync would write or delete.
+            at any path the sync would write or delete, or a `block` file of
+            the portfolio is a symlink or has malformed markers.
     """
     if not (source / BUNDLE).is_file():
         reason = f"{source} has no {BUNDLE}, so it is not a stereorepo checkout"
@@ -141,18 +188,22 @@ def plan(source: pathlib.Path, portfolio: pathlib.Path) -> Changes:
         if (portfolio / BUNDLE).is_file() else Bundle()
 
     copies = _copies(new, _tracked(source))
+    merged = {item.dest_path() for item in new.items_with_transformation(BLOCK)}
+    writes = _blocks(new, copies, source, portfolio)
     differing = {dest: path for dest, path in copies.items()
-                 if not _same(source / path, portfolio / dest)}
+                 if dest not in merged and not _same(source / path, portfolio / dest)}
     kept = [item.dest_path() for item in (*new.template_items(), *new.symlink_items())]
     removed = sorted(
         path for path in _tracked(portfolio)
         if path not in copies and not any(under(path, root) for root in kept)
         and (scaffold_only(path) or new.manages(path) or old.manages(path))
     )
-    present = {dest for dest in differing if os.path.lexists(portfolio / dest)}
+    written = {*differing, *writes}
+    present = {dest for dest in written if os.path.lexists(portfolio / dest)}
     changes = Changes(
         copies=tuple(sorted(differing.items())),
-        added=tuple(sorted(set(differing) - present)),
+        writes=tuple(sorted(writes.items())),
+        added=tuple(sorted(written - present)),
         updated=tuple(sorted(present)),
         removed=tuple(removed),
     )
@@ -190,6 +241,10 @@ def apply(changes: Changes, source: pathlib.Path, portfolio: pathlib.Path) -> Ch
             target.symlink_to(src.readlink())
         else:
             shutil.copy2(src, target)
+    for dest, content in changes.writes:
+        target = portfolio / dest
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(content)
     for path in changes.removed:
         target = portfolio / path
         if target.is_symlink() or target.is_file():

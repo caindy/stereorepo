@@ -18,7 +18,7 @@ import yaml
 
 from lib.adapt.omit import OMIT_REASON, below, scaffold_only_inside
 from lib.adapt.tracked import git_tracked_files
-from lib.bundle import Bundle, BundleItem, load_bundle
+from lib.bundle import BLOCK, Bundle, BundleItem, load_bundle
 
 DEFAULT_INTEGRATIONS: frozenset[str] = frozenset({"AGENTS.md", "README.md"})
 
@@ -278,10 +278,7 @@ def _content_matches(
     return source_text == target_text
 
 
-def _classify_dir(
-    item: BundleItem,
-    target_path: pathlib.Path,
-) -> PlannedAction:
+def _classify_dir(item: BundleItem, target_path: pathlib.Path) -> PlannedAction:
     """Classifies a bundle item declared as a directory."""
     dest = item.dest_path().rstrip("/")
     if target_path.is_dir() and not target_path.is_symlink():
@@ -302,10 +299,7 @@ def _classify_dir(
     )
 
 
-def _classify_symlink(
-    item: BundleItem,
-    target_path: pathlib.Path,
-) -> PlannedAction:
+def _classify_symlink(item: BundleItem, target_path: pathlib.Path) -> PlannedAction:
     """Classifies a bundle item declared as a symlink."""
     dest = item.dest_path().rstrip("/")
     if not target_path.is_symlink():
@@ -377,7 +371,11 @@ def _classify_bundle_item(
     scaffold_dir: pathlib.Path,
     config: ProductConfig,
 ) -> PlannedAction:
-    """Classifies a single bundle item against the target repository."""
+    """Classifies a single bundle item against the target repository.
+
+    A target's own copy of a `block` file is integrated, since the sync merges
+    stereorepo's block into it (stereorepo's DR-316).
+    """
     dest = item.dest_path().rstrip("/")
     target_path = target_dir / dest
 
@@ -399,11 +397,13 @@ def _classify_bundle_item(
             source=item.source,
         )
 
-    if dest in DEFAULT_INTEGRATIONS or _matches_pattern(dest, config.integrations):
+    block = item.has_transformation(BLOCK)
+    if block or dest in DEFAULT_INTEGRATIONS or _matches_pattern(dest, config.integrations):
         return PlannedAction(
             path=dest,
             classification=PathClassification.INTEGRATE,
-            reason="preserves target content while integrating stereorepo conventions",
+            reason=("the sync merges stereorepo's block and keeps the target's own lines" if block
+                    else "preserves target content while integrating stereorepo conventions"),
             kind=item.kind,
             source=item.source,
         )
