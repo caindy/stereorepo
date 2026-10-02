@@ -23,6 +23,10 @@ an instruction to follow rather than a program to run, because the work is
 judgement about one specific portfolio. Running repository tooling on a fresh
 clone requires Python >= 3.13 (DR-268).
 
+A repository that already holds a product is adopted rather than specialized:
+point the agent at [`ADOPT.md`](ADOPT.md) instead, with this repository checked
+out beside it.
+
 ## What you inherit
 
 | | |
@@ -47,4 +51,5 @@ Design, from Alan Cooper's persona work, from SKOS, and from a working
 adopted almost whole. Where a rule exists, `.meta/decisions.md` records what it
 cost to learn.
 
-This file is for **arriving**; [`SPECIALIZE.md`](SPECIALIZE.md) is for **acting**.
+This file is for **arriving**; [`SPECIALIZE.md`](SPECIALIZE.md) and
+[`ADOPT.md`](ADOPT.md) are for **acting**.

@@ -144,6 +144,39 @@ def charter() -> str | None:
     return "\n".join(out) + record.accounted_by("charter.md")
 
 
+def _procedure(name: str, target: str) -> str | None:
+    """The root-level page for the Discipline called `name`.
+
+    Reads only `assertions/disciplines.yaml`, the scaffold's own Disciplines,
+    which a portfolio does not inherit.
+
+    Args:
+        name: The Discipline's `name`.
+        target: The page's render target, whose Artifact carries its preamble
+            and postamble.
+
+    Returns:
+        str | None: The page, or `None` when the assertions hold no such
+        Discipline.
+    """
+    abox = record.load("assertions/disciplines.yaml") or {}
+    d = next((x for x in abox.get("disciplines", []) if x["name"] == name), None)
+    if d is None:
+        return None
+    out = [record.BANNER.format(src="assertions/disciplines.yaml"),
+           record.authored(target),
+           d["description"].strip() + "\n",
+           f"**Where the judgement is.** {d['judgement'].strip()}\n",
+           "## Steps\n",
+           "\n".join(
+               f"{i}. **{s['name'].rstrip('.')}.** {s['statement'].strip()}"
+               for i, s in enumerate(d["steps"], 1)
+           ) + "\n",
+           "_Produces: " + "; ".join(d["produces"]).rstrip(".") + "._\n",
+           record.authored(target, "postamble")]
+    return "\n".join(out) + record.accounted_by(target)
+
+
 def specialize() -> str | None:
     """The root-level instruction an agent arriving at the repo is pointed to.
 
@@ -155,19 +188,14 @@ def specialize() -> str | None:
     which is every portfolio: a portfolio specializes nothing, so it has no
     such page.
     """
-    abox = record.load("assertions/disciplines.yaml") or {}
-    d = next((x for x in abox.get("disciplines", []) if x["name"] == "Specialization"), None)
-    if d is None:
-        return None
-    out = [record.BANNER.format(src="assertions/disciplines.yaml"),
-           record.authored("../SPECIALIZE.md"),
-           d["description"].strip() + "\n",
-           f"**Where the judgement is.** {d['judgement'].strip()}\n",
-           "## Steps\n",
-           "\n".join(
-               f"{i}. **{s['name'].rstrip('.')}.** {s['statement'].strip()}"
-               for i, s in enumerate(d["steps"], 1)
-           ) + "\n",
-           "_Produces: " + "; ".join(d["produces"]).rstrip(".") + "._\n",
-           record.authored("../SPECIALIZE.md", "postamble")]
-    return "\n".join(out) + record.accounted_by("../SPECIALIZE.md")
+    return _procedure("Specialization", "../SPECIALIZE.md")
+
+
+def adopt() -> str | None:
+    """The root-level instruction for bringing an existing repository under stereorepo.
+
+    Generated from the Adoption Discipline, as `specialize()` is generated
+    from Specialization. Answers `None` where the assertions hold no Adoption
+    Discipline, which is every portfolio: a portfolio adopts nothing.
+    """
+    return _procedure("Adoption", "../ADOPT.md")

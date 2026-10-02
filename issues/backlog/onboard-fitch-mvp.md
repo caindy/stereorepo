@@ -83,37 +83,39 @@ finds it:
 
 - A repository may keep its own decision log or roadmap. The procedure asks
   which subjects each one keeps, rather than assuming Decision Records and the
-  board replace them. *Waits for the procedure.*
+  board replace them. *Covered by Adoption's* "Settle the product's own records" *step* (`ADOPT.md`).
 - A repository may use another version-control layer over git. The procedure
-  checks that layer holds nothing git lacks before removing it. *Waits for the procedure.*
+  checks that layer holds nothing git lacks before removing it.
+  *Covered by Adoption's* "Retire another version-control layer" *step* (`ADOPT.md`).
 - No tool applies the plan. The first pass copied `managed_items`,
   `template_items` and `symlink_items` from `lib.bundle` as
   `test_specialization.py` does, and integrated `.gitignore`, `AGENTS.md` and
-  `README.md` by hand. *Waits for the procedure.* `adapt-plan-reads-tracked-files`
-  made the plan list only what the target tracks, which is the plan such a
-  tool would apply, but nothing applies it yet. `adoption-plan-omits-scaffold-only-paths`,
-  in the backlog with no parent, would keep scaffold-only paths out of it.
+  `README.md` by hand. *Covered by Adoption's* "Plan the adoption", "Copy
+  the managed items" *and* "Integrate the template items" *steps* (`ADOPT.md`):
+  `just adapt plan` lists only what the target tracks and no scaffold-only
+  path, `bundle.py sync` (DR-315) copies the managed items, and the
+  integrate and conflict entries stay a step done by hand.
 - stereorepo's `.gitignore` ignores `.agents/` as a compiled harness
   directory, and fitch-mvp tracked two hand-written skills there. Moving them
   to `.claude/skills/` merges them: render compiles that directory, with the
   inherited skills, into `.meta/.apm/skills/` and `.agents/`
   (`lib/apm_compile/skills.py`), so `.agents/` can be ignored as it is here.
   The procedure moves a product's harness skills to `.claude/skills/`.
-  *Waits for the procedure.*
+  *Covered by Adoption's* "Move harness skills" *step* (`ADOPT.md`).
 - stereorepo's inherited vocabulary and wiki have Claim, Evidence and
   Decision, and fitch-mvp's domain has its own Claim, Evidence and Decision.
   The procedure lists the domain terms that share a label with an inherited
   one, so that each is recorded as confusable in `domain_vocabulary.yaml`.
-  *Waits for the procedure.* `cited-slots-in-portfolio-schemas` addresses the
+  *Covered by Adoption's* "Write the assertions" *step* (`ADOPT.md`). `cited-slots-in-portfolio-schemas` addresses the
   same clash in the gate: a citation of a slot of the product's `Decision`
   passes once its Project names its schema.
 - The template's DR-001 says the portfolio was specialized from stereorepo.
   An adopted repository needs an entry that says it was adopted, and
-  rejects starting a new repository. *Waits for the procedure.*
+  rejects starting a new repository. *Covered by Adoption's* "Record the adoption" *step* (`ADOPT.md`).
 - An existing product needs a gate that prints Article 21 lines, and
   `just bootstrap` only creates seed projects. fitch-mvp has a hand-written
-  `gate.py` that wraps its build and pytest. *Waits for the procedure* for
-  writing that gate. Three parts let such a gate do its job in the loop:
+  `gate.py` that wraps its build and pytest. *Covered by Adoption's* "Write
+  the product's gate" *step* (`ADOPT.md`) for writing that gate. Three parts let such a gate do its job in the loop:
   `project-at-repository-root` sends a change to a product at the root to its
   Project's gate, `landing-gate-holds-on-could-not-run` holds a landing whose
   Neo4j step could not run, and `portfolio-steps-without-subject` removes the
@@ -121,13 +123,16 @@ finds it:
 - The gate in the loop's worktree has no `.venv`. A portfolio cannot declare
   the `just setup` recipe the loop runs, because the `justfile` is rendered
   (`.meta/lib/render/writers.py`). fitch-mvp avoids the need: its gate runs
-  under `uv run --with-requirements`. *Waits for the procedure.*
+  under `uv run --with-requirements`. *Covered by Adoption's* "Write the product's gate" *step* (`ADOPT.md`).
 - An existing codebase fails the comment, suppression and size ratchets on
   its first gate. The checks' own remedy is a baseline under `.meta/checks/`,
-  which the bundle owns as managed, so a sync could overwrite it. *Waits for
-  the procedure.* No part addresses the overwrite.
+  which the bundle owns as managed, so a sync could overwrite it.
+  `portfolio-owns-ratchet-baselines` moved the portfolio's counts to
+  `.meta/baselines/`, which no sync touches (DR-314).
+  *Covered by Adoption's* "Render, baseline and check" *step* (`ADOPT.md`).
 - A Product needs a primary Persona, and fitch-mvp has none yet, so its
-  structure declares Projects and no Product. *Waits for the procedure.*
+  structure declares Projects and no Product.
+  *Covered by Adoption's* "Write the assertions" *step* (`ADOPT.md`).
 
 ## Desk-check brief
 

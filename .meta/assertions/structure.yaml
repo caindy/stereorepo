@@ -676,12 +676,29 @@ artifacts:
       You are looking at **stereorepo**, a scaffold for building software products as a
       team of one in the agentic AI era. Specializing it produces a **Portfolio**:
       one repo, one Bounded Context, one Ubiquitous Language, holding however many
-      Products and Projects.
+      Products and Projects. For a repository that already holds a product, follow
+      [`ADOPT.md`](ADOPT.md) instead.
     postamble: |
       ## Then
 
       Read [`.meta/README.md`](.meta/README.md). Its load map routes to everything
       else, and is deliberately insufficient on its own.
+  - id: work:artifact/adopt
+    name: ADOPT.md
+    path: ADOPT.md
+    preamble: |
+      # Adopt stereorepo into an existing repository
+
+      You are looking at **stereorepo**, a scaffold for building software products as a
+      team of one in the agentic AI era. Adopting it brings a repository that already
+      holds a product under the same conventions a specialized **Portfolio** has, and
+      keeps the product's code, history and records. For an empty repository, follow
+      [`SPECIALIZE.md`](SPECIALIZE.md) instead.
+    postamble: |
+      ## Then
+
+      Read [`.meta/README.md`](.meta/README.md) in the adopted repository. Its load map
+      routes to everything else, and is deliberately insufficient on its own.
   - id: work:artifact/stakeholders-readme
     name: stakeholders/README.md
     path: stakeholders/README.md

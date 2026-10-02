@@ -7,7 +7,8 @@
 You are looking at **stereorepo**, a scaffold for building software products as a
 team of one in the agentic AI era. Specializing it produces a **Portfolio**:
 one repo, one Bounded Context, one Ubiquitous Language, holding however many
-Products and Projects.
+Products and Projects. For a repository that already holds a product, follow
+[`ADOPT.md`](ADOPT.md) instead.
 
 Turning this scaffold into a new portfolio repo. Done once, by an agent following these steps, and never again in that repo.
 
@@ -21,7 +22,7 @@ Turning this scaffold into a new portfolio repo. Done once, by an agent followin
 4. **Fill placeholders and write assertions.** Fill in every placeholder, and write the portfolio's own assertions — its Portfolio, Products and Projects; its Personas, once there is research to draw them from; its Bounded Context and the words its domain experts actually use.
 5. **Choose languages and bootstrap.** Choose the languages the portfolio will use, from those stereorepo's `bootstraps/` supports, and bring them to hand: running `just bootstrap <lang> <path>` instantiates a seed project and registers it in `assertions/structure.yaml` (DR-206). Language adoption can happen now or be deferred to any point in the portfolio lifecycle.
 6. **Render and check.** Re-render, then run the gate. It fails on any placeholder left behind, so run it before removing anything. Both green before going on.
-7. **Confirm scaffold-only paths absent.** Confirm `SPECIALIZE.md`, `template/`, `bootstraps/` and `pair/` are absent. A portfolio specializes nothing, and leaving either invites someone to run this twice. Confirm too that `.meta/adapt.py`, `.meta/lib/adapt/` and `.meta/checks/probes/tools/test_brownfield.py` are absent: brownfield adoption plans from `template/`, which a portfolio does not have (DR-305).
+7. **Confirm scaffold-only paths absent.** Confirm `SPECIALIZE.md`, `ADOPT.md`, `template/`, `bootstraps/` and `pair/` are absent. A portfolio specializes nothing, and leaving any of them invites someone to run this twice. Confirm too that `.meta/adapt.py`, `.meta/lib/adapt/` and `.meta/checks/probes/tools/test_brownfield.py` are absent: brownfield adoption plans from `template/`, which a portfolio does not have (DR-305).
 8. **Commit.** All changes verified, commit the specialized repository under the author's own credential.
 
 _Produces: A portfolio repo, with its own history and nothing of the scaffold's._

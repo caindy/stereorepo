@@ -17,6 +17,7 @@ is a poor fit here.
 |---|---|
 | [`README.md`](README.md) | The landing page. What stereorepo is, for anyone arriving. |
 | [`SPECIALIZE.md`](SPECIALIZE.md) | Generated. The steps for turning a clone into a portfolio. |
+| [`ADOPT.md`](ADOPT.md) | Generated. The steps for bringing an existing repository under stereorepo. |
 | [`.meta/README.md`](.meta/README.md) | **Start here.** A load map routing to everything else. Deliberately small. |
 | `.meta/` | The staging ground. Never ships as product content. |
 | `.meta/.apm/` | APM primitives, compiled to whatever harness is needed. Derived from `assertions/`. |
@@ -48,8 +49,8 @@ observe. There are no pull requests.
 ## Conventions
 
 - `CLAUDE.md`, `GEMINI.md`, and `.github/copilot-instructions.md` are symlinks to this file. Edit `AGENTS.md`.
-- `SPECIALIZE.md` is generated from the Specialization Discipline. Edit the
-  assertion, not the file.
+- `SPECIALIZE.md` is generated from the Specialization Discipline, and
+  `ADOPT.md` from the Adoption Discipline. Edit the assertion, not the file.
 - Use the vocabulary from the ontology of work in preference to synonyms: an
   *Issue*, not a ticket or story; a *seat*, not a coder or reviewer; the
   *developer*, not the user or the owner.

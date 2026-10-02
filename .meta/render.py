@@ -15,6 +15,7 @@ from lib.render.bootstraps import (
 )
 from lib.render.decisions import decision_form, decisions
 from lib.render.pages import (
+    adopt,
     charter,
     disciplines,
     specialize,
@@ -62,6 +63,7 @@ __all__ = [
     "RECORD",
     "TARGETS",
     "accounted_by",
+    "adopt",
     "all_artifacts",
     "apm_primitives",
     "artifacts",

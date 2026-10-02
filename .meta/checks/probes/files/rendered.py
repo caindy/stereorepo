@@ -9,7 +9,7 @@ expensive target generators.
 from typing import Any
 
 from checks.collect import check
-from lib.render import targets
+from lib.render import pages, record, targets
 
 
 def _probe_invocations(calls: dict[str, int]) -> list[str]:
@@ -90,6 +90,42 @@ def _probe_fallbacks_without_specialize() -> list[str]:
     return [f"without ../SPECIALIZE.md: {problem}" for problem in problems]
 
 
+def _probe_adopt() -> list[str]:
+    """`pages.adopt()` writes a page only where the scaffold's own Disciplines hold Adoption.
+
+    A portfolio's `assertions/disciplines.yaml` is absent or holds none of the
+    scaffold's procedures, and it must render no `ADOPT.md`. Over the real
+    assertions the page carries every step's name.
+    """
+    problems: list[str] = []
+    real = record.load("assertions/disciplines.yaml") or {}
+    adoption = next((d for d in real.get("disciplines") or [] if d["name"] == "Adoption"), None)
+    if adoption is None:
+        return ["assertions/disciplines.yaml holds no Adoption Discipline"]
+    page = pages.adopt() or ""
+    problems.extend(f"ADOPT.md lacks the step {s['name']!r}"
+                    for s in adoption["steps"] if f"**{s['name'].rstrip('.')}.**" not in page)
+    without = {"disciplines": [d for d in real["disciplines"] if d["name"] != "Adoption"]}
+    for label, held in (("absent", None), ("holding no Adoption", without)):
+        if _adopt_over(held) is not None:
+            problems.append(f"adopt() answers a page with assertions/disciplines.yaml {label}")
+    return problems
+
+
+def _adopt_over(held: Any) -> str | None:
+    """`pages.adopt()` with `assertions/disciplines.yaml` read as `held`, every other file as is."""
+    saved = record.load
+
+    def load(rel: str) -> Any | None:
+        return held if rel == "assertions/disciplines.yaml" else saved(rel)
+
+    record.load = load
+    try:
+        return pages.adopt()
+    finally:
+        record.load = saved
+
+
 @check("rendered artifact probes", pre=True)
 def rendered_artifact_probes() -> list[str]:
     """**Rendered artifact probes** verify single-evaluation snapshot reuse and orphan detection.
@@ -130,4 +166,5 @@ def rendered_artifact_probes() -> list[str]:
     problems.extend(_probe_unrendered())
     problems.extend(_probe_fallbacks())
     problems.extend(_probe_fallbacks_without_specialize())
+    problems.extend(_probe_adopt())
     return problems

@@ -71,6 +71,7 @@ TARGETS: dict[str, TargetFn] = {
     "charter.md": pages.charter,
     "vocabulary.md": pages.vocabulary,
     "../SPECIALIZE.md": pages.specialize,
+    "../ADOPT.md": pages.adopt,
     "../justfile": writers.justfile,
     "../.claude/skills/wikisplain/SKILL.md": skills.wikisplain_skill,
     "../.claude/skills/search/SKILL.md": skills.search_skill,

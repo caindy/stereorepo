@@ -97,7 +97,7 @@ RENDERED_TARGETS: frozenset[str] = frozenset({
     ".meta/decisions.md",
     ".meta/disciplines.md",
     ".meta/vocabulary.md",
-    "SPECIALIZE.md",
+    "SPECIALIZE.md", "ADOPT.md",
     ".meta/apm.yml",
     ".meta/templates/decision.md",
     ".claude/skills/technical-writing/SKILL.md",

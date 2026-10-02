@@ -9,8 +9,9 @@ from collections.abc import Sequence
 from checks.collect import META, ROOT, TEMPLATE, CouldNotRun, Found, Passed, StepOutcome, check
 from checks.files import sources
 
-SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "bootstraps/", "pair/", ".meta/adapt.py",
-                 ".meta/lib/adapt/", ".meta/checks/probes/tools/test_brownfield.py")
+SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "ADOPT.md", "bootstraps/", "pair/",
+                 ".meta/adapt.py", ".meta/lib/adapt/",
+                 ".meta/checks/probes/tools/test_brownfield.py")
 """Paths the scaffold has and a portfolio does not, at the top level or below it, such as the
 brownfield adoption tool and its probe (stereorepo's DR-305)."""
 

@@ -63,8 +63,8 @@ disciplines:
       - id: work:discipline-step/specialization/confirm-scaffold-only-paths-absent
         name: Confirm scaffold-only paths absent
         statement: >-
-          Confirm `SPECIALIZE.md`, `template/`, `bootstraps/` and `pair/` are absent. A portfolio specializes nothing, and leaving
-          either invites someone to run this twice. Confirm too that `.meta/adapt.py`, `.meta/lib/adapt/`
+          Confirm `SPECIALIZE.md`, `ADOPT.md`, `template/`, `bootstraps/` and `pair/` are absent. A portfolio specializes nothing, and leaving
+          any of them invites someone to run this twice. Confirm too that `.meta/adapt.py`, `.meta/lib/adapt/`
           and `.meta/checks/probes/tools/test_brownfield.py` are absent: brownfield adoption plans from
           `template/`, which a portfolio does not have (DR-305).
       - id: work:discipline-step/specialization/commit
@@ -72,3 +72,115 @@ disciplines:
         statement: All changes verified, commit the specialized repository under the author's own credential.
     produces:
       - A portfolio repo, with its own history and nothing of the scaffold's.
+
+  - id: work:discipline/adoption
+    name: Adoption
+    description: >-
+      Bringing an existing repository, one that already holds a product, its
+      history and its own records, under the conventions a specialized
+      portfolio has. Done once per repository, by an agent following these
+      steps in that repository with a stereorepo checkout beside it. What
+      Specialization does for an empty repository, this does for one that is
+      not empty, and it keeps everything the product already has.
+    judgement: >-
+      Which of the product's own records (a decision log, a roadmap) keep their
+      subjects and which give them to Decision Records and the board; which of
+      the product's domain terms share a label with an inherited one; how
+      `README.md`, `AGENTS.md` and `.gitignore` carry both the product's content
+      and the conventions; and what the product's gate has to run. None of it is
+      in the plan a tool writes, which is why this is a procedure to follow
+      rather than a program to run.
+    steps:
+      - id: work:discipline-step/adoption/plan-the-adoption
+        name: Plan the adoption
+        statement: >-
+          From the stereorepo checkout, run `just adapt plan <repository>`. The plan
+          lists only the paths the repository tracks, sorted into those it keeps, those it gains,
+          those whose content it integrates and those that conflict, and it leaves out every path
+          a portfolio does not have (DR-305). Read the plan before changing anything.
+      - id: work:discipline-step/adoption/settle-the-products-own-records
+        name: Settle the product's own records
+        statement: >-
+          For each decision log or roadmap the repository already keeps, decide which subjects it
+          keeps and which move to Decision Records under `.meta/assertions/decisions/` or to the
+          board in `issues/`. Do not assume they replace it: a log may record decisions about the
+          domain that no Decision Record would.
+      - id: work:discipline-step/adoption/retire-another-version-control-layer
+        name: Retire another version-control layer
+        statement: >-
+          Where the repository uses a version-control layer over git, check that the layer holds
+          nothing git lacks, such as unpublished changes or history kept only in its own store,
+          before removing it. The pair loop reads only git.
+      - id: work:discipline-step/adoption/copy-the-managed-items
+        name: Copy the managed items
+        statement: >-
+          Run `<checkout>/.meta/bundle.py --root <repository> sync <checkout>` from a clean
+          working tree. It copies every managed item the checkout tracks and leaves the
+          repository's own files alone (DR-315). The repository has no `sync` recipe until this
+          first copy brings one, and the checkout's own recipe cannot be pointed at it, because
+          `--root` is an option of `bundle.py` and the recipe places its arguments after `sync`.
+          Every later sync is `just sync <checkout>`, run in the repository.
+      - id: work:discipline-step/adoption/integrate-the-template-items
+        name: Integrate the template items
+        statement: >-
+          Work through the plan's integrate and conflict entries by hand: no tool applies them.
+          `README.md`, `AGENTS.md` and `.gitignore` keep the product's content beside the
+          conventions, and `.meta/assertions/` takes the template's files with the placeholders
+          filled. Then link `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` to
+          `AGENTS.md`.
+      - id: work:discipline-step/adoption/move-harness-skills
+        name: Move harness skills
+        statement: >-
+          Move each hand-written skill the repository keeps under `.agents/` or another harness
+          directory to `.claude/skills/`. The render compiles that directory, with the inherited
+          skills, into `.meta/.apm/skills/` and `.agents/`, and `.gitignore` ignores `.agents/` as
+          compiled output, so a skill left there is lost.
+      - id: work:discipline-step/adoption/record-the-adoption
+        name: Record the adoption
+        statement: >-
+          Write DR-001 as the decision to adopt: it says the repository was adopted rather than
+          specialized, and records starting a new repository as the alternative rejected,
+          because the product's history is worth keeping.
+      - id: work:discipline-step/adoption/write-the-assertions
+        name: Write the assertions
+        statement: >-
+          In `.meta/assertions/structure.yaml`, declare the product as a Project. A product at
+          the repository's root is declared with `name: .` (DR-303). Give the Project its `gate`
+          and, before the first gate, name its LinkML schemas in `schemas`, so that prose about
+          the product's own schema slots is checked against them (DR-304). Declare a Product only
+          once it has a primary Persona; until then, declare Projects only. List the product's
+          domain terms that share a label with an inherited term, and mark each as confusable in
+          both directions in `domain_vocabulary.yaml`.
+      - id: work:discipline-step/adoption/write-the-products-gate
+        name: Write the product's gate
+        statement: >-
+          Write the command the Project's `gate` names. It wraps the product's build and tests
+          and prints each step as Article 21 shapes it, reporting `?` for a step that cannot run,
+          such as one that needs a database or Docker the seat's sandbox lacks. It must run in the
+          loop's worktree, which has no `.venv`, so it installs what it needs itself, for example
+          with `uv run --with-requirements`. Pin the interpreter with `--python` where a
+          requirement does not build on `uv`'s default. The worktree sits at `worktrees/pair`,
+          inside the repository's tree, so keep every product tool that walks the tree out of it:
+          pytest, for one, needs `testpaths` set, or it collects the worktree's copy of the
+          tests.
+      - id: work:discipline-step/adoption/render-baseline-and-check
+        name: Render, baseline and check
+        statement: >-
+          Run `just render`, then the gate. Existing code fails the comment, suppression and size
+          ratchets on its first gate. Record what it already has in `.meta/baselines/`, which no
+          sync touches, and never in the baselines beside the checks, which every sync replaces
+          (DR-314). Both green before going on.
+      - id: work:discipline-step/adoption/confirm-scaffold-only-paths-absent
+        name: Confirm scaffold-only paths absent
+        statement: >-
+          Confirm that `SPECIALIZE.md`, `ADOPT.md`, `template/`, `bootstraps/`, `pair/`,
+          `.meta/adapt.py`, `.meta/lib/adapt/` and `.meta/checks/probes/tools/test_brownfield.py`
+          are absent, as for a specialized portfolio (DR-305).
+      - id: work:discipline-step/adoption/commit
+        name: Commit
+        statement: >-
+          All changes verified, commit the adoption under the author's own credential. The
+          repository's Issues then land through the pair loop, run from the checkout with
+          `uv run --script <checkout>/pair/pair.py run`.
+    produces:
+      - An adopted repository, with its own history and product, holding the bundle and its own assertions.

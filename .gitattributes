@@ -34,6 +34,7 @@
 /.meta/disciplines.md merge=union
 /.meta/templates/decision.md merge=union
 /.meta/vocabulary.md merge=union
+/ADOPT.md merge=union
 /SPECIALIZE.md merge=union
 /bootstraps/python/.apm/instructions/python-standard.instructions.md merge=union
 /bootstraps/python/.apm/skills/brainstorming/SKILL.md merge=union
