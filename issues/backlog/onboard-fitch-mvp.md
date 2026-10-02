@@ -182,3 +182,64 @@ desk-check points there. To pick up these parts, fitch-mvp needs, at least:
   one touching only `issues/` should not.
 - Decide whether the ratchet-baseline finding (a managed baseline a sync could
   overwrite) needs a part before a second onboarding: no part addresses it.
+
+## Desk-check notes
+
+fitch-mvp is onboarded: its `main` holds the bundle and its own assertions,
+its whole gate passes (90 steps across the `meta` and `fitch` Projects), and
+its first Issue, `docs-cite-current-slots`, landed through the pair loop with
+the Neo4j step run. These notes are what that onboarding found and the parts
+have not yet fixed. The seats cannot read fitch-mvp, so each note carries what
+it showed.
+
+- **A fresh worktree fails the `meta` gate until it is rendered.** The `apm
+  package` and `rendered prose` steps read `.meta/apm.yml`, which is a render
+  output that git ignores, so a worktree that has never run `just render`
+  fails both ("Not an APM project - no apm.yml found") whatever the branch
+  changed. A seat cannot render to fix it: `render.py` writes `.claude/skills/`
+  first, which the seat's sandbox forbids, and stops before it writes
+  `apm.yml`. In fitch-mvp the seats got past it by copying `apm.yml` from the
+  developer's checkout, which holds only while the assertions are unchanged.
+  Wanted: a new worktree of an unchanged `main` passes `just gate meta`
+  without anyone rendering in it, whether because the gate compiles the
+  package first, the loop renders when it creates the worktree, or
+  `render.py` writes `apm.yml` before the harness files. Check whether
+  stereorepo's own worktrees hit this too.
+- **Syncing an adopted portfolio removes what the bundle drops.** Nothing
+  syncs a portfolio with stereorepo. fitch-mvp was synced twice by copying
+  `lib.bundle`'s `managed_items()` over it, which never deletes. When DR-305
+  made `.meta/adapt.py`, `.meta/lib/adapt/` and
+  `.meta/checks/probes/tools/test_brownfield.py` scaffold-only, fitch-mvp kept
+  its copies, and their probe reported `?` until they were removed by hand.
+  Wanted: a recipe that syncs a portfolio from a stereorepo checkout, copying
+  managed items, removing the managed paths the bundle no longer lists and
+  the scaffold-only ones, and leaving template items and the portfolio's own
+  files alone.
+- **The ratchet baselines are the portfolio's, not the bundle's.**
+  `.meta/checks/*.baseline.yaml` sit inside `.meta/checks/`, a managed
+  directory, so each sync of fitch-mvp overwrote its comment baseline (418
+  existing comments across 27 files) with stereorepo's, and it had to be
+  restored from git each time. An adopted codebase depends on its baselines
+  from its first gate. Wanted: a sync never overwrites a portfolio's
+  baselines, whether they move out of the managed directory or the bundle
+  marks them as the portfolio's.
+- **Fold `adoption-plan-omits-scaffold-only-paths` into this Flight.** That
+  backlog Issue already describes the planner's half of DR-305: it still
+  plans `.meta/lib/adapt/` and the brownfield probe into an adopted
+  repository. Make it a part by setting its `parent:` to this Flight, rather
+  than writing a new Issue for it.
+- **Write the adoption procedure.** Specialization covers an empty
+  repository and nothing covers an existing one. Write Adoption as a
+  Discipline beside Specialization, rendered as `SPECIALIZE.md` is, from
+  what fitch-mvp needed: the ten findings above in "Findings for the adoption
+  procedure", the sync recipe from the note above, and three more that the
+  onboarding found after the parts landed. First, the loop keeps its worktree
+  at `worktrees/pair`, inside the portfolio's tree, so a product tool that
+  walks the tree must be kept out of it: fitch-mvp's pytest collected the
+  worktree's copy of its tests and failed on duplicate modules until a
+  `pytest.ini` set `testpaths = tests`. Second, an adopted repository may
+  need its interpreter pinned for its gate: `uv` defaults to Python 3.14, on
+  which one of fitch-mvp's pinned requirements does not build, so its gate
+  runs under `--python 3.13`. Third, prose about a product's own schema slots
+  is checked against that schema only once the Project's `schemas` names it,
+  so the procedure declares the schemas before the first gate.
