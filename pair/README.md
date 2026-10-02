@@ -250,7 +250,9 @@ driving the loop reads the code instead of the line.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:
 `state.json` is the Issue underway, `turns.jsonl` has one row per turn with
-tokens and cache reads, `events.jsonl` is the event log below, `<seat>.log` and `<seat>.jsonl` are each seat's
+tokens, cache reads, and the tool calls the harness refused (`denials`, a
+count, and `denied`: a refused Bash call's command, or another tool's name),
+`events.jsonl` is the event log below, `<seat>.log` and `<seat>.jsonl` are each seat's
 output, and `run.lock` holds the pid of the loop working Issues. A grooming
 pass keeps the same files in `.pair/groom/`, and its lock in
 `.pair/groom.lock`. A pass left paused in `.pair/state.json` by a loop older

@@ -2279,6 +2279,41 @@ class ExitCodeTest(unittest.TestCase):
         self.assertEqual(exits("accept"), LOCKED)
 
 
+class TurnLogTest(unittest.TestCase):
+    """`.pair/turns.jsonl`: one row per turn, with the tool calls the harness refused."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+
+    def rows(self) -> list[dict[str, Any]]:
+        lines = (self.b.loop.dir / "turns.jsonl").read_text().splitlines()
+        return [json.loads(line) for line in lines]
+
+    def test_a_row_records_the_turns_denials(self) -> None:
+        st = State(slug="x")
+        self.b.loop.record(st, "primary", TurnResult(True, denied=["x=$(pwd)", "Write"]), False)
+        self.b.loop.record(st, "secondary", TurnResult(True), True)
+        self.assertEqual(
+            [(row["denials"], row["denied"]) for row in self.rows()],
+            [(2, ["x=$(pwd)", "Write"]), (0, [])],
+        )
+
+    def test_status_shows_the_denials_and_a_row_older_than_them(self) -> None:
+        row = {"at": "2026-10-02T10:00:00", "slug": "x", "stage": "todo", "turn": 1,
+               "role": "primary", "quiet": False, "seconds": 3.0,
+               "cache_read": 1, "cache_write": 2}
+        self.b.loop.dir.mkdir(parents=True, exist_ok=True)
+        (self.b.loop.dir / "turns.jsonl").write_text(
+            json.dumps(row) + "\n"
+            + json.dumps({**row, "at": "2026-10-02T10:01:00", "turn": 2, "denials": 2}) + "\n"
+        )
+        lines = [line for line in status(self.b.repo).splitlines() if " x todo #" in line]
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(lines[0].endswith("write 2"), lines[0])
+        self.assertTrue(lines[1].endswith("write 2  denied 2"), lines[1])
+
+
 class EventLogTest(unittest.TestCase):
     """`.pair/events.jsonl`: one event for each transition, written once."""
 
@@ -3439,10 +3474,22 @@ def task(subtype: str, task_id: str, description: str = "") -> dict[str, object]
                      "description": description, "session_id": "s1"}}
 
 
-def result(text: str, output: int = 1) -> dict[str, object]:
-    return {"emit": {"type": "result", "subtype": "success", "is_error": False,
-                     "result": text, "session_id": "s1", "total_cost_usd": 0.5,
-                     "usage": {"input_tokens": 1, "output_tokens": output}}}
+def result(
+    text: str, output: int = 1, denials: Sequence[object] = ()
+) -> dict[str, object]:
+    event: dict[str, object] = {
+        "type": "result", "subtype": "success", "is_error": False, "result": text,
+        "session_id": "s1", "total_cost_usd": 0.5,
+        "usage": {"input_tokens": 1, "output_tokens": output},
+    }
+    if denials:
+        event["permission_denials"] = list(denials)
+    return {"emit": event}
+
+
+def denial(tool: str, **tool_input: object) -> dict[str, object]:
+    """One entry of `permission_denials`, as Claude Code lists a refused tool call."""
+    return {"tool_name": tool, "tool_use_id": "toolu_1", "tool_input": tool_input}
 
 
 class ClaudeSeatTest(unittest.TestCase):
@@ -3497,11 +3544,11 @@ class ClaudeSeatTest(unittest.TestCase):
             [],
             [
                 task("task_started", "t1", "Run the pair gate"),
-                result("first", output=2),
+                result("first", output=2, denials=[denial("Bash", command="a=$(pwd)")]),
                 {"sleep": 0.3},
                 task("task_notification", "t1"),
                 {"write": "late.txt"},
-                result("second", output=3),
+                result("second", output=3, denials=[denial("Write", file_path="/f")]),
             ],
         )
         turn = seat.send("go")
@@ -3509,6 +3556,7 @@ class ClaudeSeatTest(unittest.TestCase):
         self.assertEqual(turn.text, "second")
         self.assertTrue((self.wt / "late.txt").exists())
         self.assertEqual(turn.usage, {"input_tokens": 2, "output_tokens": 5})
+        self.assertEqual(turn.denied, ["a=$(pwd)", "Write"])
         self.assertEqual(seat.tasks, {})
         kinds = [(e["type"], e.get("result") or e.get("text", "")) for e in self.logged()]
         sent = [text for kind, text in kinds if kind == "pair/sent"]
@@ -3518,6 +3566,21 @@ class ClaudeSeatTest(unittest.TestCase):
         readable = (self.log / "primary.log").read_text()
         self.assertIn("[task t1 started] Run the pair gate", readable)
         self.assertIn("[task t1 ended]", readable)
+
+    def test_a_turn_reports_the_tool_calls_the_harness_refused(self) -> None:
+        refused = [
+            denial("Bash", command="x=$(git rev-parse HEAD) && echo $x"),
+            denial("Write", file_path="/elsewhere"),
+            denial("Bash", description="no command"),
+            {"tool_name": "Bash", "tool_input": "x=$(pwd)"},
+            "not an entry",
+        ]
+        seat = self.seat([], [result("one", denials=refused)], [result("two")])
+        self.assertEqual(
+            seat.send("go").denied,
+            ["x=$(git rev-parse HEAD) && echo $x", "Write", "Bash", "Bash", "?"],
+        )
+        self.assertEqual(seat.send("again").denied, [])
 
     def test_a_result_waiting_before_the_message_is_not_the_turns(self) -> None:
         seat = self.seat([result("stale")], [result("answer")])

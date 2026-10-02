@@ -77,6 +77,27 @@ class TurnResult:
     seconds: float = 0.0
     error: str | None = None
     refused: bool = False
+    denied: list[str] = field(default_factory=list)
+    """The tool calls the harness refused during the turn, one `denied` string each."""
+
+
+def denied(entry: object) -> str:
+    """One entry of a `result` event's `permission_denials`, as a short string.
+
+    Claude Code lists each tool call it refused as
+    `{"tool_name", "tool_use_id", "tool_input"}` (the Agent SDK's
+    `SDKPermissionDenial`). A refused `Bash` call reads as its command, which
+    says which shape of command the sandbox could not analyse; any other call
+    reads as its tool's name. A `Bash` entry whose command is not where this
+    expects reads as `Bash`, and an entry of no recognisable shape as `?`, so
+    the count stays right and an odd entry never costs the turn.
+    """
+    if not isinstance(entry, dict):
+        return "?"
+    name = str(entry.get("tool_name") or "?")
+    tool_input = entry.get("tool_input")
+    command = tool_input.get("command") if isinstance(tool_input, dict) else None
+    return command if name == "Bash" and isinstance(command, str) else name
 
 
 def is_refusal(error: str | None) -> bool:
@@ -503,9 +524,9 @@ class ClaudeSeat:
         a `result` that leaves no background task outstanding. The first
         `result` that leaves some outstanding is answered, once, with
         `SETTLE`, so that the seat can stop a task it no longer needs rather
-        than hold the turn open until the timeout. `usage` is summed over
-        every `result` of the turn; the rest of the outcome is the last
-        `result`'s.
+        than hold the turn open until the timeout. `usage` is summed, and
+        `denied` gathered, over every `result` of the turn; the rest of the
+        outcome is the last `result`'s.
         """
         started = time.monotonic()
         while True:
@@ -520,6 +541,7 @@ class ClaudeSeat:
         if gone:
             return TurnResult(False, error=gone, session_id=self.session_id)
         usage: dict[str, Any] = {}
+        refusals: list[str] = []
         settling = False
         while True:
             left = self.timeout - (time.monotonic() - started)
@@ -545,6 +567,7 @@ class ClaudeSeat:
                     usage[key] = usage.get(key, 0) + value
                 else:
                     usage[key] = value
+            refusals += [denied(entry) for entry in event.get("permission_denials") or []]
             if self.tasks:
                 if not settling:
                     settling = True
@@ -564,6 +587,7 @@ class ClaudeSeat:
                 seconds=time.monotonic() - started,
                 error=error,
                 refused=is_refusal(error),
+                denied=refusals,
             )
 
     def _outstanding(self) -> str:

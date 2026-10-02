@@ -905,6 +905,8 @@ class Loop:
             "cache_write": usage.get("cache_creation_input_tokens"),
             "output": usage.get("output_tokens"),
             "cost_usd": result.cost_usd,
+            "denials": len(result.denied),
+            "denied": result.denied,
         }
         self.dir.mkdir(parents=True, exist_ok=True)
         with (self.dir / "turns.jsonl").open("a") as f:
@@ -1756,10 +1758,12 @@ def status(repo: Path, main: str = "main") -> str:
     if view["turns"]:
         lines.append("\nlast turns:")
         for row in view["turns"]:
+            denials = row.get("denials")
             lines.append(
                 f"  {row['slug']} {row['stage']} #{row['turn']} {row['role']:8} "
                 f"{'quiet' if row['quiet'] else 'changed'}  {row['seconds']}s  "
                 f"cache read {row['cache_read']}  write {row['cache_write']}"
+                + ("" if denials is None else f"  denied {denials}")
             )
     return "\n".join(lines)
 
