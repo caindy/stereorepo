@@ -20,6 +20,16 @@ SCHEMA_VERSION: int = 1
 VALID_KINDS: tuple[str, ...] = ("file", "dir", "symlink")
 VALID_OWNERSHIPS: tuple[str, ...] = ("managed", "template", "symlink")
 YAML_MAPPING = "YAML mapping"
+SCAFFOLD_ONLY_PATHS: tuple[str, ...] = (
+    "SPECIALIZE.md", "template", "bootstraps", "pair", ".meta/adapt.py",
+    ".meta/lib/adapt", ".meta/checks/probes/tools/test_brownfield.py",
+)
+"""Paths the scaffold has and a portfolio does not, relative to the root (stereorepo's DR-305).
+
+Specialization leaves them out of a portfolio, and an adoption plan omits the ones that lie
+inside a bundle directory. The same paths as `checks.files.scaffold.SCAFFOLD_ONLY`, which
+spells a directory with a trailing slash.
+"""
 
 
 class BundleError(Exception):

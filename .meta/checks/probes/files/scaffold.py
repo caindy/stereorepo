@@ -5,16 +5,16 @@ scaffold-only path, so a scan that reported nothing at all would pass there.
 Here it is given a file written to a temporary directory: the bare reference
 must be reported once, and the one that says it is stereorepo's must not be.
 
-`SCAFFOLD_ONLY` has a second copy, `SCAFFOLD_ONLY_PATHS` in
-`test_specialization.py`, which the gate does not import
-(stereorepo's DR-150), and the two are asked to name the same paths.
+`SCAFFOLD_ONLY` has a second copy, `lib.bundle.SCAFFOLD_ONLY_PATHS`, which
+`test_specialization.py` and the adoption planner read, and the two are asked
+to name the same paths.
 """
 import pathlib
 import tempfile
 
-from checks.collect import META, check
+from checks.collect import check
 from checks.files import scaffold
-from checks.probes.harness import load_module
+from lib.bundle import SCAFFOLD_ONLY_PATHS
 
 SAMPLE = (
     "Run the gate from `bootstraps/python/seed`.\n"
@@ -41,17 +41,9 @@ def scaffold_only_path_probes() -> list[str]:
 
 
 def _lists_agree() -> list[str]:
-    """`SCAFFOLD_ONLY` and `test_specialization.py`'s `SCAFFOLD_ONLY_PATHS` name the same paths.
-
-    Nothing where `test_specialization.py` is absent, as in a portfolio,
-    which does not inherit it.
-    """
-    runner_path = META / "test_specialization.py"
-    if not runner_path.is_file():
-        return []
-    runner = load_module(runner_path, "test_specialization_module", register=False)
+    """`SCAFFOLD_ONLY` and `lib.bundle.SCAFFOLD_ONLY_PATHS` name the same paths."""
     gate_side = {name.rstrip("/") for name in scaffold.SCAFFOLD_ONLY}
-    runner_side = set(runner.SCAFFOLD_ONLY_PATHS)
+    runner_side = set(SCAFFOLD_ONLY_PATHS)
     if gate_side != runner_side:
         return [f"scaffold-only paths: SCAFFOLD_ONLY and SCAFFOLD_ONLY_PATHS differ by "
                 f"{sorted(gate_side ^ runner_side)}"]

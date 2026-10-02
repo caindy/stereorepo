@@ -29,7 +29,7 @@ import sys
 import tempfile
 from collections.abc import Callable, Sequence
 
-from lib.bundle import Bundle, load_bundle
+from lib.bundle import SCAFFOLD_ONLY_PATHS, Bundle, load_bundle
 
 try:
     import yaml
@@ -44,11 +44,6 @@ ROOT = META.parent
 FIXTURES_DIR = META / "fixtures" / "specialization"
 DEFAULT_TOKENS_PATH = FIXTURES_DIR / "tokens.json"
 TOKEN_RE = re.compile(r"__[A-Z0-9_]+__")
-SCAFFOLD_ONLY_PATHS = ("SPECIALIZE.md", "template", "bootstraps", "pair", ".meta/adapt.py",
-                       ".meta/lib/adapt", ".meta/checks/probes/tools/test_brownfield.py")
-"""Paths the scaffold has and a portfolio does not, relative to the root; the same paths as
-`checks.files.scaffold.SCAFFOLD_ONLY`, which spells a directory with a trailing slash."""
-
 NO_FIXTURE = "Tokens fixture file not found: {path}"
 """What `load_tokens` raises where nothing is at the path it was given."""
 

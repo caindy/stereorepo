@@ -16,6 +16,7 @@ from typing import Any
 
 import yaml
 
+from lib.adapt.omit import OMIT_REASON, below, scaffold_only_inside
 from lib.adapt.tracked import git_tracked_files
 from lib.bundle import Bundle, BundleItem, load_bundle
 
@@ -34,6 +35,7 @@ class PathClassification(str, enum.Enum):
     RETAIN = "retain"
     INTEGRATE = "integrate"
     CONFLICT = "conflict"
+    OMIT = "omit"
 
 
 @dataclasses.dataclass(frozen=True)
@@ -59,7 +61,7 @@ class PlannedAction:
 
     Attributes:
         path: Relative path within target repository.
-        classification: Target action classification (create, retain, integrate, conflict).
+        classification: Target action classification (create, retain, integrate, conflict, omit).
         reason: Explanation for the classification.
         kind: Filesystem type ('file', 'dir', or 'symlink').
         source: Optional scaffold source path if different from target path.
@@ -453,20 +455,30 @@ def build_adoption_plan(
 
     actions: list[PlannedAction] = []
     seen_destinations: set[str] = set()
+    dir_dests: list[str] = []
 
     for item in active_bundle.items:
         dest = item.dest_path().rstrip("/")
         if not dest or dest in seen_destinations:
             continue
         seen_destinations.add(dest)
+        if item.kind == "dir":
+            dir_dests.append(dest)
         action = _classify_bundle_item(item, target_p, scaffold_p, active_config)
         actions.append(action)
+
+    omitted_paths = scaffold_only_inside(dir_dests)
+    actions.extend(
+        PlannedAction(path=p, classification=PathClassification.OMIT, reason=OMIT_REASON,
+                      kind="dir" if (scaffold_p / p).is_dir() else "file")
+        for p in omitted_paths
+    )
 
     all_ignores = tuple(DEFAULT_IGNORES) + tuple(active_config.ignore)
     target_files = _scan_target_files(target_p, all_ignores)
 
     for p in target_files:
-        if p in seen_destinations:
+        if p in seen_destinations or below(p, omitted_paths):
             continue
         kind = "symlink" if (target_p / p).is_symlink() else "file"
         if _matches_pattern(p, active_config.retain):

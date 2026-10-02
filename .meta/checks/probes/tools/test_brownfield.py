@@ -16,13 +16,14 @@ import tempfile
 
 import yaml
 
-from checks.collect import META, CouldNotRun, Found, Passed, StepOutcome, check
+from checks.collect import META, Found, Passed, StepOutcome, check
 from checks.probes.harness import load_module
 from lib.adapt import (
     PathClassification,
     build_adoption_plan,
     load_product_config,
 )
+from lib.adapt.omit import scaffold_only_inside
 from lib.bundle import load_bundle
 
 
@@ -343,6 +344,16 @@ def _check_cli_and_formats(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> lis
     except Exception as exc:  # noqa: BLE001  # reason: probe diagnostic capture
         problems.append(f"brownfield: to_yaml produced invalid YAML: {exc}")
 
+    parsed_formats = (("to_json", json.loads(json_out)), ("to_yaml", yaml.safe_load(yaml_out)))
+    for path in _nested_scaffold_only(scaffold_dir):
+        if not any(line.startswith("OMIT") and f" {path} (" in line
+                   for line in text_out.splitlines()):
+            problems.append(f"brownfield: to_text shows no OMIT row for {path}")
+        for fmt, parsed in parsed_formats:
+            if not any(a["path"] == path and a["classification"] == "omit"
+                       for a in parsed["actions"]):
+                problems.append(f"brownfield: {fmt} shows no omit action for {path}")
+
     clean_args = argparse.Namespace(
         target=str(target_dir),
         root=str(scaffold_dir),
@@ -383,19 +394,43 @@ def _check_cli_and_formats(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> lis
     return problems
 
 
-NO_TEMPLATE = "no template/ to adopt from: brownfield adoption is planned from the scaffold"
-"""Why the step could not run in a repository without the scaffold's `template/`: a portfolio."""
+def _nested_scaffold_only(scaffold_dir: pathlib.Path) -> list[str]:
+    """The scaffold-only paths that lie strictly inside a `dir` item of the bundle."""
+    bundle = load_bundle(bundle_path=scaffold_dir / ".meta" / "bundle.yaml", repo_root=scaffold_dir)
+    return scaffold_only_inside(item.dest_path().rstrip("/")
+                                for item in bundle.items if item.kind == "dir")
 
 
-def _check_without_template(tmp: pathlib.Path) -> list[str]:
-    """Validates that the step reports it could not run, rather than passing, without template/."""
-    bare = tmp / "no_template"
-    bare.mkdir()
-    shown = test_brownfield_probes(bare)
-    if not isinstance(shown, CouldNotRun) or shown.why != NO_TEMPLATE:
-        return [f"brownfield: a repository without template/ reported {shown!r}, "
-                f"expected could-not-run {NO_TEMPLATE!r}"]
-    return []
+def _check_omits_scaffold_only(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]:
+    """Validates that a scaffold-only path inside a planned directory is omitted, nothing below it.
+
+    Checked in an empty target, and in one that already holds a file of the
+    scaffold's adoption tool, which must be neither retained nor a conflict.
+    """
+    problems: list[str] = []
+    nested = _nested_scaffold_only(scaffold_dir)
+    if not nested:
+        return ["brownfield: no scaffold-only path lies inside a bundle directory to omit"]
+    held = tmp / "omit_held"
+    (held / ".meta" / "lib" / "adapt").mkdir(parents=True)
+    (held / ".meta" / "lib" / "adapt" / "plan.py").write_text("stale\n", encoding="utf-8")
+    for name, target_dir in (("empty", tmp / "omit_empty"), ("holding lib/adapt", held)):
+        target_dir.mkdir(parents=True, exist_ok=True)
+        plan = build_adoption_plan(
+            target_dir=target_dir,
+            bundle_path=scaffold_dir / ".meta" / "bundle.yaml",
+            scaffold_dir=scaffold_dir,
+        )
+        for path in nested:
+            got = [(a.path, a.classification.value) for a in plan.actions
+                   if a.path == path or a.path.startswith(f"{path}/")]
+            if got != [(path, PathClassification.OMIT.value)]:
+                problems.append(f"brownfield: {name} target planned {got} for scaffold-only "
+                                f"{path}, expected one omit")
+        if plan.has_conflicts:
+            problems.append(f"brownfield: {name} target reported conflicts "
+                            f"{[a.path for a in plan.conflicts]}")
+    return problems
 
 
 @check("brownfield adoption probes", pre=True)
@@ -409,23 +444,18 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
     4. ProductConfig overrides (retain, integrations, ignore, tokens) are honoured.
     5. Target directory trees remain strictly unmodified (read-only invariant).
     6. Formats (text, JSON, YAML) and CLI execution exit codes adhere to specification.
-    7. A repository without `template/` is reported as could-not-run.
+    7. Scaffold-only paths inside a planned directory are OMIT, with nothing planned below them.
     8. A git target is planned from its tracked files, not its working tree.
 
-    The plan is drawn from the scaffold's `template/`. A specialized portfolio
-    has no copy of this step (stereorepo's DR-305), but a repository adopted
-    from a plan still does, without `template/`, so there the step could not
-    run and says so rather than passing.
+    Neither a specialized portfolio nor a repository adopted from a plan has
+    a copy of this step (stereorepo's DR-305), so it runs only in the scaffold.
 
     Args:
         scaffold_dir: The repository whose bundle and `template/` the plans are drawn from.
 
     Returns:
-        StepOutcome: `CouldNotRun` where `scaffold_dir` has no `template/`,
-        otherwise `Found` with one line per failed case, or `Passed`.
+        StepOutcome: `Found` with one line per failed case, or `Passed`.
     """
-    if not (scaffold_dir / "template").is_dir():
-        return CouldNotRun(NO_TEMPLATE)
     problems: list[str] = []
 
     with tempfile.TemporaryDirectory() as tmp_str:
@@ -436,7 +466,7 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
         problems.extend(_check_product_config(scaffold_dir, tmp))
         problems.extend(_check_readonly_invariant(scaffold_dir, tmp))
         problems.extend(_check_cli_and_formats(scaffold_dir, tmp))
-        problems.extend(_check_without_template(tmp))
+        problems.extend(_check_omits_scaffold_only(scaffold_dir, tmp))
         problems.extend(_check_tracked_files(scaffold_dir, tmp))
 
     return Found(problems) if problems else Passed("8 adoption cases")

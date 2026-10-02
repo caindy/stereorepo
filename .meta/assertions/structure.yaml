@@ -511,6 +511,9 @@ artifacts:
   - id: work:artifact/meta-lib-adapt-init
     name: .meta/lib/adapt/__init__.py
     path: .meta/lib/adapt/__init__.py
+  - id: work:artifact/meta-lib-adapt-omit
+    name: .meta/lib/adapt/omit.py
+    path: .meta/lib/adapt/omit.py
   - id: work:artifact/meta-lib-adapt-plan
     name: .meta/lib/adapt/plan.py
     path: .meta/lib/adapt/plan.py

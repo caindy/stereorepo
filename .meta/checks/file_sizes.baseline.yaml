@@ -21,4 +21,4 @@
 .meta/checks/files/python.py: 333
 .meta/checks/probes/knowledge.py: 85
 .meta/terms.py: 397
-.meta/test_specialization.py: 128
+.meta/test_specialization.py: 123
