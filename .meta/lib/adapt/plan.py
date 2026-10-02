@@ -16,6 +16,7 @@ from typing import Any
 
 import yaml
 
+from lib.adapt.tracked import git_tracked_files
 from lib.bundle import Bundle, BundleItem, load_bundle
 
 DEFAULT_INTEGRATIONS: frozenset[str] = frozenset({"AGENTS.md", "README.md"})
@@ -214,9 +215,24 @@ def _scan_target_files(
     target_dir: pathlib.Path,
     ignores: frozenset[str] | tuple[str, ...],
 ) -> list[str]:
-    """Scans existing relative file and symlink paths in target directory."""
+    """Lists the target's relative file and symlink paths that are not ignored.
+
+    In a git repository these are the tracked paths that exist on disk as a
+    file or symlink, which leaves out deleted paths and submodule
+    directories. They are deduplicated, since during an unfinished merge
+    `ls-files` prints an unmerged path once per stage. Elsewhere the working
+    tree is walked.
+    """
     if not target_dir.is_dir():
         return []
+    tracked = git_tracked_files(target_dir)
+    if tracked is not None:
+        return sorted({
+            p
+            for p in tracked
+            if not _is_ignored(p, ignores)
+            and ((target_dir / p).is_symlink() or (target_dir / p).is_file())
+        })
     rel_paths: list[str] = []
     for root, dirnames, filenames in target_dir.walk(follow_symlinks=False):
         rel_root = root.relative_to(target_dir).as_posix()

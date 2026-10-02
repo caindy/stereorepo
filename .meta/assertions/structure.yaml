@@ -511,6 +511,9 @@ artifacts:
   - id: work:artifact/meta-lib-adapt-plan
     name: .meta/lib/adapt/plan.py
     path: .meta/lib/adapt/plan.py
+  - id: work:artifact/meta-lib-adapt-tracked
+    name: .meta/lib/adapt/tracked.py
+    path: .meta/lib/adapt/tracked.py
   - id: work:artifact/meta-lib-bundle-init
     name: .meta/lib/bundle/__init__.py
     path: .meta/lib/bundle/__init__.py

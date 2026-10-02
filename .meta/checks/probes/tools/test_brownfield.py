@@ -9,7 +9,9 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import pathlib
+import subprocess
 import tempfile
 
 import yaml
@@ -166,6 +168,63 @@ def _check_conflicts(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]
     if not struct_act or struct_act.classification != PathClassification.CONFLICT:
         problems.append("brownfield: file-to-dir structure.yaml not marked CONFLICT")
 
+    return problems
+
+
+def _check_tracked_files(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]:
+    """Validates that a git target is planned from its tracked files.
+
+    The files are staged rather than committed: `ls-files` reads the index,
+    and a commit would need an identity and would trigger the developer's
+    signing configuration.
+    """
+    problems: list[str] = []
+    target_dir = tmp / "git_target"
+    target_dir.mkdir(parents=True)
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_")}
+
+    def git(*args: str) -> None:
+        subprocess.run(
+            ["git", "-C", str(target_dir), *args], check=True, capture_output=True, env=env
+        )
+
+    try:
+        git("init", "-q")
+        (target_dir / "src").mkdir()
+        (target_dir / "src" / "app.py").write_text("print('hello')\n", encoding="utf-8")
+        (target_dir / "gone.py").write_text("deleted after staging\n", encoding="utf-8")
+        (target_dir / ".gitignore").write_text("build/\n", encoding="utf-8")
+        git("add", "src/app.py", "gone.py", ".gitignore")
+    except (OSError, subprocess.CalledProcessError) as exc:
+        return [f"brownfield: could not build the git target: {exc}"]
+    (target_dir / "gone.py").unlink()
+    (target_dir / "scratch.txt").write_text("untracked\n", encoding="utf-8")
+    (target_dir / "build").mkdir()
+    (target_dir / "build" / "out.txt").write_text("ignored\n", encoding="utf-8")
+    (target_dir / ".meta").mkdir()
+    (target_dir / ".meta" / "render.py").write_text("Untracked product render\n", encoding="utf-8")
+
+    plan = build_adoption_plan(
+        target_dir=target_dir,
+        bundle_path=scaffold_dir / ".meta" / "bundle.yaml",
+        scaffold_dir=scaffold_dir,
+    )
+    action_map = {a.path: a for a in plan.actions}
+
+    app_act = action_map.get("src/app.py")
+    if not app_act or app_act.classification != PathClassification.RETAIN:
+        problems.append("brownfield: tracked src/app.py was not classified as RETAIN")
+    for absent in ("gone.py", "scratch.txt", "build/out.txt"):
+        if absent in action_map:
+            problems.append(f"brownfield: untracked, ignored or deleted {absent} was planned")
+    render_act = action_map.get(".meta/render.py")
+    if not render_act or render_act.classification != PathClassification.CONFLICT:
+        problems.append(
+            "brownfield: untracked .meta/render.py at a scaffold path not marked CONFLICT"
+        )
+    gem_act = action_map.get("GEMINI.md")
+    if not gem_act or gem_act.classification != PathClassification.CREATE:
+        problems.append("brownfield: unoccupied GEMINI.md not marked CREATE in a git target")
     return problems
 
 
@@ -351,6 +410,7 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
     5. Target directory trees remain strictly unmodified (read-only invariant).
     6. Formats (text, JSON, YAML) and CLI execution exit codes adhere to specification.
     7. A repository without `template/` is reported as could-not-run.
+    8. A git target is planned from its tracked files, not its working tree.
 
     The plan is drawn from the scaffold's `template/`, which a portfolio does
     not have, so there the step could not run and says so rather than passing.
@@ -375,5 +435,6 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
         problems.extend(_check_readonly_invariant(scaffold_dir, tmp))
         problems.extend(_check_cli_and_formats(scaffold_dir, tmp))
         problems.extend(_check_without_template(tmp))
+        problems.extend(_check_tracked_files(scaffold_dir, tmp))
 
-    return Found(problems) if problems else Passed("7 adoption cases")
+    return Found(problems) if problems else Passed("8 adoption cases")
