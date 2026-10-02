@@ -81,10 +81,10 @@ The APM package is integrated into the repository operator surface (`just`) via 
 
 ## APM Distribution & Upstream Synchronization (stereorepo's DR-206)
 
-To enable downstream specialized portfolios, client repos, and external consumers to install and synchronize stereorepo's cognitive layer:
+To enable downstream portfolios and external consumers to install and synchronize stereorepo's cognitive layer:
 
 - **Subdirectory Packaging & Root Cleanliness:** The APM CLI natively consumes virtual subdirectory packages (`apm install caindy/stereorepo/.meta` or `{git: caindy/stereorepo, path: .meta}`). The repository root remains completely clean, preserving the staging boundary rule that `.meta/` is the staging ground (stereorepo's DR-001) and that APM packages nest under `.meta/` (stereorepo's DR-172) without requiring root symlinks.
 - **Multi-Harness Authorization:** The package manifest authorizes `claude`, `gemini`, `copilot`, `codex`, and `kiro`. When installed with multi-target flags (e.g. `--target claude,codex,kiro`), APM projects primitives natively into `.claude/`, `.codex/`, and `.kiro/` without bespoke per-vendor compilers.
 - **Release:** a versioned GitHub Release, cut from a tag once the gate and `just apm validate` pass. The procedure is not yet a recipe.
-- **Downstream Synchronization:** Specialized client repos declare `caindy/stereorepo/.meta@^0.1.0` in their `apm.yml`. Running `apm outdated` inspects upstream tags, and `apm update` applies updates, prunes deleted disciplines, and updates `apm.lock.yaml`.
+- **Downstream Synchronization:** A portfolio declares `caindy/stereorepo/.meta@^0.1.0` in its `apm.yml`. Running `apm outdated` inspects upstream tags, and `apm update` applies updates, prunes deleted disciplines, and updates `apm.lock.yaml`.
 

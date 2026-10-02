@@ -12,7 +12,6 @@ decisions:
       - work:artifact/meta-apm-manifest
       - work:artifact/meta-apm-readme
       - work:artifact/meta-bootstrap
-      - work:artifact/wiki-stereorepo-client-repo
       - work:artifact/meta-lib-render-writers
       - work:artifact/meta-lib-apm-compile-instructions
     context: >-

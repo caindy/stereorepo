@@ -5,7 +5,8 @@ A seat's `just render` stops at its first write to
 Pages are written in the order `.meta/lib/render/targets.py` lists them, so
 every page after the skills goes unwritten. This was reported in
 `portfolio-steps-without-subject`, `specialized-portfolio-gate`,
-`gate-only-touched-projects` and `why-fork-delivery-records`. Each worked
+`gate-only-touched-projects`, `why-fork-delivery-records` and
+`why-fork-inherited-terms`. Each worked
 around it.
 
 ## Wanted

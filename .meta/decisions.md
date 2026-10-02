@@ -181,6 +181,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-316](assertions/decisions/DR-316.yaml) | A managed file marked `block` keeps a portfolio's own lines: a sync replaces only stereorepo's marked block | Adopted |
 | [DR-317](assertions/decisions/DR-317.yaml) | A bundle item owned by the portfolio is never removed by a sync: `stakeholders/` ships only its READMEs | Adopted |
 | [DR-318](assertions/decisions/DR-318.yaml) | A sync keeps the skills render compiles into `.meta/.apm/` from the portfolio's own `.claude/skills/` | Adopted |
+| [DR-319](assertions/decisions/DR-319.yaml) | Client Repo is merged into Portfolio, and the other inherited terms but Journaling are kept | Adopted |
 
 ## Holes
 
@@ -203,7 +204,7 @@ and the query a reader in a file actually has.
 | [`.claude/skills/technical-writing/SKILL.md`](../.claude/skills/technical-writing/SKILL.md) | [DR-194](assertions/decisions/DR-194.yaml), [DR-196](assertions/decisions/DR-196.yaml), [DR-198](assertions/decisions/DR-198.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml) |
 | [`.claude/skills/wikisplain/SKILL.md`](../.claude/skills/wikisplain/SKILL.md) | [DR-187](assertions/decisions/DR-187.yaml), [DR-259](assertions/decisions/DR-259.yaml) |
 | [`.gitattributes`](../.gitattributes) | [DR-143](assertions/decisions/DR-143.yaml) |
-| [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml), [DR-172](assertions/decisions/DR-172.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml) |
+| [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml), [DR-172](assertions/decisions/DR-172.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-319](assertions/decisions/DR-319.yaml) |
 | [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/apm.yml`](apm.yml) | [DR-206](assertions/decisions/DR-206.yaml) |
 | [`.meta/apm_compile.py`](apm_compile.py) | [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-212](assertions/decisions/DR-212.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
@@ -213,7 +214,7 @@ and the query a reader in a file actually has.
 | [`.meta/assertions/imported/authority.yaml`](assertions/imported/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml) |
 | [`.meta/assertions/imported/charter.yaml`](assertions/imported/charter.yaml) | [DR-228](assertions/decisions/DR-228.yaml), [DR-297](assertions/decisions/DR-297.yaml) |
 | [`.meta/assertions/imported/disciplines.yaml`](assertions/imported/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-196](assertions/decisions/DR-196.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-229](assertions/decisions/DR-229.yaml), [DR-270](assertions/decisions/DR-270.yaml) |
-| [`.meta/assertions/imported/vocabulary.yaml`](assertions/imported/vocabulary.yaml) | [DR-182](assertions/decisions/DR-182.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-298](assertions/decisions/DR-298.yaml) |
+| [`.meta/assertions/imported/vocabulary.yaml`](assertions/imported/vocabulary.yaml) | [DR-182](assertions/decisions/DR-182.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-298](assertions/decisions/DR-298.yaml), [DR-319](assertions/decisions/DR-319.yaml) |
 | [`.meta/assertions/structure.yaml`](assertions/structure.yaml) | [DR-210](assertions/decisions/DR-210.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-223](assertions/decisions/DR-223.yaml) |
 | [`.meta/assertions/vocabulary.yaml`](assertions/vocabulary.yaml) | [DR-035](assertions/decisions/DR-035.yaml), [DR-313](assertions/decisions/DR-313.yaml) |
 | [`.meta/baselines/file_sizes.baseline.yaml`](baselines/file_sizes.baseline.yaml) | [DR-314](assertions/decisions/DR-314.yaml) |
@@ -352,7 +353,6 @@ and the query a reader in a file actually has.
 | [`template/AGENTS.md`](../template/AGENTS.md) | [DR-183](assertions/decisions/DR-183.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml) |
 | [`wiki/README.md`](../wiki/README.md) | [DR-184](assertions/decisions/DR-184.yaml), [DR-185](assertions/decisions/DR-185.yaml) |
 | [`wiki/stereorepo/README.md`](../wiki/stereorepo/README.md) | [DR-184](assertions/decisions/DR-184.yaml), [DR-185](assertions/decisions/DR-185.yaml) |
-| [`wiki/stereorepo/client-repo.md`](../wiki/stereorepo/client-repo.md) | [DR-206](assertions/decisions/DR-206.yaml) |
 | [`wiki/stereorepo/concept.md`](../wiki/stereorepo/concept.md) | [DR-195](assertions/decisions/DR-195.yaml) |
 | [`wiki/stereorepo/flight.md`](../wiki/stereorepo/flight.md) | [DR-298](assertions/decisions/DR-298.yaml), [DR-299](assertions/decisions/DR-299.yaml) |
 | [`wiki/stereorepo/knowledge-management.md`](../wiki/stereorepo/knowledge-management.md) | [DR-185](assertions/decisions/DR-185.yaml), [DR-196](assertions/decisions/DR-196.yaml), [DR-259](assertions/decisions/DR-259.yaml) |

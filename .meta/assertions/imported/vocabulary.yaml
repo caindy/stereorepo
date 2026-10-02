@@ -151,30 +151,12 @@ concept_set:
     scope_note: >-
       One repo, one Bounded Context, one Ubiquitous Language. The repo boundary
       and the language boundary are the same boundary, which is why a portfolio
-      is a monorepo.
+      is a monorepo. A portfolio's repository is a clone of stereorepo,
+      specialized or adopted, that keeps `.meta/`; no second word names the
+      repository apart from the portfolio it holds (stereorepo's DR-319).
+    avoid: [Client Repo, Child Repo]
     confusable_with:
       - work:concept/product
-      - work:concept/client-repo
-  - id: work:concept/client-repo
-    pref_label: Client Repo
-    definition: >-
-      A software repository that specializes stereorepo by adopting its cognitive
-      operating layer via the APM package, inheriting its SDLC and verification gates,
-      and instantiating language Projects from Bootstraps on demand.
-    in_scheme: work:scheme/stereorepo
-    broader: work:concept/g-divided
-    alt_labels:
-      - Specialization
-      - Child Repo
-      - Specialized Portfolio
-    confusable_with:
-      - work:concept/portfolio
-      - work:concept/project
-    scope_note: >-
-      A downstream repository consuming stereorepo's cognitive primitives (`.meta/`)
-      via APM. While a Portfolio names the monorepo boundary for one Bounded Context,
-      a Client Repo names the physical git repository that specializes the scaffold,
-      inheriting its disciplines, verification gate, and language bootstraps.
   - id: work:concept/product
     pref_label: Product
     definition: >-

@@ -74,8 +74,7 @@ _The units a stereorepo is made of._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Portfolio** | Everything one developer builds inside one Bounded Context. One per repo. | — |
-| **Client Repo** | A software repository that specializes stereorepo by adopting its cognitive operating layer via the APM package, inheriting its SDLC and verification gates, and instantiating language Projects from Bootstraps on demand. | — |
+| **Portfolio** | Everything one developer builds inside one Bounded Context. One per repo. | Client Repo, Child Repo |
 | **Product** | Something delivered to users, with its own interface and therefore its own primary Persona. The unit of value. | — |
 | **Project** | A unit of build — one toolchain, one language, its own tests and gate. The unit of construction. | workstream |
 | **Bootstrap** | The standard for one language, together with the gates that hold a project to it. | starter, boilerplate, scaffold |
@@ -120,9 +119,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Concept.** The semantic unit of maintainer knowledge. Where a Concept lands in the artifact hierarchy — whether as a schema gloss, a section, or a dedicated markdown file — is subordinate to the authoring agent's structural judgement under the Diátaxis Compass. "Article" is strictly avoided to protect the Charter's empirical clauses (stereorepo's Article 1, stereorepo's Article 15).
 
-**Portfolio.** One repo, one Bounded Context, one Ubiquitous Language. The repo boundary and the language boundary are the same boundary, which is why a portfolio is a monorepo.
-
-**Client Repo.** A downstream repository consuming stereorepo's cognitive primitives (`.meta/`) via APM. While a Portfolio names the monorepo boundary for one Bounded Context, a Client Repo names the physical git repository that specializes the scaffold, inheriting its disciplines, verification gate, and language bootstraps.
+**Portfolio.** One repo, one Bounded Context, one Ubiquitous Language. The repo boundary and the language boundary are the same boundary, which is why a portfolio is a monorepo. A portfolio's repository is a clone of stereorepo, specialized or adopted, that keeps `.meta/`; no second word names the repository apart from the portfolio it holds (stereorepo's DR-319).
 
 **Product.** Cooper's rule is the test for one Product against two: a primary persona's goals cannot be met by an interface aimed at another without unacceptable compromise.
 
@@ -217,8 +214,7 @@ more often a collision than a gap.
 
 | This | Is not | 
 |---|---|
-| **Portfolio** | Product, Client Repo |
-| **Client Repo** | Portfolio, Project |
+| **Portfolio** | Product |
 | **Product** | Portfolio, Project |
 | **Project** | Issue, Product |
 | **Developer** | Seat |

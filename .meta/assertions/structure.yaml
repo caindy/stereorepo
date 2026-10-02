@@ -720,9 +720,6 @@ artifacts:
   - id: work:artifact/wiki-stereorepo-concept
     name: wiki/stereorepo/concept.md
     path: wiki/stereorepo/concept.md
-  - id: work:artifact/wiki-stereorepo-client-repo
-    name: wiki/stereorepo/client-repo.md
-    path: wiki/stereorepo/client-repo.md
   - id: work:artifact/wiki-stereorepo-flight
     name: wiki/stereorepo/flight.md
     path: wiki/stereorepo/flight.md

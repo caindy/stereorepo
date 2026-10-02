@@ -1,0 +1,64 @@
+decisions:
+  - id: work:decision/319
+    name: "DR-319 · Client Repo is merged into Portfolio, and the other inherited terms but Journaling are kept"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/meta-apm-readme
+    context: >-
+      DR-313 says an inherited term is re-tested before it is kept: the common
+      word where a competent engineer or model would guess it right, and a
+      coined word only for a genuinely new concept. The pair loop's bootstrap
+      applied the rule to the board's terms and not to the 41 it inherited.
+      Re-testing them found one that names nothing new. *Client Repo*
+      defined the repository that specializes stereorepo, and set it apart
+      from the Portfolio as the physical repository against the Bounded
+      Context. A Portfolio is one per repository, so the two always name the
+      same thing, and the page that explained the difference described a
+      distribution the fork removed (the signed channel, multi-harness
+      projection).
+    alternatives:
+      - name: Keep *Client Repo* beside *Portfolio*
+        chosen: false
+        reason: >-
+          Two words for one thing invite a reader to look for the difference,
+          and there is none: one repository holds exactly one Portfolio.
+      - name: Rename *Client Repo* to *repository*
+        chosen: false
+        reason: >-
+          A repository that is not a Portfolio's (stereorepo itself, an
+          upstream) is also a repository, so the common word alone loses the
+          one thing the term said: that `.meta/` came from stereorepo.
+      - name: Merge it into *Portfolio*
+        chosen: true
+        reason: >-
+          *Portfolio* already says one per repository, and its scope note can
+          say in one sentence that the repository is a specialized or adopted
+          clone of stereorepo.
+    consequences:
+      - >-
+        `work:concept/client-repo` and `wiki/stereorepo/client-repo.md` are
+        gone. *Client Repo* and *Child Repo* are on the Portfolio entry's
+        `avoid` list.
+        The page's other two synonyms are not: *Specialization* names a
+        Discipline, and *specialized portfolio* is the ordinary phrase for a
+        portfolio made by Specialization rather than Adoption.
+      - >-
+        DR-206 no longer lists the deleted page under `enacted_in`; what it
+        decided, and its prose, are unchanged.
+      - >-
+        *Journaling* fails the test, since the common word means keeping a
+        log, but it names a Discipline, so its rename is the backlog Issue
+        `rename-discipline-journaling` rather than part of this decision.
+      - >-
+        The other 39 inherited terms are kept, each for the reason recorded in
+        the Issue `why-fork-inherited-terms`: the standard name in its own
+        canon (DDD, Toulmin, APM, Cooper, Christensen, Knuth), the common word
+        already, or the name of a Discipline whose meaning the words carry.
+    falsifier: >-
+      A sentence in a durable artifact needs *Client Repo* to say something
+      *Portfolio* cannot, such as a repository holding two Portfolios or a
+      Portfolio spread over two repositories.
+    rationale: |-
+      One repository, one Portfolio: the word for the repository and the word
+      for what it holds can be the same word.
