@@ -83,35 +83,102 @@ finds it:
 
 - A repository may keep its own decision log or roadmap. The procedure asks
   which subjects each one keeps, rather than assuming Decision Records and the
-  board replace them.
+  board replace them. *Waits for the procedure.*
 - A repository may use another version-control layer over git. The procedure
-  checks that layer holds nothing git lacks before removing it.
+  checks that layer holds nothing git lacks before removing it. *Waits for the procedure.*
 - No tool applies the plan. The first pass copied `managed_items`,
   `template_items` and `symlink_items` from `lib.bundle` as
   `test_specialization.py` does, and integrated `.gitignore`, `AGENTS.md` and
-  `README.md` by hand.
+  `README.md` by hand. *Waits for the procedure.* `adapt-plan-reads-tracked-files`
+  made the plan list only what the target tracks, which is the plan such a
+  tool would apply, but nothing applies it yet. `adoption-plan-omits-scaffold-only-paths`,
+  in the backlog with no parent, would keep scaffold-only paths out of it.
 - stereorepo's `.gitignore` ignores `.agents/` as a compiled harness
   directory, and fitch-mvp tracked two hand-written skills there. Moving them
   to `.claude/skills/` merges them: render compiles that directory, with the
   inherited skills, into `.meta/.apm/skills/` and `.agents/`
   (`lib/apm_compile/skills.py`), so `.agents/` can be ignored as it is here.
   The procedure moves a product's harness skills to `.claude/skills/`.
+  *Waits for the procedure.*
 - stereorepo's inherited vocabulary and wiki have Claim, Evidence and
   Decision, and fitch-mvp's domain has its own Claim, Evidence and Decision.
   The procedure lists the domain terms that share a label with an inherited
   one, so that each is recorded as confusable in `domain_vocabulary.yaml`.
+  *Waits for the procedure.* `cited-slots-in-portfolio-schemas` addresses the
+  same clash in the gate: a citation of a slot of the product's `Decision`
+  passes once its Project names its schema.
 - The template's DR-001 says the portfolio was specialized from stereorepo.
   An adopted repository needs an entry that says it was adopted, and
-  rejects starting a new repository.
+  rejects starting a new repository. *Waits for the procedure.*
 - An existing product needs a gate that prints Article 21 lines, and
   `just bootstrap` only creates seed projects. fitch-mvp has a hand-written
-  `gate.py` that wraps its build and pytest.
+  `gate.py` that wraps its build and pytest. *Waits for the procedure* for
+  writing that gate. Three parts let such a gate do its job in the loop:
+  `project-at-repository-root` sends a change to a product at the root to its
+  Project's gate, `landing-gate-holds-on-could-not-run` holds a landing whose
+  Neo4j step could not run, and `portfolio-steps-without-subject` removes the
+  two `meta` steps that would otherwise hold every landing.
 - The gate in the loop's worktree has no `.venv`. A portfolio cannot declare
   the `just setup` recipe the loop runs, because the `justfile` is rendered
   (`.meta/lib/render/writers.py`). fitch-mvp avoids the need: its gate runs
-  under `uv run --with-requirements`.
+  under `uv run --with-requirements`. *Waits for the procedure.*
 - An existing codebase fails the comment, suppression and size ratchets on
   its first gate. The checks' own remedy is a baseline under `.meta/checks/`,
-  which the bundle owns as managed, so a sync could overwrite it.
+  which the bundle owns as managed, so a sync could overwrite it. *Waits for
+  the procedure.* No part addresses the overwrite.
 - A Product needs a primary Persona, and fitch-mvp has none yet, so its
-  structure declares Projects and no Product.
+  structure declares Projects and no Product. *Waits for the procedure.*
+
+## Desk-check brief
+
+**What was delivered, in stereorepo.** Five parts, each in `issues/done/`
+with its change on `main`:
+
+- `adapt-plan-reads-tracked-files`: `just adapt plan` lists only what a git
+  target tracks (`.meta/lib/adapt/tracked.py`). For fitch-mvp the plan fell
+  from 3,094 `RETAIN` entries to 96, with 2 `INTEGRATE` and 4 `CONFLICT`.
+- `cited-slots-in-portfolio-schemas`: a Project in `structure.yaml` names its
+  LinkML schemas in `schemas`, and `cited schema slots` resolves the product's
+  `Decision` slots against them (DR-304).
+- `landing-gate-holds-on-could-not-run`: a gate step reported `?` (Neo4j or
+  Docker missing) pauses the loop instead of landing. `just pair-status` names
+  the step, and `just pair` re-runs the gate once Docker is up.
+- `project-at-repository-root`: a Project declared with `name: .` takes every
+  path no deeper Project holds, except `issues/`, `.meta/` and what the bundle
+  places, which stay with `meta` (`pair/touched.py`, DR-303).
+- `portfolio-steps-without-subject`: a portfolio no longer gets `.meta/adapt.py`,
+  `.meta/lib/adapt/` or the brownfield probe, and `comment probes` keeps every
+  Python Project's gate in lockstep with `comments.py` (DR-305). Its `meta`
+  gate reports no `?`, so it passes with `CI` set and does not hold every
+  landing.
+
+Every finding under "Findings for the adoption procedure" now says whether a
+part addresses it. None is fully closed by a part: all ten wait for the
+procedure.
+
+**Where to see it.** `pair/test_pair.py` (`GateSelectionTest`, and the
+`?`-gate pause tests), `.meta/checks/probes/citations.py`,
+`.meta/checks/probes/tools/lockstep.py`, and `CI=1 just test-specialization`.
+
+**Not checked: fitch-mvp itself.** The seats cannot read
+`/Users/christopher/fitch-mvp`, so nothing here confirms any of the three
+desk-check points there. To pick up these parts, fitch-mvp needs, at least:
+
+- its bundle synced again, so that it carries the new `pair/touched.py`,
+  `pair/loop.py` and checks, and drops `.meta/lib/adapt/` and the brownfield
+  probe (no tool yet removes them from an adopted repository;
+  `adoption-plan-omits-scaffold-only-paths` is in the backlog);
+- its root Project declared with `name: .` and its `gate`, and its schemas
+  named under that Project's `schemas`.
+
+**Worth trying.**
+
+- In fitch-mvp, `just gate` inside a seat's sandbox: the Neo4j tests should
+  report `?` and the run should pass. Then land an Issue through
+  `uv run --script <stereorepo>/pair/pair.py run` with Docker stopped: it
+  should pause naming the Neo4j step, and land after you start Docker and run
+  it again.
+- A change touching only `tests/` there should run the product's gate, and
+  one touching only `issues/` should not.
+- Decide whether the ratchet-baseline finding (a managed baseline a sync could
+  overwrite) needs a part before a second onboarding: no part addresses it.
