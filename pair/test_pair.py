@@ -50,6 +50,34 @@ def sh(cwd: Path, *args: str) -> str:
     ).stdout.strip()
 
 
+RENAMED = "".join(f"line {n}\n" for n in range(20))
+"""Content enough for `git diff` to see a file the landing moves as renamed."""
+
+
+def commit_on(repo: Path, parent: str, files: dict[str, str | None]) -> str:
+    """A commit on `parent` with `files` written, built without touching `repo`'s index or tree.
+
+    A path whose content is `None` is removed.
+    """
+    with tempfile.TemporaryDirectory() as tmp:
+        env = {**os.environ, "GIT_INDEX_FILE": str(Path(tmp) / "index")}
+
+        def run(*args: str, stdin: str | None = None) -> str:
+            return subprocess.run(
+                ["git", *args], cwd=repo, env=env, input=stdin,
+                capture_output=True, text=True, check=True,
+            ).stdout.strip()
+
+        run("read-tree", parent)
+        for path, content in files.items():
+            if content is None:
+                run("update-index", "--force-remove", path)
+                continue
+            blob = run("hash-object", "-w", "--stdin", stdin=content)
+            run("update-index", "--add", "--cacheinfo", f"100644,{blob},{path}")
+        return run("commit-tree", "-p", parent, "-m", "commit_on", run("write-tree"))
+
+
 def inspects_processes() -> bool:
     """Whether `ps` runs here. A seat's sandbox refuses it (DR-302)."""
     try:
@@ -254,6 +282,7 @@ class Bench:
         self.before_land: list[Action] = []
         self.during_gate: list[Action] = []
         self.lock_waits = 0
+        self.while_waiting: Callable[[], None] | None = None
         bench = self
 
         class TestLoop(Loop):
@@ -269,7 +298,11 @@ class Bench:
                 return super().land(st, sha, retry)
 
             def wait_for_lock(self) -> None:
+                """The other process frees its locks, or does what `while_waiting` says instead."""
                 bench.lock_waits += 1
+                if bench.while_waiting is not None:
+                    bench.while_waiting()
+                    return
                 (bench.repo / ".git" / "index.lock").unlink(missing_ok=True)
                 (bench.repo / ".git" / "refs" / "heads" / "main.lock").unlink(
                     missing_ok=True
@@ -2116,7 +2149,7 @@ class AlongsideTest(unittest.TestCase):
         def lock(repo: Path) -> None:
             (repo / ".git" / "index.lock").write_text("")
 
-        b.loop.wait_for_lock = lambda: None  # type: ignore[method-assign]
+        b.while_waiting = lambda: None
         b.before_land = [lambda _repo: None, lock]
         b.script(("primary", quiet), *land_the_issue("x"))
         self.assertEqual(b.loop.run(once=True), "paused")
@@ -2137,6 +2170,79 @@ class AlongsideTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertEqual(b.lock_waits, 1)
         self.assertTrue(b.on_main("issues/done/x.md"))
+
+    def race_main(self) -> tuple[str, str]:
+        """Play the other process's half of a landing race in the developer's checkout.
+
+        Commits `a.txt`, `b.txt` and `r.txt` on `main`, then builds the landing
+        `sha` (changes `b.txt`, adds `c.txt`, renames `r.txt` to `moved.txt`,
+        which `git diff` reports under the new name alone unless told
+        `--no-renames`) and the other process's commit A
+        (changes `a.txt`) on it. A's merge has written A's tree and holds the
+        lock on `main`'s ref; waiting for the lock finishes it by moving `main` to
+        A. Answers `(sha, A)`.
+        """
+        b = self.b
+        (b.repo / "a.txt").write_text("a\n")
+        (b.repo / "b.txt").write_text("b\n")
+        (b.repo / "r.txt").write_text(RENAMED)
+        sh(b.repo, "add", "a.txt", "b.txt", "r.txt")
+        sh(b.repo, "commit", "-q", "-m", "a, b and r")
+        base = sh(b.repo, "rev-parse", "main")
+        sha = commit_on(
+            b.repo,
+            base,
+            {"b.txt": "landing\n", "c.txt": "new\n", "r.txt": None, "moved.txt": RENAMED},
+        )
+        other = commit_on(b.repo, base, {"a.txt": "other\n"})
+        sh(b.repo, "read-tree", "-m", "-u", "HEAD", other)
+        lock = b.repo / ".git" / "refs" / "heads" / "main.lock"
+        lock.write_text("")
+
+        def other_moves_main() -> None:
+            lock.unlink()
+            sh(b.repo, "update-ref", "refs/heads/main", other)
+
+        b.while_waiting = other_moves_main
+        return sha, other
+
+    def test_a_ref_refusal_overtaken_by_main_is_put_back(self) -> None:
+        b = self.b
+        sha, _other = self.race_main()
+        self.assertEqual(b.loop.land(State(slug="x", stage="todo"), sha), "moved")
+        self.assertEqual(sh(b.repo, "status", "--porcelain"), "")
+        self.assertEqual((b.repo / "a.txt").read_text(), "other\n")
+        self.assertEqual((b.repo / "b.txt").read_text(), "b\n")
+        self.assertFalse((b.repo / "c.txt").exists())
+        self.assertEqual((b.repo / "r.txt").read_text(), RENAMED)
+        self.assertFalse((b.repo / "moved.txt").exists())
+
+    def test_a_put_back_keeps_unrelated_local_edits(self) -> None:
+        b = self.b
+        sha, _other = self.race_main()
+        with (b.repo / ".gitignore").open("a") as ignore:
+            ignore.write("scratch/\n")
+        self.assertEqual(b.loop.land(State(slug="x", stage="todo"), sha), "moved")
+        self.assertIn("scratch/", (b.repo / ".gitignore").read_text())
+        self.assertEqual(sh(b.repo, "status", "--porcelain"), "M .gitignore")
+
+    def test_a_lock_on_mains_ref_that_stays_pauses_and_says_so(self) -> None:
+        b = self.b
+        lock = b.repo / ".git" / "refs" / "heads" / "main.lock"
+
+        def other_holds_main(_repo: Path) -> None:
+            lock.write_text("")
+
+        b.while_waiting = lambda: None
+        b.before_land = [lambda _repo: None, other_holds_main]
+        b.script(("primary", quiet), *land_the_issue("x"))
+        self.assertEqual(b.loop.run(once=True), "paused")
+        reason = b.state().paused or ""
+        self.assertIn("refs/heads/main.lock stayed", reason)
+        self.assertIn("holds the half-done landing as staged changes to ", reason)
+        self.assertIn("issues/done/x.md", reason)
+        self.assertIn("(git: ", reason)
+        lock.unlink()
 
     def test_a_refusal_with_nothing_in_the_way_is_tried_again(self) -> None:
         b = self.b

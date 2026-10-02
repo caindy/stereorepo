@@ -1386,6 +1386,12 @@ class Loop:
         `index.lock` or the lock on `main`'s ref, is tried again after
         `wait_for_lock`, up to `LAND_TRIES` times before it pauses. The pause
         reason names a lock still in place, and ends with git's error.
+
+        A try refused at the lock on `main`'s ref has already written the
+        landing into the checkout. When `main` then moves instead, `unwrite`
+        puts those paths back before `land` answers `moved`, so that the
+        checkout does not keep the unlanded paths staged; when the loop pauses
+        instead, the reason names them.
         """
         branch = git(self.repo, "symbolic-ref", "--short", "-q", "HEAD", check=False)
         if branch != self.main:
@@ -1401,14 +1407,20 @@ class Loop:
             for path in ("index.lock", f"refs/heads/{self.main}.lock")
         ]
         edits: list[str] = []
+        written: set[str] = set()
         for tries in range(1, LAND_TRIES + 1):
+            before = git(self.repo, "rev-parse", self.main)
             done = git_run(self.repo, "merge", "--ff-only", "-q", sha)
             if done.returncode == 0:
                 return "landed"
             if not git_ok(self.repo, "merge-base", "--is-ancestor", self.main, sha):
+                self.unwrite(sha, written)
                 return "moved"
             edits = self.edits_in_the_way(sha)
-            if edits or tries == LAND_TRIES:
+            if edits:
+                break
+            written |= self.diff_names(before, sha)
+            if tries == LAND_TRIES:
                 break
             self.wait_for_lock()
         held = [lock for lock in locks if lock.exists()]
@@ -1421,6 +1433,13 @@ class Loop:
             )
         else:
             why = f"(git refused it {LAND_TRIES} times)"
+        half = self.half_landed(sha, written)
+        if half:
+            why += (
+                f"; your checkout holds the half-done landing as staged changes to "
+                f"{', '.join(half)}, which the next run finishes "
+                f"(or `git restore --staged --worktree` them)"
+            )
         self.pause(
             st,
             f"could not fast-forward {self.main} in your checkout to {sha[:8]} "
@@ -1455,9 +1474,52 @@ class Loop:
             (untracked if entry[:2] == "??" else changed).add(entry[3:])
             if entry[0] in "RC":
                 changed.add(next(entries, ""))
-        landing = set(git(self.repo, "diff", "--name-only", "-z", self.main, sha).split("\0"))
-        unlike_sha = set(git(self.repo, "diff", "--name-only", "-z", sha).split("\0"))
-        return sorted(landing & (untracked | (changed & unlike_sha)) - {""})
+        landing = self.diff_names(self.main, sha)
+        return sorted(landing & (untracked | (changed & self.diff_names(sha))))
+
+    def half_landed(self, sha: str, paths: set[str]) -> list[str]:
+        """The `paths` whose checkout still holds a refused fast-forward's write of `sha`.
+
+        A path counts when its index entry and working-tree content both
+        match `sha` and one of them differs from `HEAD`. A path the developer
+        has changed since the try does not match `sha`, and is left out; so is
+        a path that an `index.lock` refusal never wrote, and one absent from
+        `sha`, `HEAD`, the index and the working tree alike.
+        """
+        if not paths:
+            return []
+        unlike_sha = self.diff_names(sha) | self.diff_names("--cached", sha)
+        unlike_head = self.diff_names("HEAD") | self.diff_names("--cached", "HEAD")
+        return sorted((paths & unlike_head) - unlike_sha)
+
+    def diff_names(self, *args: str) -> set[str]:
+        """The paths `git diff` with `args` names in the developer's checkout.
+
+        A rename is two paths, the one it came from and the one it went to:
+        `git diff` would name only the second, and a landing that moves a
+        file writes both.
+        """
+        return set(
+            git(self.repo, "diff", "--name-only", "--no-renames", "-z", *args).split("\0")
+        ) - {""}
+
+    def unwrite(self, sha: str, paths: set[str]) -> None:
+        """Put the checkout's half-landed `paths` of `sha` back to `HEAD`, index and working tree.
+
+        A failure, such as the other process holding `index.lock`, leaves the
+        checkout as it is rather than stopping the loop.
+        """
+        half = self.half_landed(sha, paths)
+        if half:
+            git_run(
+                self.repo,
+                "restore",
+                "--source=HEAD",
+                "--staged",
+                "--worktree",
+                "--",
+                *(f":(literal){path}" for path in half),
+            )
 
     def wait_for_lock(self) -> None:
         """Give the other process's git command (a lock, or a commit in flight) time to finish."""
