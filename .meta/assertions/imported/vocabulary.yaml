@@ -364,6 +364,32 @@ concept_set:
       moves it to `done/`, and leaving notes and resuming returns it to
       `backlog/`, where its next Flight check writes each note as a child.
     avoid: [review, approval]
+  - id: work:concept/meta-harness
+    pref_label: Meta-harness
+    definition: >-
+      A tool that runs coding-agent harnesses and passes work between them.
+    in_scheme: work:scheme/stereorepo
+    broader: work:concept/g-doing
+    scope_note: >-
+      The pair loop is one. It was built here because none of the others
+      surveyed both keeps agents off the top and its state in git, and none
+      runs a pair in which both seats write code.
+    confusable_with:
+      - work:concept/supervisor
+  - id: work:concept/cockpit
+    pref_label: Cockpit
+    definition: >-
+      The one deterministic view across every repository the developer runs a
+      pair loop in, from which the developer answers whatever waits on them.
+    in_scheme: work:scheme/stereorepo
+    broader: work:concept/g-doing
+    scope_note: >-
+      Not built yet. Each repository keeps its own supervisor; the cockpit
+      only reads what each one publishes, and writes nothing back but new
+      backlog files.
+    avoid: [dashboard, captain]
+    confusable_with:
+      - work:concept/supervisor
   - id: work:concept/discipline
     pref_label: Discipline
     definition: A structured way of working that must be adhered to because it is not an imperative program.

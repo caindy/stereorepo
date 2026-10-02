@@ -55,6 +55,8 @@ _Who does the work, and how it moves from the backlog to main._
 | **Supervisor** | The deterministic program that runs the seats and moves an Issue between stages from what it can observe: where the Issue file is, the working tree, and the gate's exit code. | orchestrator, captain, lead |
 | **Quiet turn** | A seat's turn that changes nothing, by which the seat accepts the state the other left. | approval, verdict, sign-off |
 | **Desk check** | The developer's check, by hand, of a `developer` Issue's result before it lands on `main`, or of a Flight after its parts have landed there. | review, approval |
+| **Meta-harness** | A tool that runs coding-agent harnesses and passes work between them. | — |
+| **Cockpit** | The one deterministic view across every repository the developer runs a pair loop in, from which the developer answers whatever waits on them. | dashboard, captain |
 | **Skill (stereorepo Capability kind)** | A Capability that composes tools, as against a tool, which is atomic. | — |
 
 #### What the work is for
@@ -146,6 +148,10 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Desk check.** The one stage that waits for the developer. A `developer` Issue's desk check holds the loop: accepting lands it, and leaving notes in the Issue file and resuming sends it back to the pair. A Flight's desk check does not hold the loop, because its parts are already on `main`: accepting moves it to `done/`, and leaving notes and resuming returns it to `backlog/`, where its next Flight check writes each note as a child.
 
+**Meta-harness.** The pair loop is one. It was built here because none of the others surveyed both keeps agents off the top and its state in git, and none runs a pair in which both seats write code.
+
+**Cockpit.** Not built yet. Each repository keeps its own supervisor; the cockpit only reads what each one publishes, and writes nothing back but new backlog files.
+
 **Discipline.** Not a Capability, and not a characterisation such as a communication style.
 
 **Decision record.** The level is who shares the matter. A Project decision unmarked reads as everyone's; a Portfolio decision marked as a Project's is hidden from every other Project. "ADR" named the Project level until stereorepo's DR-093, and imported a qualifier the record never used.
@@ -220,6 +226,8 @@ more often a collision than a gap.
 | **Flight** | Issue |
 | **Seat** | Developer, Supervisor |
 | **Supervisor** | Seat |
+| **Meta-harness** | Supervisor |
+| **Cockpit** | Supervisor |
 | **Evidence** | Citation |
 | **Skill (stereorepo Capability kind)** | Skill (APM primitive), Prompt (APM primitive) |
 | **Skill (APM primitive)** | Skill (stereorepo Capability kind), Prompt (APM primitive) |

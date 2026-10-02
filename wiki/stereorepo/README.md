@@ -30,6 +30,10 @@ underlying tooling and gate mechanisms.
   it accepts the state it found.
 - **[[desk-check|Desk check]]** — The developer's check, by hand, of a
   `developer` Issue or a Flight.
+- **[[meta-harness|Meta-harness]]** — A tool that runs coding-agent harnesses
+  and passes work between them, and why none surveyed was adopted.
+- **[[cockpit|Cockpit]]** — The one view, yet to be built, across every
+  repository the developer runs a pair loop in.
 - **[[ubiquitous-language|Ubiquitous Language]]** — How terms are defined,
   bounded, and checked to prevent semantic collision across agents and the developer.
 
