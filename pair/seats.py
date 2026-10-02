@@ -137,9 +137,38 @@ The project source gives the seat the repository's `CLAUDE.md`, its skills under
 `.claude/skills/` and its `.claude/settings.json`. Leaving out the user and
 local sources keeps the developer's own plugins and settings out of the seat, so
 its context is the repository's and a fresh session re-uses more of the cached
-prefix: in stereorepo, about 7,300 tokens are written per fresh session against
-about 12,000 with every source loaded. `--setting-sources ""` writes less still,
-but it drops the project's skills too.
+prefix.
+
+About 10,500 tokens per fresh session is the floor with these flags. The tools
+and the whole system prompt, the loop's appended prompt included, are
+byte-identical across sessions and are read from the cache. After the user's
+first message, Claude Code 2.1.287 adds a message of role `system`, about
+20,000 characters long, that carries the request's last cache breakpoint. That
+message differs between sessions in three places: the scratchpad directory
+line, which names the session id; the sandbox's filesystem allowlist, which
+names a per-session `<session-id>/tasks` directory; and the skills listing. So
+the cache read ends at the system prompt, and the first message and that block
+are written fresh in every session. Claude Code builds the block itself, and no
+seat flag removes it.
+
+Measured with Claude Code 2.1.287 in a scratch clone of stereorepo, as the
+prompt-cache tokens that the second of two fresh one-turn Sonnet sessions
+wrote, with these flags plus the following. The first two rows had the same
+git status in both sessions; in the last two the second session's status also
+listed a file the first had written. That costs nothing: with a differing
+status, the first row's flags wrote 10,472.
+
+| Extra flags or environment                      | Writes | Skills |
+|-------------------------------------------------|--------|--------|
+| none                                            | 10,468 | yes    |
+| `CLAUDE_CODE_DISABLE_GIT_INSTRUCTIONS=1`        | 10,014 | yes    |
+| `--exclude-dynamic-system-prompt-sections`      | 11,259 | yes    |
+| `--setting-sources "" --disable-slash-commands` |  5,394 | no     |
+
+Leaving out the git status or moving the dynamic sections out of the system
+prompt saves nothing, because neither touches the per-session block. Dropping
+the project source halves the write but loses the project's skills, so these
+flags are kept.
 """
 
 
