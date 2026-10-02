@@ -7,11 +7,10 @@ waits_on:
 # Cite the booktutor spike's answers on the Seat and Supervisor pages
 
 Found grooming `why-fork-board-wiki-pages`. The Seat and Supervisor pages
-list, as open questions, what the booktutor spike had to answer (once
-section 8 of `WHY_FORK.md`, which `why-fork-remove-file` deletes), and its
-answers are said to be in `docs/PAIR_LOOP_SPIKE.md` in `caindy/booktutor`. No seat can read that
-file: the clone at `~/code/booktutor` and its `booktutor.gitbundle` hold no
-`docs/` directory at any commit.
+list, as open questions, what the booktutor spike had to answer, and its
+answers are said to be in `docs/PAIR_LOOP_SPIKE.md` in `caindy/booktutor`.
+No seat can read that file: the clone at `~/code/booktutor` and its
+`booktutor.gitbundle` hold no `docs/` directory at any commit.
 
 ## Wanted
 

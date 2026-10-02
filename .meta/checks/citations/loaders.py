@@ -39,8 +39,7 @@ def durable(copied: set[pathlib.Path]) -> Iterator[pathlib.Path]:
     """Yield all durable repository files subject to citation validation.
 
     Covers documentation pages, inherited portfolio files, template files,
-    and assertion files under `.meta/assertions/`. Not `WHY_FORK.md`, which is
-    kept as written until its content is worked up into records.
+    and assertion files under `.meta/assertions/`.
 
     Parameters:
         copied (set[pathlib.Path]): Set of file paths copied into specialized portfolios.
@@ -50,8 +49,6 @@ def durable(copied: set[pathlib.Path]) -> Iterator[pathlib.Path]:
     """
     for path in tree():
         if path.is_symlink() or not path.is_file() or ".git" in path.parts:
-            continue
-        if path == ROOT / "WHY_FORK.md":
             continue
         if path.suffix == ".md" or path in copied or TEMPLATE in path.parents or (
                 path.suffix in (".yaml", ".yml") and (META / "assertions") in path.parents) or (
