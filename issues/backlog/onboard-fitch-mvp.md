@@ -38,15 +38,33 @@ Docker container. It is colocated with Jujutsu (`.jj/`), and it keeps its own
 Once fitch-mvp holds its assertions, both of these become its first Decision
 Records.
 
-## How the developer will know it is delivered
+## How anyone will know it is delivered
 
-- fitch-mvp holds the adopted bundle, its own assertions in place of the
-  scaffold's, and its `README.md`, `AGENTS.md` and `.gitignore` integrated
-  rather than overwritten.
-- `just gate` in fitch-mvp passes, and covers its existing tests.
-- One Issue in fitch-mvp's `issues/backlog/` lands on its `main` through
+The Flight is delivered in two repositories, and each is checked by whoever
+can see it.
+
+**The Flight check, in stereorepo.** The pair confirms that:
+
+- every part of this Flight is in `done/`, and each one's change is in
+  `main`;
+- each finding under "Findings for the adoption procedure" names a part that
+  addresses it, or says it waits for the procedure.
+
+The Flight check writes no part for the state of fitch-mvp. That repository
+is outside this tree, and the seats can neither read it nor change it. Where
+the pair finds that fitch-mvp is not yet onboarded, it says so in the
+desk-check brief and leaves the call to the developer.
+
+**The desk check, in fitch-mvp.** The developer confirms that:
+
+- fitch-mvp holds the adopted bundle and its own assertions in place of the
+  scaffold's, and its `README.md`, `AGENTS.md` and `.gitignore` keep their
+  own content beside the stereorepo conventions;
+- a seat working in fitch-mvp runs the tests that need no database without
+  Docker, and an Issue that lands there has first passed the tests that need
+  Neo4j;
+- one Issue in fitch-mvp's `issues/backlog/` has landed on its `main` through
   `uv run --script <stereorepo>/pair/pair.py run`.
-- Each gap found on the way is a part of this Flight, landed in stereorepo.
 
 ## How parts are found
 
