@@ -128,6 +128,29 @@ class Bundle:
         """Returns sorted destination path strings for all managed operating machinery."""
         return sorted(item.dest_path() for item in self.managed_items())
 
+    def manages(self, relative: str) -> bool:
+        """Whether a copy of the managed items brings a path into a portfolio.
+
+        A ratchet reads this to tell which of its two baselines owns an entry:
+        the managed one beside the checks, or the portfolio's own under
+        `.meta/baselines/`, which no item contains (stereorepo's DR-314).
+
+        Args:
+            relative: A repository-relative path, in posix form.
+
+        Returns:
+            bool: True where a managed item is the path or one of its parent
+            directories, and the path is not under `SCAFFOLD_ONLY_PATHS`.
+        """
+        def under(root: str) -> bool:
+            """Whether `relative` is `root` or lies beneath it."""
+            root = root.rstrip("/")
+            return relative == root or relative.startswith(f"{root}/")
+
+        if any(under(path) for path in SCAFFOLD_ONLY_PATHS):
+            return False
+        return any(under(item.dest_path()) for item in self.managed_items())
+
     def items_with_transformation(self, name: str) -> list[BundleItem]:
         """Returns all items requiring the specified transformation."""
         return [item for item in self.items if item.has_transformation(name)]

@@ -17,6 +17,7 @@ moved.
 """
 import collections
 import dataclasses
+import functools
 import inspect
 import pathlib
 import re
@@ -52,6 +53,10 @@ Index = dict[str, tuple[str, dict[str, Any], str]]
 
 Refs = list[tuple[str, str, str]]
 """Every reference site one pass over the assertions found: `(identifier, class, where)`."""
+
+Recorded = tuple[dict[str, int], dict[str, int]]
+"""What a pair of ratchet baselines allows, as `Baselines.recorded` reads it: the bundle's first,
+then the portfolio's (stereorepo's DR-314)."""
 
 
 class CouldNotRun:
@@ -126,6 +131,69 @@ def check(label: str, pre: bool = False) -> Callable[[StepFunction], StepFunctio
     return register
 
 
+@dataclasses.dataclass(frozen=True)
+class Baselines:
+    """The two files one ratchet reads: the bundle's, and the portfolio's own (stereorepo's DR-314).
+
+    A copy of the bundle's managed items replaces `managed`, so its entries are
+    the paths that copy brings. `portfolio` sits under `.meta/baselines/`, which
+    no managed item contains, so a copy never touches it and it holds every
+    other path. A key that is not a path, such as a `repeated suppressions`
+    group, may sit in either file and is allowed the sum.
+
+    Attributes:
+        managed: The baseline beside the checks, shipped with the bundle.
+        portfolio: The portfolio's baseline, absent until it holds an entry.
+        manages: Whether a copy of the managed items brings a path. A probe
+            passes its own; None reads `.meta/bundle.yaml` through
+            `bundle_manages`.
+    """
+
+    managed: pathlib.Path
+    portfolio: pathlib.Path
+    manages: Callable[[str], bool] | None = None
+
+    @classmethod
+    def named(cls, stem: str) -> "Baselines":
+        """The pair a ratchet named `stem` reads, `<stem>.baseline.yaml` in each place."""
+        name = f"{stem}.baseline.yaml"
+        return cls(META / "checks" / name, META / "baselines" / name)
+
+    def recorded(self) -> Recorded:
+        """What each file records, managed first, each empty where the file is absent."""
+        return recorded_baseline(self.managed), recorded_baseline(self.portfolio)
+
+    def where(self) -> tuple[str, str]:
+        """Both files as a failure names them, repository-relative, managed first."""
+        return (self.managed.relative_to(ROOT).as_posix(),
+                self.portfolio.relative_to(ROOT).as_posix())
+
+    def owner(self) -> Callable[[str], bool] | None:
+        """`manages`, or `bundle_manages()` where none was given."""
+        return self.manages if self.manages is not None else bundle_manages()
+
+
+def summed(recorded: Recorded, groups: bool) -> dict[str, int]:
+    """The count each key may hold across both files of a pair, summed.
+
+    A `repeated suppressions` group, keyed by a rule and a reason joined with
+    ` — `, can have sites in managed files and in a portfolio's own, so neither
+    file alone holds its number (stereorepo's DR-314). A path belongs in one
+    file, and is summed only so that a misplaced entry is still counted.
+
+    Args:
+        recorded: What `Baselines.recorded` read, managed first.
+        groups: True for the group keys, False for the path keys.
+
+    Returns:
+        dict[str, int]: Each key of the kind asked for, to its summed count.
+    """
+    total: collections.Counter[str] = collections.Counter()
+    for one in recorded:
+        total.update({key: count for key, count in one.items() if (" — " in key) == groups})
+    return dict(total)
+
+
 def recorded_baseline(path: pathlib.Path) -> dict[str, int]:
     """A ratchet baseline read off disk: repository-relative path to the debt it may still hold.
 
@@ -140,9 +208,49 @@ def recorded_baseline(path: pathlib.Path) -> dict[str, int]:
     return yaml.safe_load(path.read_text(encoding="utf-8")) or {}
 
 
+@functools.cache
+def bundle_manages() -> Callable[[str], bool] | None:
+    """`Bundle.manages` over `.meta/bundle.yaml`, or None where the bundle cannot load.
+
+    The import is deferred, as `sources.inherited` defers it, so that the module
+    every step imports does not load the bundle until a ratchet asks.
+    """
+    try:
+        from lib.bundle import load_bundle
+
+        return load_bundle(bundle_path=META / "bundle.yaml", repo_root=ROOT).manages
+    except (ImportError, OSError, ValueError):
+        return None
+
+
+def misplaced(recorded: Recorded, baselines: Baselines,
+              manages: Callable[[str], bool]) -> list[str]:
+    """Every path entry held in the baseline that does not own it, naming the one that does.
+
+    A portfolio entry for a managed path would add to the bundle's count where a
+    copy should replace it, and a managed entry for a portfolio path would be
+    lost at the next copy.
+
+    Args:
+        recorded: What `baselines.recorded()` read, managed first.
+        baselines: The pair, named in each line.
+        manages: Whether a copy of the managed items brings a path.
+
+    Returns:
+        list[str]: One line per misplaced entry. Keys holding ` — ` are not
+        paths and are never misplaced.
+    """
+    managed, portfolio = baselines.where()
+    held, own = recorded
+    return ([f"{key}: {managed} holds a path the bundle does not manage — move it to {portfolio}"
+             for key in sorted(held) if " — " not in key and not manages(key)]
+            + [f"{key}: {portfolio} holds a path the bundle manages — move it to {managed}"
+               for key in sorted(own) if " — " not in key and manages(key)])
+
+
 def against_baseline(counts: dict[str, int], sites: dict[str, list[str]],
-                     recorded: dict[str, int], noun: str,
-                     baseline: pathlib.Path) -> list[str]:
+                     recorded: Recorded, noun: str,
+                     baselines: Baselines) -> list[str]:
     """What a ratchet has to say about the counts it found, against the counts it recorded.
 
     The comparison the Ratchet Discipline turns on: a baseline that may fall
@@ -156,32 +264,38 @@ def against_baseline(counts: dict[str, int], sites: dict[str, list[str]],
         counts: Repository-relative path to the debt the tree holds.
         sites: Repository-relative path to the detail lines listed under a
             failing file, each already formatted.
-        recorded: Repository-relative path to the debt the baseline allows.
+        recorded: What each baseline allows, managed first, as
+            `Baselines.recorded` reads it. A group key is left to
+            `comments.against_repeats`.
         noun: What is being counted, as it reads in the failure sentence.
-        baseline: The baseline file, named in the failure so the edit is stated.
+        baselines: The pair, so that a failure names the file to edit. Where
+            its `owner()` is None no entry is misplaced and every failure
+            names `managed`.
 
     Returns:
-        list[str]: One line per file whose count is not its recorded number,
-        naming the number to write, and then one line per site in that file.
-        A file the baseline holds and the tree no longer has is a stale entry
-        and says so instead.
+        list[str]: One line per entry held in the wrong file, then one line per
+        file whose count is not its recorded number, naming the number to
+        write and the file that owns the path, and then one line per site in
+        that file. A file a baseline holds and the tree no longer has is a
+        stale entry and says so instead, naming the file that holds it.
     """
-    problems = []
-    for relative in sorted(set(counts) | set(recorded)):
-        count, allowed = counts.get(relative, 0), recorded.get(relative, 0)
+    owns = baselines.owner()
+    problems = misplaced(recorded, baselines, owns) if owns is not None else []
+    allowed_by = summed(recorded, groups=False)
+    managed, portfolio = baselines.where()
+    for relative in sorted(set(counts) | set(allowed_by)):
+        count, allowed = counts.get(relative, 0), allowed_by.get(relative, 0)
         if count == allowed:
             continue
         if not (ROOT / relative).is_file():
-            if (
-                not TEMPLATE.is_dir()
-                and relative in ("SPECIALIZE.md", ".meta/test_specialization.py")
-            ):
-                continue
-            problems.append(f"{relative}: baseline holds a file that does not exist")
+            holder = managed if relative in recorded[0] else portfolio
+            problems.append(f"{relative}: {holder} holds a file that does not exist "
+                            f"— delete the entry")
             continue
+        owner = managed if owns is None or owns(relative) else portfolio
         direction = "over" if count > allowed else "under"
         problems.append(f"{relative}: {count} {noun}, {direction} its baseline of "
-                        f"{allowed} — write {count} in {baseline.relative_to(ROOT).as_posix()}")
+                        f"{allowed} — write {count} in {owner}")
         problems.extend(f"     {line}" for line in sites.get(relative, []))
     return problems
 

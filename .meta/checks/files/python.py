@@ -23,13 +23,13 @@ from typing import NamedTuple
 from checks.collect import (
     META,
     ROOT,
+    Baselines,
     CouldNotRun,
     Found,
     Passed,
     StepOutcome,
     against_baseline,
     check,
-    recorded_baseline,
 )
 from checks.files import sources
 
@@ -471,13 +471,13 @@ RUFF = "ruff==0.14.0"
 MYPY = "mypy==2.3.1"
 
 
-TYPES_BASELINE = META / "checks" / "types.baseline.yaml"
+TYPES_BASELINE = Baselines.named("types")
 
 
-LINES_BASELINE = META / "checks" / "lines.baseline.yaml"
+LINES_BASELINE = Baselines.named("lines")
 
 
-FILE_SIZES_BASELINE = META / "checks" / "file_sizes.baseline.yaml"
+FILE_SIZES_BASELINE = Baselines.named("file_sizes")
 
 
 # How long a module under `.meta/` may run before its body belongs in a package
@@ -622,8 +622,8 @@ def meta_lines() -> StepOutcome:
     The scope and the configuration are `meta ruff`'s, so the limit is declared
     once; `--select` narrows the run to the one rule that step passes over.
     """
-    if not LINES_BASELINE.is_file():
-        return CouldNotRun(f"{LINES_BASELINE.relative_to(ROOT).as_posix()} is missing")
+    if not LINES_BASELINE.managed.is_file():
+        return CouldNotRun(f"{LINES_BASELINE.managed.relative_to(ROOT).as_posix()} is missing")
     config = META / "ruff.toml"
     if not config.is_file():
         return CouldNotRun(".meta/ruff.toml is missing")
@@ -637,7 +637,7 @@ def meta_lines() -> StepOutcome:
     if out.returncode not in (0, 1):
         return CouldNotRun(f"ruff could not run — {(out.stderr or out.stdout).strip()}")
     counts, sites = ruff_findings(out.stdout)
-    problems = against_baseline(counts, sites, recorded_baseline(LINES_BASELINE),
+    problems = against_baseline(counts, sites, LINES_BASELINE.recorded(),
                                 "lines over the limit", LINES_BASELINE)
     if problems:
         return Found(tuple(problems))
@@ -711,11 +711,11 @@ def meta_file_sizes() -> StepOutcome:
     The scope is `meta lines`'s and `meta types`'s, so what counts as Python
     under `.meta/` is answered in one place.
     """
-    if not FILE_SIZES_BASELINE.is_file():
-        return CouldNotRun(f"{FILE_SIZES_BASELINE.relative_to(ROOT).as_posix()} is missing")
+    if not FILE_SIZES_BASELINE.managed.is_file():
+        return CouldNotRun(f"{FILE_SIZES_BASELINE.managed.relative_to(ROOT).as_posix()} is missing")
     lengths = line_counts(sources.meta_sources())
     counts, sites = past_ceilings(lengths)
-    problems = against_baseline(counts, sites, recorded_baseline(FILE_SIZES_BASELINE),
+    problems = against_baseline(counts, sites, FILE_SIZES_BASELINE.recorded(),
                                 "lines past its ceiling", FILE_SIZES_BASELINE)
     if problems:
         return Found(tuple(problems))

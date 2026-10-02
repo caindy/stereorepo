@@ -1,0 +1,13 @@
+# This repository's own ratchet baseline for the `meta file sizes` step of
+# `.meta/check.py`, beside the bundle's in `.meta/checks/file_sizes.baseline.yaml`.
+#
+# The bundle's file holds the paths a copy of its managed items brings into a
+# portfolio, and that copy replaces it. This file holds every other path, and
+# no managed item contains `.meta/baselines/`, so no copy touches it
+# (stereorepo's DR-314). The step reads both, fails an entry held in the wrong
+# one, and names the one to edit.
+#
+# Each entry is the lines past its ceiling a file may still run, and may fall
+# and may not rise.
+
+.meta/test_specialization.py: 120

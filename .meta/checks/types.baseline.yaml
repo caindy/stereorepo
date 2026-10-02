@@ -1,3 +1,8 @@
 # The ratchet baseline for the `meta types` step of `.meta/check.py`.
 #
+# This is the bundle's half: it holds the paths a copy of the managed items
+# brings into a portfolio, and that copy replaces it. Every other path lives in
+# the file of the same name under `.meta/baselines/`, which no copy touches,
+# and the step reads both (stereorepo's DR-314).
+#
 # Drained to empty.

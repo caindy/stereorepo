@@ -1,0 +1,67 @@
+decisions:
+  - id: work:decision/314
+    name: "DR-314 · Each ratchet reads two baselines: the bundle's beside the checks, and the portfolio's own under .meta/baselines/"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-checks-collect
+      - work:artifact/meta-checks-comments
+      - work:artifact/meta-checks-files-python
+      - work:artifact/meta-lib-bundle-init
+      - work:artifact/meta-baselines-file-sizes
+      - work:artifact/meta-checks-comments-baseline
+      - work:artifact/meta-checks-file-sizes-baseline
+      - work:artifact/meta-checks-lines-baseline
+      - work:artifact/meta-checks-suppressions-baseline
+      - work:artifact/meta-checks-types-baseline
+      - work:artifact/meta-checks-probes-tools-comments
+    context: >-
+      The ratchet baselines sat in `.meta/checks/`, a managed directory of
+      `.meta/bundle.yaml`, so every copy of the managed items into a
+      portfolio overwrote them. Each sync of fitch-mvp replaced its comment
+      baseline, 418 comments across 27 files, with stereorepo's, and the
+      developer restored it from git each time. Keeping the portfolio's file
+      whole is no fix either: its entries for managed files go stale as soon
+      as stereorepo changes those files, and its own ratchet then fails them.
+    alternatives:
+      - name: Mark the baselines in the bundle as the portfolio's
+        chosen: false
+        reason: >-
+          The portfolio would keep stereorepo's counts for managed files
+          forever, and a sync that changes a managed file would fail the
+          portfolio's gate until someone rewrote those counts by hand.
+      - name: Merge the two files at copy time
+        chosen: false
+        reason: >-
+          No sync recipe exists yet, and a merge done in the copy is a step
+          every copy has to remember; two files the ratchet reads need no
+          step at all.
+      - name: Two files per ratchet, split by whether the bundle manages the path
+        chosen: true
+        reason: >-
+          `.meta/checks/<name>.baseline.yaml` holds the paths a copy of the
+          managed items brings, and the copy replaces it with stereorepo's.
+          `.meta/baselines/<name>.baseline.yaml` holds every other path, and
+          no managed item contains that directory, so no copy touches it.
+          Each owner writes only its own file.
+    consequences:
+      - >-
+        `Bundle.manages` decides which file owns a path: a managed item is
+        the path or one of its parents, and the path is not scaffold-only. A
+        scaffold-only path, or one the bundle does not list such as
+        `.meta/test_specialization.py`, belongs in stereorepo's own
+        `.meta/baselines/`, which no portfolio receives.
+      - >-
+        A path entry held in the wrong file fails its ratchet and names the
+        file it belongs in, and a failing count names the file that owns the
+        path. A `repeated suppressions` group is keyed by rule and reason, not
+        by path, so it may sit in either file and is allowed the sum, and its
+        failures name both.
+      - >-
+        A missing portfolio file reads as empty, so a fresh portfolio starts
+        with no `.meta/baselines/` and its ratchets pass.
+    falsifier: >-
+      A sync of a portfolio still has to restore a baseline by hand, or a
+      ratchet fails an entry a copy of the managed items left stale.
+    rationale: |-
+      Each baseline file has one owner, so a copy that replaces the bundle's
+      file cannot reach the portfolio's.

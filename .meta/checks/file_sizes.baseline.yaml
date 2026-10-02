@@ -1,5 +1,10 @@
 # The ratchet baseline for the `meta file sizes` step of `.meta/check.py`.
 #
+# This is the bundle's half: it holds the paths a copy of the managed items
+# brings into a portfolio, and that copy replaces it. Every other path lives in
+# the file of the same name under `.meta/baselines/`, which no copy touches,
+# and the step reads both (stereorepo's DR-314).
+#
 # One entry per file, holding the lines past its ceiling it may still run. The
 # ceilings themselves are `MODULE_CEILING` and `ENTRY_CEILING` in
 # `.meta/checks/files/python.py`, five hundred lines for a module and three
@@ -17,8 +22,7 @@
 # Recorded as the ceilings were adopted, and it falls as
 # scripts are decomposed into `.meta/lib/<script>/`.
 
-.meta/checks/comments.py: 317
+.meta/checks/comments.py: 316
 .meta/checks/files/python.py: 333
 .meta/checks/probes/knowledge.py: 85
 .meta/terms.py: 397
-.meta/test_specialization.py: 120

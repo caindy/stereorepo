@@ -27,14 +27,14 @@ holds the third, reading that reason for a cause this repository can fix
 the tree held 210 body comment blocks across 15 files when the first was
 written, and one internally caused suppression when the second landed, and the
 Ratchet Discipline is what a checker that cannot be clean at once does. The
-baselines are
-`.meta/checks/comments.baseline.yaml` and
-`.meta/checks/suppressions.baseline.yaml`, and each may fall and may not rise.
+baselines are `.meta/checks/comments.baseline.yaml` and
+`.meta/checks/suppressions.baseline.yaml`, each with a portfolio's own twin in
+`.meta/baselines/` (stereorepo's DR-314); each may fall and may not rise.
 The comparison itself is `collect.against_baseline`, shared with the
 `meta types` step of `files.py` (stereorepo's DR-210).
 
-`repeated suppressions` ratchets too, against
-`.meta/checks/suppressions.baseline.yaml`, and its comparison is
+`repeated suppressions` ratchets too, against the sum of both suppression
+baselines, and its comparison is
 `against_repeats` rather than the shared one: a group is keyed by its rule and
 reason rather than by a path, so a baseline entry the tree has dropped is one
 to delete rather than one naming a file that no longer exists
@@ -51,21 +51,20 @@ import tokenize
 from collections.abc import Mapping
 
 from checks.collect import (
-    META,
     ROOT,
+    Baselines,
     CouldNotRun,
     Found,
     Passed,
     StepOutcome,
     against_baseline,
     check,
-    recorded_baseline,
+    summed,
 )
 from checks.files import meta_sources, script_metadata_lines, tree
 
-BASELINE = META / "checks" / "comments.baseline.yaml"
-SUPPRESSIONS_BASELINE = META / "checks" / "suppressions.baseline.yaml"
-SUPPRESSIONS = SUPPRESSIONS_BASELINE
+BASELINE = Baselines.named("comments")
+SUPPRESSIONS = Baselines.named("suppressions")
 
 # How many sites sharing one rule and one reason make a root cause rather than a
 # coincidence. Two is the literal reading of the Suppression Audit Protocol and
@@ -591,31 +590,33 @@ def against_repeats(groups: dict[str, list[str]], recorded: dict[str, int]) -> l
 
     Args:
         groups: Group key to every site in it, as `<path>:<line>`.
-        recorded: Group key to the number of sites the baseline allows.
+        recorded: Group key to the sites both baselines allow, `collect.summed`.
 
     Returns:
         list[str]: One line per group whose count is not its recorded number,
         and then one line per site in that group for groups at or above
         `REPEAT_LIMIT`. A group shrunk below the limit reports only the
-        instruction to remove its entry.
+        instruction to remove its entry. Each names both baselines.
     """
     counts = {key: len(sites) for key, sites in groups.items()
               if len(sites) >= REPEAT_LIMIT or key in recorded}
-    where = SUPPRESSIONS.relative_to(ROOT).as_posix()
+    managed, portfolio = SUPPRESSIONS.where()
     problems = []
     for key in sorted(set(counts) | set(recorded)):
         count, allowed = counts.get(key, 0), recorded.get(key, 0)
         if count == allowed:
             continue
         if count < REPEAT_LIMIT:
-            problems.append(f"{key}: down to {count} sites — remove the entry from {where}")
+            problems.append(f"{key}: down to {count} sites — remove its entries from "
+                            f"{managed} and {portfolio}")
             continue
         if count > allowed:
             problems.append(f"{key}: {count} sites, over its baseline of {allowed} — one root "
-                            f"cause written {count} times; fix the cause, do not raise {where}")
+                            f"cause written {count} times; fix the cause, do not raise "
+                            f"{managed} or {portfolio}")
         else:
             problems.append(f"{key}: {count} sites, under its baseline of {allowed} — "
-                            f"write {count} in {where}")
+                            f"make its entries in {managed} and {portfolio} sum to {count}")
         problems.extend(f"     {line}" for line in groups.get(key, []))
     return problems
 
@@ -711,9 +712,8 @@ def suppression_causes() -> StepOutcome:
     `suppressions.baseline.yaml`, which may fall and may not rise. One entry is
     left, and annotating `.meta/render.py` is what empties it.
     """
-    if not SUPPRESSIONS_BASELINE.is_file():
-        return CouldNotRun(f"{SUPPRESSIONS_BASELINE.relative_to(ROOT).as_posix()} is missing")
-    recorded = {k: v for k, v in recorded_baseline(SUPPRESSIONS_BASELINE).items() if " — " not in k}
+    if not SUPPRESSIONS.managed.is_file():
+        return CouldNotRun(f"{SUPPRESSIONS.managed.relative_to(ROOT).as_posix()} is missing")
     names, counts, sites, read = modules(), {}, {}, 0
     for source in sources():
         relative = source.relative_to(ROOT).as_posix()
@@ -728,8 +728,8 @@ def suppression_causes() -> StepOutcome:
             counts[relative] = len(named)
             sites[relative] = [cause_site(relative, line, cause, why)
                                for line, why, cause in named]
-    problems = against_baseline(counts, sites, recorded, "internal suppression causes",
-                                SUPPRESSIONS_BASELINE)
+    problems = against_baseline(counts, sites, SUPPRESSIONS.recorded(),
+                                "internal suppression causes", SUPPRESSIONS)
     if problems:
         return Found(tuple(problems))
     return Passed(f"{read} suppression reasons read, {sum(counts.values())} naming a cause "
@@ -757,8 +757,8 @@ def repeated_suppressions() -> StepOutcome:
     is refused outright by `broad suppressions`, so it has no repetition to
     count.
     """
-    if not SUPPRESSIONS.is_file():
-        return CouldNotRun(f"{SUPPRESSIONS.relative_to(ROOT).as_posix()} is missing")
+    if not SUPPRESSIONS.managed.is_file():
+        return CouldNotRun(f"{SUPPRESSIONS.managed.relative_to(ROOT).as_posix()} is missing")
     python = sources()
     groups, unparsed = repeated({
         source.relative_to(ROOT).as_posix(): source.read_text(encoding="utf-8")
@@ -766,7 +766,7 @@ def repeated_suppressions() -> StepOutcome:
     })
     if unparsed:
         return Found(tuple(unparsed))
-    problems = against_repeats(groups, {k: v for k, v in recorded_baseline(SUPPRESSIONS).items() if " — " in k})
+    problems = against_repeats(groups, summed(SUPPRESSIONS.recorded(), groups=True))
     if problems:
         return Found(tuple(problems))
     counted = [sites for sites in groups.values() if len(sites) >= REPEAT_LIMIT]
@@ -795,9 +795,8 @@ def inline_commentary() -> StepOutcome:
     being one. Either way every site in that file is listed, which is what the
     edit needs.
     """
-    if not BASELINE.is_file():
-        return CouldNotRun(f"{BASELINE.relative_to(ROOT).as_posix()} is missing")
-    recorded = recorded_baseline(BASELINE)
+    if not BASELINE.managed.is_file():
+        return CouldNotRun(f"{BASELINE.managed.relative_to(ROOT).as_posix()} is missing")
     counts, sites = {}, {}
     for source in sources():
         relative = source.relative_to(ROOT).as_posix()
@@ -810,7 +809,7 @@ def inline_commentary() -> StepOutcome:
         if found:
             counts[relative] = len(found)
             sites[relative] = [comment_site(relative, block) for block in found]
-    problems = against_baseline(counts, sites, recorded, "body comments", BASELINE)
+    problems = against_baseline(counts, sites, BASELINE.recorded(), "body comments", BASELINE)
     if problems:
         return Found(tuple(problems))
     return Passed(f"{sum(counts.values())} body comments across {len(counts)} files, "

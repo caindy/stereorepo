@@ -1,5 +1,10 @@
 # The ratchet baseline for the `meta lines` step of `.meta/check.py`.
 #
+# This is the bundle's half: it holds the paths a copy of the managed items
+# brings into a portfolio, and that copy replaces it. Every other path lives in
+# the file of the same name under `.meta/baselines/`, which no copy touches,
+# and the step reads both (stereorepo's DR-314).
+#
 # One entry per file, holding the lines over the limit it may still carry. The
 # limit itself is `line-length` in `.meta/ruff.toml`, and `meta ruff` passes
 # over the rule that reads it so that this step can.
@@ -21,7 +26,7 @@
 .meta/checks/citations/prose.py: 1
 .meta/checks/citations/record.py: 7
 .meta/checks/collect.py: 2
-.meta/checks/comments.py: 6
+.meta/checks/comments.py: 5
 .meta/checks/files/__init__.py: 6
 .meta/checks/files/history.py: 9
 .meta/checks/files/inline_python.py: 1
@@ -80,5 +85,4 @@
 .meta/lib/wikisplain/links.py: 5
 .meta/lib/wikisplain/pages.py: 12
 .meta/terms.py: 1
-.meta/test_specialization.py: 0
 .meta/wikisplain.py: 2

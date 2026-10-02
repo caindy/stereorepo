@@ -1,9 +1,12 @@
 """The detectors of `comments.py` that the comment steps read through, so a wrong answer shows as a wrong verdict rather than a failure (stereorepo's DR-207).
 """
+import dataclasses
 import pathlib
+import tempfile
+from collections.abc import Callable
 from typing import Any
 
-from checks.collect import ROOT, StepOutcome, against_baseline, check
+from checks.collect import ROOT, Baselines, Recorded, StepOutcome, against_baseline, check
 from checks.probes.tools.lockstep import lockstep, lockstep_probes, verdict
 
 
@@ -18,7 +21,10 @@ def comment_probes(root: pathlib.Path = ROOT) -> StepOutcome:
 
     The ratchet the `inline commentary` step reads through is asked the same
     way: a count at its baseline, over it, under it, and an entry naming a file
-    the tree no longer has. It is `collect.against_baseline` and is shared with
+    the tree no longer has. It reads two baselines, the bundle's and the
+    portfolio's (stereorepo's DR-314), so it is also asked to count a path from
+    each, to fail an entry held in the wrong one, and to name the file that
+    owns a failing path. It is `collect.against_baseline` and is shared with
     the `meta types` step (stereorepo's DR-210); both callers' site formatting
     (`comments.comment_site` and `files.mypy_errors`) and their baseline
     parameters are probed.
@@ -58,6 +64,7 @@ def comment_probes(root: pathlib.Path = ROOT) -> StepOutcome:
     blocks_found, sites = _blocks_and_sites(comments, here)
     problems = (_code_detectors(comments) + _keep_exceptions(comments) + _suppressions(comments)
                 + _causes(comments) + blocks_found + _ratchet(comments, here, sites)
+                + _two_baselines(comments, here)
                 + _type_errors(here) + _ruff_findings(here) + _rust_comments(comments)
                 + _repeats(comments) + _repeat_ratchet(comments) + lockstep_probes(comments))
     synced, projects = lockstep(comments, root)
@@ -211,7 +218,8 @@ def _ratchet(comments: Any, here: Any, one: Any) -> list[str]:
     problems = []
     def ratcheted(counts: dict[str, int], sites: dict[str, Any], recorded: dict[str, int]) -> list[str]:
         """The shared ratchet, asked about counts under the `inline commentary` step's baseline."""
-        return against_baseline(counts, sites, recorded, "body comments", comments.BASELINE)
+        return against_baseline(counts, sites, (recorded, {}), "body comments",
+                                _managing(comments.BASELINE, _every_path))
 
     if ratcheted({here: 1}, {here: one}, {here: 1}):
         problems.append("comment probes: a file at its baseline should pass")
@@ -231,6 +239,59 @@ def _ratchet(comments: Any, here: Any, one: Any) -> list[str]:
     return problems
 
 
+def _every_path(relative: str) -> bool:
+    """A fake bundle that manages every path, for a probe that asks about one file."""
+    return True
+
+
+def _managing(pair: Baselines, manages: Callable[[str], bool]) -> Baselines:
+    """`pair` judged by a fake bundle, so a probe does not depend on what the real one lists."""
+    return dataclasses.replace(pair, manages=manages)
+
+
+def _two_baselines(comments: Any, here: Any) -> list[str]:
+    """The shared ratchet over a bundle's baseline and a portfolio's (stereorepo's DR-314).
+
+    The fake bundle manages `here` alone, so `other` is a portfolio path.
+    """
+    problems = []
+    other = ".meta/checks/collect.py"
+    pair = _managing(comments.BASELINE, lambda relative: relative == here)
+    managed, portfolio = pair.where()
+
+    def ratcheted(counts: dict[str, int], recorded: Recorded) -> list[str]:
+        """The shared ratchet, asked about counts under the `inline commentary` step's pair."""
+        return against_baseline(counts, {}, recorded, "body comments", pair)
+
+    if ratcheted({here: 1, other: 2}, ({here: 1}, {other: 2})):
+        problems.append("comment probes: a path counted from each baseline should pass")
+    swapped = "\n".join(ratcheted({here: 1, other: 2}, ({other: 2}, {here: 1})))
+    for line in (f"{other}: {managed} holds a path the bundle does not manage — move it to "
+                 f"{portfolio}",
+                 f"{here}: {portfolio} holds a path the bundle manages — move it to {managed}"):
+        if line not in swapped:
+            problems.append(f"comment probes: an entry in the wrong baseline should fail with "
+                            f"{line!r}, got {swapped!r}")
+    grew = "\n".join(ratcheted({here: 2, other: 3}, ({here: 1}, {other: 2})))
+    for line in (f"write 2 in {managed}", f"write 3 in {portfolio}"):
+        if line not in grew:
+            problems.append(f"comment probes: a path over its baseline should say {line!r}, "
+                            f"got {grew!r}")
+    gone = "\n".join(against_baseline({}, {}, ({}, {"no/such/file.py": 3}), "body comments",
+                                      _managing(pair, lambda relative: False)))
+    if f"no/such/file.py: {portfolio} holds a file that does not exist" not in gone:
+        problems.append(f"comment probes: a stale portfolio entry should name {portfolio}, "
+                        f"got {gone!r}")
+    with tempfile.TemporaryDirectory() as scratch:
+        held = pathlib.Path(scratch) / "held.baseline.yaml"
+        held.write_text(f"{here}: 1\n", encoding="utf-8")
+        recorded = Baselines(held, pathlib.Path(scratch) / "absent.baseline.yaml").recorded()
+    if recorded != ({here: 1}, {}) or ratcheted({here: 1}, recorded):
+        problems.append(f"comment probes: an absent portfolio baseline should read as empty "
+                        f"and pass, got {recorded!r}")
+    return problems
+
+
 def _type_errors(here: Any) -> list[str]:
     """`files.mypy_errors` counting and siting one error, and the ratchet reading it over its baseline."""
     problems = []
@@ -242,8 +303,8 @@ def _type_errors(here: Any) -> list[str]:
     expected_site = f"{here}:42: Need type annotation  [var-annotated]"
     if type_sites != {here: [expected_site]}:
         problems.append(f"comment probes: mypy_errors sites gave {type_sites!r}")
-    type_grew = against_baseline({here: 1}, type_sites, {here: 0},
-                                 "type errors", files.TYPES_BASELINE)
+    type_grew = against_baseline({here: 1}, type_sites, ({here: 0}, {}),
+                                 "type errors", _managing(files.TYPES_BASELINE, _every_path))
     if not any("1 type errors, over its baseline of 0" in line for line in type_grew):
         problems.append(f"comment probes: type errors over baseline should fail, got {type_grew!r}")
     if not any(f"     {expected_site}" in line for line in type_grew):
@@ -263,8 +324,8 @@ def _ruff_findings(here: Any) -> list[str]:
     expected = f"{here}:7: E501 Line too long (118 > 100)"
     if sites != {here: [expected]}:
         problems.append(f"comment probes: ruff_findings sites gave {sites!r}")
-    grew = against_baseline({here: 1}, sites, {here: 0},
-                            "lines over the limit", files.LINES_BASELINE)
+    grew = against_baseline({here: 1}, sites, ({here: 0}, {}),
+                            "lines over the limit", _managing(files.LINES_BASELINE, _every_path))
     if not any("1 lines over the limit, over its baseline of 0" in line for line in grew):
         problems.append(f"comment probes: lines over baseline should fail, got {grew!r}")
     if not any(f"     {expected}" in line for line in grew):
@@ -358,8 +419,15 @@ def _repeat_ratchet(comments: Any) -> list[str]:
     if not any("3 sites, under its baseline of 4" in line for line in fell):
         problems.append(f"comment probes: a group under its baseline should fail, got {fell!r}")
     gone = comments.against_repeats(_repeated(comments, ["one root cause"] * 2), {key: 3})
-    if not any("down to 2 sites — remove the entry" in line for line in gone):
+    if not any("down to 2 sites — remove its entries from .meta/checks/suppressions.baseline.yaml "
+               "and .meta/baselines/suppressions.baseline.yaml" in line for line in gone):
         problems.append(f"comment probes: a group down below the limit should fail, got {gone!r}")
     if comments.against_repeats({}, {}):
         problems.append("comment probes: an empty baseline over a clean tree should pass")
+    summed = comments.summed(({key: 2, "a/path.py": 1}, {key: 1}), groups=True)
+    if summed != {key: 3}:
+        problems.append(f"comment probes: a group in both baselines should be allowed the sum, "
+                        f"got {summed!r}")
+    elif comments.against_repeats(three, summed):
+        problems.append("comment probes: a group at the sum of both baselines should pass")
     return problems

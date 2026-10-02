@@ -301,6 +301,9 @@ artifacts:
   - id: work:artifact/meta-apm-readme
     name: .meta/.apm/README.md
     path: .meta/.apm/README.md
+  - id: work:artifact/meta-baselines-file-sizes
+    name: .meta/baselines/file_sizes.baseline.yaml
+    path: .meta/baselines/file_sizes.baseline.yaml
   - id: work:artifact/meta-bootstrap
     name: .meta/bootstrap.py
     path: .meta/bootstrap.py

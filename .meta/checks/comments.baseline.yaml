@@ -1,5 +1,10 @@
 # The ratchet baseline for the `inline commentary` step of `.meta/check.py`.
 #
+# This is the bundle's half: it holds the paths a copy of the managed items
+# brings into a portfolio, and that copy replaces it. Every other path lives in
+# the file of the same name under `.meta/baselines/`, which no copy touches,
+# and the step reads both (stereorepo's DR-314).
+#
 # One entry per file, holding the body comment blocks it may still carry. The
 # Ratchet Discipline is what a checker that cannot be clean at once does: a
 # baseline that may fall and may not rise. A file absent from this map may hold

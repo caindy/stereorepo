@@ -17,6 +17,7 @@ from typing import Any
 
 from checks.collect import META, check
 from checks.probes.harness import load_module
+from lib.bundle import load_bundle
 
 
 def _check_fixture_keys(runner: Any, tokens_path: pathlib.Path) -> list[str]:
@@ -115,6 +116,34 @@ def _check_scaffold_only(runner: Any, tmp: pathlib.Path) -> list[str]:
     if refused != 1:
         problems.append(f"test-specialization: step 7 over a target holding .meta/adapt.py "
                         f"returned {refused}, expected 1")
+    return problems
+
+
+def _check_baselines_kept(runner: Any, tmp: pathlib.Path) -> list[str]:
+    """Validates that copying the real bundle's managed items over a portfolio replaces its
+    managed baseline with the scaffold's and leaves its own baseline unchanged."""
+    problems: list[str] = []
+    bundle = load_bundle()
+    if bundle.manages(".meta/baselines/comments.baseline.yaml"):
+        problems.append("test-specialization: a managed item contains .meta/baselines/, so a "
+                        "copy would overwrite a portfolio's own baselines")
+    scaffold, target = tmp / "baselines-scaffold", tmp / "baselines-portfolio"
+    managed, own = ".meta/checks/comments.baseline.yaml", ".meta/baselines/comments.baseline.yaml"
+    written = {scaffold / managed: ".meta/check.py: 2\n",
+               scaffold / own: ".meta/test_specialization.py: 1\n",
+               target / managed: ".meta/check.py: 9\n",
+               target / own: "src/app.py: 4\n"}
+    for path, text in written.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text, encoding="utf-8")
+    for item in bundle.managed_items():
+        runner._copy_item(scaffold / item.source_path(), target / item.dest_path(), scaffold)
+    if (target / own).read_bytes() != b"src/app.py: 4\n":
+        problems.append(f"test-specialization: a copy of the managed items changed the "
+                        f"portfolio's {own} to {(target / own).read_text()!r}")
+    if (target / managed).read_bytes() != b".meta/check.py: 2\n":
+        problems.append(f"test-specialization: a copy of the managed items left the portfolio's "
+                        f"{managed} as {(target / managed).read_text()!r}, not the scaffold's")
     return problems
 
 
@@ -219,6 +248,9 @@ def test_specialization_probes() -> list[str]:
        (stereorepo's DR-305).
     8. The shipped `.gitignore` keeps `.meta/apm.yml`, which the meta gate reads, and still
        ignores `apm.yml` elsewhere, `apm.lock.yaml` and `apm_modules/`.
+    9. A copy of the managed items replaces a portfolio's managed baselines and leaves its
+       own under `.meta/baselines/` as they were, and no managed item contains that
+       directory (stereorepo's DR-314).
     """
     test_script = META / "test_specialization.py"
     if not test_script.is_file():
@@ -236,6 +268,7 @@ def test_specialization_probes() -> list[str]:
         problems.extend(_check_fixture_error_handling(runner, tmp))
         problems.extend(_check_substitute(runner, tmp))
         problems.extend(_check_scaffold_only(runner, tmp))
+        problems.extend(_check_baselines_kept(runner, tmp))
         problems.extend(_check_gitignore(tmp))
 
     problems.extend(_check_inherited_paths(runner))
