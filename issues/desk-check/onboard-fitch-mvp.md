@@ -258,3 +258,66 @@ it showed.
 
 The existing backlog Issue `adoption-plan-omits-scaffold-only-paths` is a
 part too: its `parent:` now names this Flight.
+
+## Desk-check brief
+
+**Second round.**
+
+**What was delivered, in stereorepo.** The four children written from the
+desk-check notes, the folded-in backlog Issue, and two parts the sync work
+uncovered. Each is in `issues/done/` with its change on `main`:
+
+- `adoption-plan-omits-scaffold-only-paths`: `just adapt plan` marks
+  `.meta/lib/adapt/` and the brownfield probe `omit` inside the directories
+  it plans (`.meta/lib/adapt/omit.py`, classification `OMIT`, DR-305).
+- `fresh-worktree-passes-meta-gate`: the shipped `.gitignore` re-includes
+  `!/.meta/apm.yml`, so `git add .` in a portfolio commits it and a fresh
+  worktree's `apm package` and `rendered prose` steps find it.
+- `portfolio-owns-ratchet-baselines`: each ratchet reads the bundle's
+  baseline in `.meta/checks/` and the portfolio's in `.meta/baselines/`,
+  and a path recorded in the wrong one fails, naming the right one
+  (`.meta/checks/collect.py`, DR-314).
+- `sync-portfolio-recipe`: `just sync <checkout>` (`.meta/bundle.py sync`)
+  copies the checkout's tracked managed items, removes the managed paths
+  the bundle dropped and the scaffold-only ones, and refuses before changing
+  anything if it can't apply the sync (DR-315).
+- `managed-files-a-portfolio-integrates`: a sync merges `.gitignore`,
+  putting stereorepo's lines in a marked block at its end and leaving the
+  portfolio's own lines alone (DR-316).
+- `sync-keeps-a-portfolios-stakeholders`: a sync leaves the portfolio's own
+  `stakeholders/` alone.
+- `adoption-discipline`: Adoption is a Discipline beside Specialization,
+  rendered as `ADOPT.md` with twelve steps. It covers the ten findings, the
+  sync, the `worktrees/pair` collection trap, interpreter pinning and
+  declaring `schemas` before the first gate.
+
+Every finding under "Findings for the adoption procedure" now names the
+`ADOPT.md` step that covers it, and the parts that support that step where
+there are any. No finding is left waiting.
+
+**Where to see it.** `ADOPT.md`, `just --list` (`sync`), `.meta/baselines/`,
+`.meta/lib/adapt/omit.py`, `.meta/checks/collect.py`, and `.gitignore`
+lines 17–23.
+
+**Not checked: fitch-mvp itself.** The seats cannot read fitch-mvp, so
+nothing here confirms that it took these changes. It still carries
+whatever was hand-copied before them.
+
+**Worth trying.**
+
+- In fitch-mvp, first move the entries for its own files (418 comments
+  across 27 files) from `.meta/checks/comments.baseline.yaml` to
+  `.meta/baselines/comments.baseline.yaml`, and its other ratchet counts
+  likewise. Leave entries for managed paths under `.meta/` where they are:
+  a ratchet fails a path recorded in the wrong baseline and names the right
+  one. Moving them comes first because the sync still replaces every
+  file in `.meta/checks/`. Then run step 4 of `ADOPT.md` once
+  (`<stereorepo>/.meta/bundle.py --root . sync <stereorepo>`), and
+  `just sync <stereorepo>` again. The baseline should survive both, the
+  gate should pass with the counts recorded only in `.meta/baselines/`,
+  its `.gitignore` lines should stay outside the marked block, and any
+  leftover `.meta/lib/adapt/` should be gone.
+- Create a new loop worktree in fitch-mvp and run `just gate meta` there
+  without rendering: `apm package` and `rendered prose` should pass.
+- Read `ADOPT.md` as someone onboarding a second repository and check that
+  every judgement fitch-mvp needed has a step.
