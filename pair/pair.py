@@ -7,15 +7,18 @@
 Run from the root of the repository whose board it works; the loop's own code
 stays wherever this file is, outside that repository's tree (see README.md):
 
-    uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--flight SLUG] [--model M] [--round-cap N]
+    uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--flight SLUG] [--model M] [--STAGE-model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py groom [--rerank] [--push] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py status [--json]
-    uv run --script <stereorepo>/pair/pair.py accept [SLUG]
-    uv run --script <stereorepo>/pair/pair.py resume [SLUG]
+    uv run --script <stereorepo>/pair/pair.py accept [SLUG] [--model M] [--STAGE-model M]
+    uv run --script <stereorepo>/pair/pair.py resume [SLUG] [--model M] [--STAGE-model M]
     uv run --script <stereorepo>/pair/pair.py watch --until landed|developer|flight SLUG
 
 With `--flight`, `run` works only that Flight and the Issues below it, and
 stops when the Flight reaches its desk check.
+
+`--STAGE-model` names the model both seats run in one stage of an Issue
+(`backlog`, `flight-check`, `todo` or `in-progress`), in place of `--model`.
 
 With SLUG, `accept` and `resume` answer the desk check of that Flight on
 `main`, in your checkout, and run alongside a running loop.
@@ -45,7 +48,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import IO
 
-from loop import Loop, append_event, status, status_json
+from loop import FLIGHT_CHECK, Loop, append_event, status, status_json
 from seats import ClaudeSeat
 from watch import CONDITIONS, watch
 
@@ -168,7 +171,12 @@ def hold_lock(repo: Path, name: str = "run.lock") -> IO[str] | None:
     return lock
 
 
-def main() -> int:
+STAGE_MODELS = ("backlog", FLIGHT_CHECK, "todo", "in-progress")
+"""The stages of an Issue in which seats take turns, each of which may name its own model."""
+
+
+def arguments() -> argparse.ArgumentParser:
+    """The command line of every subcommand."""
     parser = argparse.ArgumentParser(prog="pair", description=__doc__.split("\n\n")[0])
     sub = parser.add_subparsers(dest="command", required=True)
     seats = argparse.ArgumentParser(add_help=False)
@@ -178,9 +186,16 @@ def main() -> int:
         type=int,
         help="rounds per stage for every difficulty (default: by difficulty)",
     )
+    stages = argparse.ArgumentParser(add_help=False)
+    for stage in STAGE_MODELS:
+        stages.add_argument(
+            f"--{stage}-model",
+            metavar="MODEL",
+            help=f"model for both seats in {stage} (default: --model)",
+        )
     run = sub.add_parser(
         "run",
-        parents=[seats],
+        parents=[seats, stages],
         help="work issues until the backlog is empty or the developer is needed",
     )
     run.add_argument("--once", action="store_true", help="stop after one issue")
@@ -213,11 +228,11 @@ def main() -> int:
         "--json", action="store_true", help="print the same state as one JSON object"
     )
     accept = sub.add_parser(
-        "accept", parents=[seats], help="pass the desk check and merge"
+        "accept", parents=[seats, stages], help="pass the desk check and merge"
     )
     resume = sub.add_parser(
         "resume",
-        parents=[seats],
+        parents=[seats, stages],
         help="fail the desk check; the pair picks up your notes",
     )
     for desk in (accept, resume):
@@ -237,6 +252,11 @@ def main() -> int:
         metavar="CONDITION",
         help="landed, developer (a desk check, a pause or a send-back), or flight SLUG",
     )
+    return parser
+
+
+def main() -> int:
+    parser = arguments()
     args = parser.parse_args()
     if args.command == "watch":
         until = args.until
@@ -251,13 +271,12 @@ def main() -> int:
         return watch(repo, args.until, out=lambda line: print(line, flush=True))
 
     kind = "groom" if args.command == "groom" else "pair"
-    model = getattr(args, "model", None)
     system = {
         role: (PROMPTS / f"{role}.md").read_text() for role in ("primary", "secondary")
     }
     loop = Loop(
         repo,
-        lambda role, cwd, resume: ClaudeSeat(
+        lambda role, cwd, resume, model: ClaudeSeat(
             role, cwd, system[role], loop.dir, resume=resume, model=model
         ),
         gate,
@@ -269,6 +288,11 @@ def main() -> int:
         say=lambda message: print(message, flush=True),
         round_cap=args.round_cap,
         kind=kind,
+        model=args.model,
+        stage_models={
+            stage: getattr(args, f"{stage.replace('-', '_')}_model", None)
+            for stage in STAGE_MODELS
+        },
     )
 
     desk = getattr(args, "slug", None)

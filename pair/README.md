@@ -16,6 +16,21 @@ loads the repository's own settings, `CLAUDE.md` and skills, and nothing from
 the developer's machine (`CONTEXT` in `seats.py`), so its context is the
 repository's and a fresh session re-uses most of the cached prompt.
 
+Both seats run the model `--model` names, or the CLI's default. A stage can
+name its own with `--backlog-model`, `--flight-check-model`, `--todo-model`
+or `--in-progress-model` on `just pair`, `just pair-accept` or
+`just pair-resume`, each falling back to `--model`. A seat keeps one session
+for the whole Issue while the model stays the same. When a seat's next turn
+is in a stage with another model, the seat starts a fresh session on it
+(`align_model` in `loop.py`). That costs the seat its conversation, so it
+knows the Issue only from the Issue file and the branch. It also costs at
+least about 10,500 tokens written to the prompt cache per seat, the floor
+for a fresh session measured in `seat-cache-write-per-session`. The cost is
+more when the new model has nothing cached yet, because each model has its
+own cache. A loop restarted without the same stage flags counts its stages
+as running `--model`, and switches seats back to it; one restarted with
+another `--model` starts the seats fresh on it too.
+
 The loop's code lives here, outside every portfolio's tree. It was proven in a
 spike in booktutor, where the seats read the loop's own code when it sat in the
 repository they worked on; a portfolio runs it from a stereorepo checkout so
@@ -279,6 +294,7 @@ Every event carries `at` (local time, as in `turns.jsonl`), `kind`, `loop`
 | `desk-check` | a `developer` Issue waits for its desk check, or a Flight has landed in `desk-check/` | `stage` |
 | `paused` | the loop pauses for any other reason | `reason`, `retry` |
 | `seat-refused` | the model refuses a seat's message, and the seat restarts with a fresh session | `role`, `error` |
+| `seat-model` | a seat's next turn is in a stage that names another model than its session's, and the seat starts a fresh session on it | `role`, `from`, `to` (null for the CLI's default) |
 | `stopped` | the loop stops after a Ctrl-C | `reason`, `retry` |
 | `empty` | nothing is ripe, or there is nothing to groom; no `slug` | `message` |
 | `ended` | the supervisor process ends; no `slug` | `outcome`, as `pair:` prints it, or `abandoned` (a second Ctrl-C) or `crashed` |

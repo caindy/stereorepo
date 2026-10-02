@@ -88,7 +88,8 @@ asserts on the checkout:
 ## The plan
 
 One method in `pair/loop.py`, and three tests in `pair/test_pair.py`. No
-caller of `land` changes (`pair/loop.py:655`, `:1253`, `:1502`): each
+caller of `land` changes (`move_underway`, `merge` and `kick_back` in
+`pair/loop.py`): each
 already treats `moved` as "build again on the new `main`".
 
 1. **Remember what a ref-refused try wrote.** In `Loop.land`, read

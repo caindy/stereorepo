@@ -32,7 +32,7 @@ apm *args:
 bootstrap *args:
     uvx --python 3.13 --with pyyaml python .meta/bootstrap.py {{args}}
 
-# the pair loop: carry issues to main (--once, --push, --flight SLUG, --model)
+# the pair loop: carry issues to main (--once, --push, --flight SLUG, --model, --STAGE-model)
 pair *args:
     uv run --quiet --script pair/pair.py run {{args}}
 

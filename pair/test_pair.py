@@ -8,6 +8,7 @@ from __future__ import annotations
 import collections
 import contextlib
 import functools
+import io
 import json
 import os
 import shutil
@@ -271,6 +272,7 @@ class Bench:
         self.turns: collections.deque[tuple[str, object]] = collections.deque()
         self.sent: list[tuple[str, str]] = []
         self.opened: list[tuple[str, str | None]] = []
+        self.models: list[tuple[str, str | None]] = []
         self.gates: list[bool] = []
         self.gate_runs = 0
         self.gate_targets: list[list[str] | None] = []
@@ -308,9 +310,14 @@ class Bench:
                     missing_ok=True
                 )
 
-        def factory(kind: str) -> Callable[[str, Path, str | None], FakeSeat]:
-            def make(role: str, cwd: Path, resume: str | None) -> FakeSeat:
+        def factory(
+            kind: str,
+        ) -> Callable[[str, Path, str | None, str | None], FakeSeat]:
+            def make(
+                role: str, cwd: Path, resume: str | None, model: str | None
+            ) -> FakeSeat:
                 self.opened.append((role, resume))
+                self.models.append((role, model))
                 loop = self.groomer if kind == "groom" else self.loop
                 return FakeSeat(role, cwd, resume, self, loop)
 
@@ -669,6 +676,43 @@ class LoopTest(unittest.TestCase):
         log = sh(b.loop.wt, "log", "--format=%s", "main..HEAD")
         self.assertIn("primary: backlog turn on x", log)
         self.assertNotIn("developer:", log)
+
+    def test_a_seat_interrupted_before_a_model_change_starts_fresh_unrestarted(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "x", "X")
+
+        def supervisor_killed_mid_turn(cwd: Path) -> None:
+            front("x", difficulty="easy")(cwd)
+            raise KeyboardInterrupt
+
+        b.script(("primary", supervisor_killed_mid_turn))
+        with self.assertRaises(KeyboardInterrupt):
+            b.loop.run()
+        b.loop.stage_models = {"backlog": "B"}
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        b.loop.run()
+        self.assertEqual(b.opened[-1], ("primary", None))
+        self.assertEqual(b.models[-1], ("primary", "B"))
+        self.assertFalse(b.sent[-1][1].startswith("(Your session was restarted"))
+
+    def test_a_state_file_without_models_resumes_on_the_same_model(self) -> None:
+        b = self.b
+        b.loop.model = "A"
+        b.issue("backlog", "x", "X")
+        b.stop_when_empty = True
+        b.script(("primary", front("x", difficulty="easy")))
+        b.loop.run()
+        saved = json.loads(b.loop.state_file.read_text())
+        del saved["models"]
+        b.loop.state_file.write_text(json.dumps(saved))
+        b.loop.stop_requested = False
+        b.script(("secondary", quiet), ("primary", quiet))
+        b.loop.run()
+        self.assertEqual(b.opened[-1], ("primary", "primary-session"))
+        self.assertEqual(b.models[-1], ("primary", "A"))
 
     @unittest.skipUnless(INSPECTS, NO_PS)
     def test_reap_stops_only_an_orphaned_seat_in_this_worktree(self) -> None:
@@ -1127,6 +1171,113 @@ def unappend(slug: str, text: str) -> Action:
     return act
 
 
+class SeatModelTest(unittest.TestCase):
+    """Each stage runs the model it names, and a seat changes session only to change model."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+        self.b.loop.model = "A"
+        self.b.issue("backlog", "x", "X")
+
+    def easy_issue(self) -> None:
+        self.b.script(
+            ("primary", front("x", difficulty="easy")),
+            ("secondary", quiet),
+            ("primary", append("x", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "x\n")),
+            ("secondary", quiet),
+        )
+
+    def test_with_no_stage_model_both_seats_run_model_for_the_whole_issue(
+        self,
+    ) -> None:
+        b = self.b
+        self.easy_issue()
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.models, [("primary", "A"), ("secondary", "A")])
+        self.assertEqual(b.events("seat-model"), [])
+
+    def test_a_stage_with_another_model_starts_both_seats_fresh_on_it(self) -> None:
+        b = self.b
+        b.loop.stage_models = {"in-progress": "B"}
+        self.easy_issue()
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(
+            b.models,
+            [("primary", "A"), ("secondary", "A"), ("primary", "B"), ("secondary", "B")],
+        )
+        self.assertEqual(b.opened[2:], [("primary", None), ("secondary", None)])
+        self.assertEqual(
+            [(e["role"], e["from"], e["to"]) for e in b.events("seat-model")],
+            [("primary", "A", "B"), ("secondary", "A", "B")],
+        )
+
+    def test_a_stage_that_keeps_the_model_resumes_the_sessions(self) -> None:
+        b = self.b
+        b.loop.stage_models = {"todo": "B", "in-progress": "B"}
+        self.easy_issue()
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(
+            b.models,
+            [("primary", "A"), ("secondary", "A"), ("primary", "B"), ("secondary", "B")],
+        )
+
+    def test_a_restarted_loop_switches_a_seat_only_for_a_changed_model(self) -> None:
+        b = self.b
+        b.stop_when_empty = True
+
+        def again(*turns: tuple[str, object]) -> None:
+            b.loop.stop_requested = False
+            b.script(*turns)
+            b.loop.run()
+
+        again(
+            ("primary", front("x", difficulty="easy")),
+            ("secondary", quiet),
+            ("primary", append("x", PLAN)),
+        )
+        again(("secondary", append("x", "\nAgreed.\n")))
+        self.assertEqual(b.opened[-1], ("secondary", "secondary-session"))
+        self.assertEqual(b.models[-1], ("secondary", "A"))
+        b.loop.stage_models = {"todo": "B"}
+        again(("primary", quiet))
+        self.assertEqual(b.opened[-1], ("primary", None))
+        self.assertEqual(b.models[-1], ("primary", "B"))
+        self.assertEqual(b.state().models["primary"], "B")
+        self.assertEqual(b.state().stage, "in-progress")
+        b.loop.stage_models = {"in-progress": "B"}
+        again(("primary", write("a.txt", "x\n")), ("secondary", append("x", "\n")))
+        self.assertEqual(
+            b.opened[-2:], [("primary", "primary-session"), ("secondary", None)]
+        )
+        self.assertEqual(b.models[-2:], [("primary", "B"), ("secondary", "B")])
+
+    def test_a_loop_restarted_with_another_model_starts_fresh_on_it(self) -> None:
+        b = self.b
+        b.stop_when_empty = True
+        b.script(("primary", front("x", difficulty="easy")))
+        b.loop.run()
+        self.assertEqual(b.state().models["primary"], "A")
+        b.loop.stop_requested = False
+        b.loop.model = "C"
+        b.script(("secondary", quiet), ("primary", quiet))
+        b.loop.run()
+        self.assertEqual(b.opened[-1], ("primary", None))
+        self.assertEqual(b.models[-1], ("primary", "C"))
+
+    def test_only_the_commands_that_work_an_issue_take_stage_models(self) -> None:
+        from pair import STAGE_MODELS, arguments
+
+        for command in ("run", "accept", "resume"):
+            for stage in STAGE_MODELS:
+                args = arguments().parse_args([command, f"--{stage}-model", "B"])
+                self.assertEqual(getattr(args, f"{stage.replace('-', '_')}_model"), "B")
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            arguments().parse_args(["groom", "--todo-model", "B"])
+
+
 class GateSelectionTest(unittest.TestCase):
     """The loop gates the Projects a change touches and the Products built from them (DR-303)."""
 
@@ -1274,6 +1425,14 @@ class FlightCheckTest(unittest.TestCase):
         self.assertIsNone(b.loop.load())
         self.assertEqual(b.deliver_runs, 1)
         self.assertNotIn("Delivered by", sh(b.repo, "show", f"main:{FLIGHT}"))
+
+    def test_a_flight_check_with_its_own_model_runs_its_seats_on_it(self) -> None:
+        b = self.b
+        b.loop.stage_models = {"flight-check": "B"}
+        b.stop_when_empty = True
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        b.loop.run(once=True)
+        self.assertEqual(b.models, [("primary", "B"), ("secondary", "B")])
 
     def test_a_failed_gate_in_a_flight_check_goes_to_the_primary(self) -> None:
         b = self.b

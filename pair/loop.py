@@ -50,7 +50,7 @@ import os
 import signal
 import subprocess
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -84,7 +84,7 @@ RESTARTED = (
     "left it; check `git status` and carry on.)\n\n"
 )
 
-SeatFactory = Callable[[str, Path, "str | None"], Seat]
+SeatFactory = Callable[[str, Path, "str | None", "str | None"], Seat]
 Gate = Callable[[Path, "Sequence[str] | None"], "tuple[bool, str]"]
 """Runs the gate in a tree over the named Projects, or over every Project for `None`."""
 Deliver = Callable[[Path], "tuple[bool, str] | None"]
@@ -102,6 +102,7 @@ class State:
     head: str = ""
     seen: dict[str, str] = field(default_factory=dict)
     sessions: dict[str, str] = field(default_factory=dict)
+    models: dict[str, str | None] = field(default_factory=dict)
     seats_used: list[str] = field(default_factory=list)
     note: str = ""
     paused: str | None = None
@@ -207,6 +208,8 @@ class Loop:
         say: Callable[[str], None] = print,
         round_cap: int | None = None,
         kind: str = "pair",
+        model: str | None = None,
+        stage_models: Mapping[str, str | None] | None = None,
     ) -> None:
         self.repo = repo
         self.kind = kind
@@ -223,6 +226,8 @@ class Loop:
         self.deliver = deliver
         self.say = say
         self.round_cap = round_cap
+        self.model = model
+        self.stage_models = dict(stage_models or {})
         self.seat_command = "claude"
         self.stop_requested = False
         self.seats: dict[str, Seat] = {}
@@ -680,6 +685,7 @@ class Loop:
                         st, "stopped by the developer", retry=None, kind="stopped"
                     )
                 role = st.next_role
+                self.align_model(st, role)
                 interrupted = st.in_turn == role
                 if not interrupted:
                     self.absorb_developer(st)
@@ -705,10 +711,42 @@ class Loop:
             self.seats.clear()
 
     def seat(self, st: State, role: str) -> Seat:
+        self.align_model(st, role)
         if role not in self.seats:
             resume = st.sessions.get(role) or self.saved_session(role)
-            self.seats[role] = self.seat_factory(role, self.wt, resume)
+            model = self.model_for(st.stage)
+            self.seats[role] = self.seat_factory(role, self.wt, resume, model)
+            st.models[role] = model
         return self.seats[role]
+
+    def model_for(self, stage: str) -> str | None:
+        """The model both seats run in `stage`: the stage's own if it names one, else `model`."""
+        return self.stage_models.get(stage) or self.model
+
+    def align_model(self, st: State, role: str) -> None:
+        """Start `role` afresh when its session runs another model than the stage names.
+
+        A session keeps the model it started on, so a change of model needs a
+        new session, which loses the seat's conversation and writes its prompt
+        to the cache again (`pair/README.md` gives the cost). `seat` records
+        the model each seat is built on, so a loop restarted with another
+        `--model` starts fresh too. A role with no recorded model, as in a
+        state file older than `State.models`, counts as started on `model`.
+        `work` calls this before it asks `has_session`, so that a seat
+        interrupted in a session on the old model is not told it was
+        restarted.
+        """
+        want = self.model_for(st.stage)
+        had = st.models.get(role, self.model)
+        if had == want:
+            return
+        seat = self.seats.pop(role, None)
+        if seat is not None:
+            seat.stop()
+        self.forget_session(st, role)
+        st.models[role] = want
+        self.event("seat-model", st.slug, role=role, **{"from": had, "to": want})
+        self.say(f"{role} starts a fresh session on {want or 'the default model'}")
 
     def has_session(self, st: State, role: str) -> bool:
         """Whether `seat` would resume a session for `role` rather than start one."""
