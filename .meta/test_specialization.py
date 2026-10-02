@@ -11,6 +11,8 @@ using pre-judged portfolio fixtures (DR-026, DR-204), validating that:
 4. Language bootstrapping and assertion rendering succeed.
 5. Scaffold-only paths remain strictly absent from the specialized tree.
 6. The full portfolio gate passes cleanly across all initialized projects.
+7. The meta gate passes in a fresh clone that has never rendered, so the portfolio
+   commits every render output that gate reads.
 
 Usage:
     python3 .meta/test_specialization.py [--target <dir>] [--keep] [--lang <python>] [--verbose]
@@ -19,6 +21,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import functools
 import json
 import os
 import pathlib
@@ -282,13 +285,8 @@ def step_5_bootstrap_project(target_path: pathlib.Path, lang: str, verbose: bool
         bootstrap_staging.parent.mkdir(parents=True, exist_ok=True)
         shutil.copytree(bootstrap_source, bootstrap_staging, dirs_exist_ok=True)
 
-    bootstrap_cmd = [
-        sys.executable,
-        str(target_path / ".meta" / "bootstrap.py"),
-        lang,
-        "core-lib",
-        "core_lib",
-    ]
+    bootstrap_cmd = [sys.executable, str(target_path / ".meta" / "bootstrap.py"),
+                     lang, "core-lib", "core_lib"]
     b_code, b_out, b_err = run_command(bootstrap_cmd, target_path)
     if b_code != 0:
         print(
@@ -311,12 +309,9 @@ def step_6_render_portfolio(target_path: pathlib.Path) -> int:
     r_code, r_out, r_err = run_command(
         ["uvx", "--python", "3.13", "--with", "pyyaml", "python", ".meta/render.py"], target_path)
     if r_code != 0:
-        print(
-            f"test-specialization: error — render failed (exit {r_code}):\n{r_out}\n{r_err}",
-            file=sys.stderr,
-        )
-        return r_code
-    return 0
+        print(f"test-specialization: error — render failed (exit {r_code}):\n{r_out}\n{r_err}",
+              file=sys.stderr)
+    return r_code
 
 
 def step_7_verify_scaffold_paths(target_path: pathlib.Path) -> int:
@@ -337,31 +332,40 @@ def step_7_verify_scaffold_paths(target_path: pathlib.Path) -> int:
     return 0
 
 
+def _run_gate(repo: pathlib.Path, words: Sequence[str], verbose: bool) -> int:
+    """Runs `.meta/gate` with `words` in `repo` and returns non-zero on any failing step."""
+    proc = subprocess.run([str(repo / ".meta" / "gate"), *words], check=False,
+                          cwd=str(repo), capture_output=True, text=True)
+    failed = proc.returncode != 0 or "\nx  " in proc.stdout
+    if verbose or failed:
+        print(proc.stdout)
+        print(proc.stderr, file=sys.stderr, end="")
+    if failed:
+        print(f"test-specialization: error — gate exited {proc.returncode} or a step failed",
+              file=sys.stderr)
+        return proc.returncode or 1
+    return 0
+
+
 def step_8_run_gate(target_path: pathlib.Path, verbose: bool) -> int:
     """Runs .meta/gate in the specialized repository and verifies zero failing steps."""
     print("test-specialization: step 8 — execute portfolio gate across all projects")
-    gate_script = target_path / ".meta" / "gate"
-    gate_proc = subprocess.run([str(gate_script)], check=False, cwd=str(target_path),
-                               capture_output=True, text=True)
-    if verbose or gate_proc.returncode != 0:
-        print(gate_proc.stdout)
-        if gate_proc.stderr:
-            print(gate_proc.stderr, file=sys.stderr)
+    return _run_gate(target_path, (), verbose)
 
-    if gate_proc.returncode != 0:
-        print(
-            f"test-specialization: error — gate failed with exit code {gate_proc.returncode}",
-            file=sys.stderr,
-        )
-        return gate_proc.returncode
 
-    gate_stdout = gate_proc.stdout
-    if "\nx  " in gate_stdout:
-        print("test-specialization: error — gate output contains failed steps", file=sys.stderr)
-        return 1
-
-    print("test-specialization: ok — 8 steps and portfolio gate completed cleanly")
-    return 0
+def step_9_gate_fresh_clone(target_path: pathlib.Path, verbose: bool) -> int:
+    """Runs the meta gate in a fresh clone, which like a pair loop worktree was never rendered."""
+    print("test-specialization: step 9 — execute meta gate in an unrendered fresh clone")
+    with tempfile.TemporaryDirectory(prefix="stereorepo-test-specialization-clone-") as tmp:
+        clone = pathlib.Path(tmp) / "portfolio"
+        code, _, err = run_command(["git", "clone", "-q", str(target_path), str(clone)], ROOT)
+        if code != 0:
+            print(f"test-specialization: git clone failed: {err}", file=sys.stderr)
+            return code
+        code = _run_gate(clone, ("meta",), verbose)
+    if code == 0:
+        print("test-specialization: ok — 9 steps and portfolio gate completed cleanly")
+    return code
 
 
 def execute_specialization_test(
@@ -370,7 +374,7 @@ def execute_specialization_test(
     lang: str = "python",
     verbose: bool = False,
 ) -> int:
-    """Executes the 8-step specialization discipline in the specified target directory.
+    """Executes the 8-step specialization discipline in target_path, then gates a fresh clone.
 
     Parameters:
         target_path (pathlib.Path): Destination path for the test repository.
@@ -408,6 +412,7 @@ def execute_specialization_test(
         lambda: step_6_render_portfolio(target_path),
         lambda: step_7_verify_scaffold_paths(target_path),
         lambda: step_8_run_gate(target_path, verbose),
+        lambda: step_9_gate_fresh_clone(target_path, verbose),
     )
     for step in steps:
         code = step()
@@ -447,26 +452,18 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point for the specialization end-to-end test CLI tool."""
     args = build_parser().parse_args(argv)
-    tokens = args.tokens.resolve()
-
+    run = functools.partial(execute_specialization_test, tokens_path=args.tokens.resolve(),
+                            lang=args.lang, verbose=args.verbose)
     if args.target:
         target = args.target.resolve()
         target.mkdir(parents=True, exist_ok=True)
-        return execute_specialization_test(
-            target, tokens_path=tokens, lang=args.lang, verbose=args.verbose,
-        )
-
+        return run(target)
     if args.keep:
         target = pathlib.Path(tempfile.mkdtemp(prefix="stereorepo-test-specialization-"))
         print(f"test-specialization: retaining test directory at {target}")
-        return execute_specialization_test(
-            target, tokens_path=tokens, lang=args.lang, verbose=args.verbose,
-        )
-
+        return run(target)
     with tempfile.TemporaryDirectory(prefix="stereorepo-test-specialization-") as temp_dir:
-        return execute_specialization_test(
-            pathlib.Path(temp_dir), tokens_path=tokens, lang=args.lang, verbose=args.verbose,
-        )
+        return run(pathlib.Path(temp_dir))
 
 
 if __name__ == "__main__":

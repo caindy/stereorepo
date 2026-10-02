@@ -14,6 +14,9 @@ __pycache__/
 
 # APM installation runtime artifacts (stereorepo's DR-172)
 apm.yml
+# The portfolio's own package manifest is a render output the meta gate reads,
+# so a checkout that has never rendered must already hold it.
+!/.meta/apm.yml
 apm.lock.yaml
 # APM dependencies
 apm_modules/

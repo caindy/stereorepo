@@ -1,4 +1,5 @@
-"""`test_specialization.py`'s fixture loading, path inheritance, and token substitution probes.
+"""`test_specialization.py`'s fixture loading, path inheritance, token substitution, and
+shipped `.gitignore` probes.
 
 Cites stereorepo's DR-239 and stereorepo's DR-244.
 """
@@ -9,6 +10,8 @@ import contextlib
 import io
 import json
 import pathlib
+import shutil
+import subprocess
 import tempfile
 from typing import Any
 
@@ -115,6 +118,25 @@ def _check_scaffold_only(runner: Any, tmp: pathlib.Path) -> list[str]:
     return problems
 
 
+def _check_gitignore(tmp: pathlib.Path) -> list[str]:
+    """Validates that the shipped `.gitignore` keeps `.meta/apm.yml`, which the meta gate
+    reads, and ignores the rest of APM's files."""
+    repo = tmp / "ignore"
+    repo.mkdir()
+    shutil.copy2(META.parent / ".gitignore", repo / ".gitignore")
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    problems: list[str] = []
+    for path, ignored in ((".meta/apm.yml", False), ("apm.yml", True),
+                          ("apm.lock.yaml", True), ("apm_modules/x", True)):
+        res = subprocess.run(["git", "check-ignore", "-q", "--no-index", path],
+                             cwd=repo, check=False)
+        if (res.returncode == 0) != ignored:
+            verdict = "lets in" if ignored else "ignores"
+            problems.append(f"test-specialization: .gitignore {verdict} {path}, "
+                            "so a fresh checkout of a portfolio disagrees with the scaffold")
+    return problems
+
+
 def _check_inherited_paths(runner: Any) -> list[str]:
     """Validates that inherited path parsing retrieves expected scaffold assets."""
     problems: list[str] = []
@@ -195,6 +217,8 @@ def test_specialization_probes() -> list[str]:
     6. `.meta/bundle.yaml` is well-formed and validates against repository disk contents.
     7. A copy leaves out scaffold-only paths below the top level, and step 7 refuses one
        (stereorepo's DR-305).
+    8. The shipped `.gitignore` keeps `.meta/apm.yml`, which the meta gate reads, and still
+       ignores `apm.yml` elsewhere, `apm.lock.yaml` and `apm_modules/`.
     """
     test_script = META / "test_specialization.py"
     if not test_script.is_file():
@@ -212,6 +236,7 @@ def test_specialization_probes() -> list[str]:
         problems.extend(_check_fixture_error_handling(runner, tmp))
         problems.extend(_check_substitute(runner, tmp))
         problems.extend(_check_scaffold_only(runner, tmp))
+        problems.extend(_check_gitignore(tmp))
 
     problems.extend(_check_inherited_paths(runner))
     problems.extend(_check_bundle(runner))
