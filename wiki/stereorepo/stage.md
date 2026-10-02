@@ -51,7 +51,7 @@ Issue files. Where a seat moves one, the supervisor puts it back.
   A stage is the directory the file sits in, and every view of the board is
   read from it.
 - **Not a status field.** No front-matter key records an Issue's stage, so a
-  field can never disagree with where the file actually sits.
+  field can never disagree with where the file actually sits (stereorepo's DR-308).
 
 ---
 

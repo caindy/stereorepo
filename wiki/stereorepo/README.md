@@ -16,6 +16,20 @@ underlying tooling and gate mechanisms.
   remember is compiled into artifacts rather than held in the agent.
 - **[[flight|Flight]]** — An Issue with children, whose delivered value the
   developer desk-checks once, after its parts have landed.
+- **[[issue|Issue]]** — One unit of work, as one Markdown file on the board.
+- **[[board|Board]]** — A repository's set of Issue files, whose directories
+  are the stages.
+- **[[stage|Stage]]** — Where an Issue is on its way to `main`, held as the
+  directory its file sits in.
+- **[[developer|Developer]]** — The one person a repository serves.
+- **[[seat|Seat]]** — One of the two harness sessions that take an Issue to
+  `main` in turns.
+- **[[supervisor|Supervisor]]** — The program that runs the seats and moves an
+  Issue from what it observes.
+- **[[quiet-turn|Quiet turn]]** — A seat's turn that changes nothing, by which
+  it accepts the state it found.
+- **[[desk-check|Desk check]]** — The developer's check, by hand, of a
+  `developer` Issue or a Flight.
 - **[[ubiquitous-language|Ubiquitous Language]]** — How terms are defined,
   bounded, and checked to prevent semantic collision across agents and the developer.
 
