@@ -179,6 +179,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-314](assertions/decisions/DR-314.yaml) | Each ratchet reads two baselines: the bundle's beside the checks, and the portfolio's own under .meta/baselines/ | Adopted |
 | [DR-315](assertions/decisions/DR-315.yaml) | `just sync` mirrors a checkout's managed items into a portfolio, removes what the bundle dropped, and never commits | Adopted |
 | [DR-316](assertions/decisions/DR-316.yaml) | A managed file marked `block` keeps a portfolio's own lines: a sync replaces only stereorepo's marked block | Adopted |
+| [DR-317](assertions/decisions/DR-317.yaml) | A bundle item owned by the portfolio is never removed by a sync: `stakeholders/` ships only its READMEs | Adopted |
 
 ## Holes
 
@@ -205,7 +206,7 @@ and the query a reader in a file actually has.
 | [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/apm.yml`](apm.yml) | [DR-206](assertions/decisions/DR-206.yaml) |
 | [`.meta/apm_compile.py`](apm_compile.py) | [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-212](assertions/decisions/DR-212.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
-| [`.meta/assertions/disciplines.yaml`](assertions/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-204](assertions/decisions/DR-204.yaml), [DR-222](assertions/decisions/DR-222.yaml), [DR-227](assertions/decisions/DR-227.yaml), [DR-234](assertions/decisions/DR-234.yaml), [DR-270](assertions/decisions/DR-270.yaml), [DR-316](assertions/decisions/DR-316.yaml) |
+| [`.meta/assertions/disciplines.yaml`](assertions/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-204](assertions/decisions/DR-204.yaml), [DR-222](assertions/decisions/DR-222.yaml), [DR-227](assertions/decisions/DR-227.yaml), [DR-234](assertions/decisions/DR-234.yaml), [DR-270](assertions/decisions/DR-270.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
 | [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
 | [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |
 | [`.meta/assertions/imported/authority.yaml`](assertions/imported/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml) |
@@ -216,7 +217,7 @@ and the query a reader in a file actually has.
 | [`.meta/assertions/vocabulary.yaml`](assertions/vocabulary.yaml) | [DR-035](assertions/decisions/DR-035.yaml), [DR-313](assertions/decisions/DR-313.yaml) |
 | [`.meta/baselines/file_sizes.baseline.yaml`](baselines/file_sizes.baseline.yaml) | [DR-314](assertions/decisions/DR-314.yaml) |
 | [`.meta/bootstrap.py`](bootstrap.py) | [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-312](assertions/decisions/DR-312.yaml) |
-| [`.meta/bundle.py`](bundle.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml) |
+| [`.meta/bundle.py`](bundle.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
 | [`.meta/charter.md`](charter.md) | [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml) |
 | [`.meta/check.py`](check.py) | [DR-014](assertions/decisions/DR-014.yaml), [DR-029](assertions/decisions/DR-029.yaml), [DR-034](assertions/decisions/DR-034.yaml), [DR-037](assertions/decisions/DR-037.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-124](assertions/decisions/DR-124.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-130](assertions/decisions/DR-130.yaml), [DR-131](assertions/decisions/DR-131.yaml), [DR-132](assertions/decisions/DR-132.yaml), [DR-144](assertions/decisions/DR-144.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-169](assertions/decisions/DR-169.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-261](assertions/decisions/DR-261.yaml), [DR-268](assertions/decisions/DR-268.yaml) |
 | [`.meta/checks/citations/__init__.py`](checks/citations/__init__.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
@@ -258,9 +259,10 @@ and the query a reader in a file actually has.
 | [`.meta/checks/probes/tools/dereference.py`](checks/probes/tools/dereference.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-192](assertions/decisions/DR-192.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/probes/tools/lockstep.py`](checks/probes/tools/lockstep.py) | [DR-305](assertions/decisions/DR-305.yaml) |
 | [`.meta/checks/probes/tools/search.py`](checks/probes/tools/search.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
-| [`.meta/checks/probes/tools/sync.py`](checks/probes/tools/sync.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml) |
+| [`.meta/checks/probes/tools/sync.py`](checks/probes/tools/sync.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
 | [`.meta/checks/probes/tools/terms.py`](checks/probes/tools/terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml), [DR-279](assertions/decisions/DR-279.yaml) |
-| [`.meta/checks/probes/tools/test_specialization.py`](checks/probes/tools/test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml) |
+| [`.meta/checks/probes/tools/test_brownfield.py`](checks/probes/tools/test_brownfield.py) | [DR-317](assertions/decisions/DR-317.yaml) |
+| [`.meta/checks/probes/tools/test_specialization.py`](checks/probes/tools/test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
 | [`.meta/checks/suppressions.baseline.yaml`](checks/suppressions.baseline.yaml) | [DR-223](assertions/decisions/DR-223.yaml), [DR-225](assertions/decisions/DR-225.yaml), [DR-314](assertions/decisions/DR-314.yaml) |
 | [`.meta/checks/types.baseline.yaml`](checks/types.baseline.yaml) | [DR-210](assertions/decisions/DR-210.yaml), [DR-314](assertions/decisions/DR-314.yaml) |
 | [`.meta/ddd/skos.yaml`](ddd/skos.yaml) | [DR-018](assertions/decisions/DR-018.yaml) |
@@ -271,7 +273,7 @@ and the query a reader in a file actually has.
 | [`.meta/fixtures/specialization/tokens.json`](fixtures/specialization/tokens.json) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml) |
 | [`.meta/gate`](gate) | [DR-104](assertions/decisions/DR-104.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-303](assertions/decisions/DR-303.yaml) |
 | [`.meta/lib/__init__.py`](lib/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
-| [`.meta/lib/adapt/plan.py`](lib/adapt/plan.py) | [DR-316](assertions/decisions/DR-316.yaml) |
+| [`.meta/lib/adapt/plan.py`](lib/adapt/plan.py) | [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
 | [`.meta/lib/apm_compile/__init__.py`](lib/apm_compile/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/apm_compile/agents.py`](lib/apm_compile/agents.py) | [DR-171](assertions/decisions/DR-171.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-194](assertions/decisions/DR-194.yaml), [DR-198](assertions/decisions/DR-198.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-228](assertions/decisions/DR-228.yaml) |
 | [`.meta/lib/apm_compile/apm.py`](lib/apm_compile/apm.py) | [DR-172](assertions/decisions/DR-172.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
@@ -281,8 +283,8 @@ and the query a reader in a file actually has.
 | [`.meta/lib/apm_compile/instructions.py`](lib/apm_compile/instructions.py) | [DR-172](assertions/decisions/DR-172.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/apm_compile/primitives.py`](lib/apm_compile/primitives.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/apm_compile/skills.py`](lib/apm_compile/skills.py) | [DR-217](assertions/decisions/DR-217.yaml) |
-| [`.meta/lib/bundle/__init__.py`](lib/bundle/__init__.py) | [DR-314](assertions/decisions/DR-314.yaml), [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml) |
-| [`.meta/lib/bundle/sync.py`](lib/bundle/sync.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml) |
+| [`.meta/lib/bundle/__init__.py`](lib/bundle/__init__.py) | [DR-314](assertions/decisions/DR-314.yaml), [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
+| [`.meta/lib/bundle/sync.py`](lib/bundle/sync.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
 | [`.meta/lib/dereference/__init__.py`](lib/dereference/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/dereference/asking.py`](lib/dereference/asking.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/dereference/cli.py`](lib/dereference/cli.py) | [DR-217](assertions/decisions/DR-217.yaml) |

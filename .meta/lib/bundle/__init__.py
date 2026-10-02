@@ -18,7 +18,7 @@ import yaml
 
 SCHEMA_VERSION: int = 1
 VALID_KINDS: tuple[str, ...] = ("file", "dir", "symlink")
-VALID_OWNERSHIPS: tuple[str, ...] = ("managed", "template", "symlink")
+VALID_OWNERSHIPS: tuple[str, ...] = ("managed", "template", "symlink", "portfolio")
 YAML_MAPPING = "YAML mapping"
 SCAFFOLD_ONLY_PATHS: tuple[str, ...] = (
     "SPECIALIZE.md", "ADOPT.md", "template", "bootstraps", "pair", ".meta/adapt.py",
@@ -149,7 +149,9 @@ class BundleItem:
     Attributes:
         path: Path identifier relative to repository root.
         kind: Artifact filesystem type ('file', 'dir', or 'symlink').
-        ownership: Lifecycle policy ('managed', 'template', or 'symlink').
+        ownership: Lifecycle policy ('managed', 'template', 'symlink', or 'portfolio').
+            A 'portfolio' item is a path whose content belongs to the portfolio: no
+            copy brings it, and no sync removes anything under it (stereorepo's DR-317).
         source: Optional source path in scaffold if different from destination.
         target: Optional destination path in specialized repo if different from source.
         transformations: Sequence of transformation names to apply during transfer.
@@ -215,6 +217,10 @@ class Bundle:
     def symlink_items(self) -> list[BundleItem]:
         """Returns all items declared as symlinks."""
         return [item for item in self.items if item.ownership == "symlink"]
+
+    def portfolio_items(self) -> list[BundleItem]:
+        """Returns all items whose content belongs to the portfolio (stereorepo's DR-317)."""
+        return [item for item in self.items if item.ownership == "portfolio"]
 
     def inherited_paths(self) -> list[str]:
         """Returns sorted destination path strings for all managed operating machinery."""

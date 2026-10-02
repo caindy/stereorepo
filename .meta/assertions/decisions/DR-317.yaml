@@ -1,0 +1,70 @@
+decisions:
+  - id: work:decision/317
+    name: "DR-317 · A bundle item owned by the portfolio is never removed by a sync: `stakeholders/` ships only its READMEs"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-lib-bundle-sync
+      - work:artifact/meta-lib-bundle-init
+      - work:artifact/meta-bundle
+      - work:artifact/meta-lib-adapt-plan
+      - work:artifact/meta-checks-probes-tools-sync
+      - work:artifact/meta-checks-probes-tools-test-brownfield
+      - work:artifact/meta-checks-probes-tools-test-specialization
+      - work:artifact/meta-assertions-disciplines
+    context: >-
+      `stakeholders/` was a managed directory item, but it holds product
+      material (DR-041): a portfolio writes its own Personas under
+      `stakeholders/customers/` and its Roles under `stakeholders/internal/`.
+      `just sync` (DR-315) mirrors a managed directory, so it removed every
+      Persona and Role the portfolio wrote. Listing only the three READMEs
+      as managed files is not enough on its own. A sync also removes a path
+      the portfolio's old bundle managed, and every portfolio's old bundle
+      lists `stakeholders/`, so the first sync after the change would still
+      remove them.
+    alternatives:
+      - name: Treat a managed file inside a formerly managed directory as narrowing it
+        chosen: false
+        reason: >-
+          The rule is invisible in the bundle, and it would also keep files
+          that a deliberate narrowing of some other directory meant to drop.
+      - name: Drop `stakeholders/` from the bundle outright
+        chosen: false
+        reason: >-
+          The portfolio's old bundle still manages it, so the first sync
+          would remove the portfolio's Personas and Roles anyway, and new
+          portfolios would lose the READMEs that say what the directory is
+          for.
+      - name: A `portfolio` ownership, kept the way template and symlink items are
+        chosen: true
+        reason: >-
+          The sync already keeps every path under a template or symlink item
+          over every removal rule, so a `portfolio` item joins that list and
+          covers the first sync too. DR-316 rejected a new ownership because
+          every reader of the managed items would have to learn it; here none
+          does, since a `portfolio` item is not managed and the managed files
+          inside it are listed on their own.
+    consequences:
+      - >-
+        `.meta/bundle.yaml` lists `stakeholders/` as a `portfolio` dir item
+        and its three READMEs as managed file items. `validate_bundle`
+        accepts the ownership, and `bundle.py list --ownership portfolio`
+        filters on it.
+      - >-
+        A sync copies the three READMEs and never removes or overwrites
+        anything else under `stakeholders/`, including a file a later bundle
+        stops managing: stereorepo cannot retract a file it once shipped
+        there.
+      - >-
+        `just adapt plan` gives a `portfolio` item no action of its own; the
+        target's files under it are retained as its own.
+      - >-
+        `stakeholders/internal/architect/README.md`, the scaffold's example
+        Role, is no longer inherited. A new portfolio does not get it, and a
+        portfolio that has it keeps it.
+    falsifier: >-
+      After a sync, a portfolio has lost or changed a file under
+      `stakeholders/` that is not one of the three managed READMEs.
+    rationale: |-
+      The bundle says which paths are stereorepo's and which are the
+      portfolio's, so a sync can replace the scaffold's material without
+      reading the portfolio's.

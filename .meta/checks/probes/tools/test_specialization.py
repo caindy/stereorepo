@@ -225,6 +225,13 @@ def _check_bundle(runner: Any) -> list[str]:
             f"found {len(bundle.symlink_items())}"
         )
 
+    if "stakeholders/" not in [item.dest_path() for item in bundle.portfolio_items()]:
+        problems.append("test-specialization: stakeholders/ is not a portfolio item, so a sync "
+                        "would remove a portfolio's own Personas and Roles (stereorepo's DR-317)")
+    if bundle.manages("stakeholders/customers/persona.md"):
+        problems.append("test-specialization: a managed item contains stakeholders/customers/, "
+                        "so a sync would overwrite a portfolio's own Personas")
+
     errors = validate_bundle(bundle, META.parent)
     for err in errors:
         problems.append(f"test-specialization: bundle validation error: {err}")

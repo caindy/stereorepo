@@ -424,6 +424,10 @@ def build_adoption_plan(
 ) -> AdoptionPlan:
     """Builds a deterministic, collision-aware adoption plan for a target repository.
 
+    A portfolio item, such as `stakeholders/`, gets no action of its own: the
+    managed files inside it are created like any other, and the target's own
+    files under it are retained (stereorepo's DR-317).
+
     Parameters:
         target_dir: Target repository directory to inspect.
         bundle: Optional pre-loaded Bundle manifest.
@@ -442,15 +446,10 @@ def build_adoption_plan(
         msg = f"Target repository directory not found: {target_p}"
         raise FileNotFoundError(msg)
 
-    scaffold_p = (
-        pathlib.Path(scaffold_dir).resolve()
-        if scaffold_dir
-        else pathlib.Path(__file__).resolve().parents[3]
-    )
+    scaffold_p = (pathlib.Path(scaffold_dir).resolve() if scaffold_dir
+                  else pathlib.Path(__file__).resolve().parents[3])
     active_bundle = bundle or load_bundle(
-        bundle_path=pathlib.Path(bundle_path) if bundle_path else None,
-        repo_root=scaffold_p,
-    )
+        bundle_path=pathlib.Path(bundle_path) if bundle_path else None, repo_root=scaffold_p)
     active_config = config or ProductConfig()
 
     actions: list[PlannedAction] = []
@@ -459,7 +458,7 @@ def build_adoption_plan(
 
     for item in active_bundle.items:
         dest = item.dest_path().rstrip("/")
-        if not dest or dest in seen_destinations:
+        if item.ownership == "portfolio" or not dest or dest in seen_destinations:
             continue
         seen_destinations.add(dest)
         if item.kind == "dir":

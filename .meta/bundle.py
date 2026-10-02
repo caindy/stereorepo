@@ -102,7 +102,7 @@ def _cmd_list(args: argparse.Namespace) -> int:
     for item in items:
         trans = f" [{' '.join(item.transformations)}]" if item.transformations else ""
         src = f" (source: {item.source})" if item.source else ""
-        print(f"{item.ownership:8s} {item.kind:7s} {item.path}{src}{trans}")
+        print(f"{item.ownership:9s}{item.kind:7s} {item.path}{src}{trans}")
     return 0
 
 
@@ -172,7 +172,8 @@ def main(argv: list[str] | None = None) -> int:
 
     list_p = subparsers.add_parser("list", help="List bundle items")
     list_p.add_argument(
-        "--ownership", choices=["managed", "template", "symlink"], help="Filter by ownership"
+        "--ownership", choices=["managed", "template", "symlink", "portfolio"],
+        help="Filter by ownership",
     )
     list_p.add_argument("--kind", choices=["file", "dir", "symlink"], help="Filter by kind")
     list_p.add_argument("--transformation", help="Filter by required transformation")

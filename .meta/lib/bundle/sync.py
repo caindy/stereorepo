@@ -9,7 +9,10 @@ holds, one under a managed item the checkout's bundle dropped, and one under
 `.meta/bundle.yaml` before the copy replaces that file. Template items, symlink
 items, untracked and ignored files, and every path no bundle manages are left
 alone, and so is a path the old bundle managed that the new one lists as a
-template or symlink item. A managed file with the `block` transformation, such as
+template or symlink item. Nothing under a portfolio item, such as `stakeholders/`, is
+ever removed, even where the old bundle managed it or a later bundle stops managing
+a file inside it; the managed files the bundle names inside it are still copied
+(stereorepo's DR-317). A managed file with the `block` transformation, such as
 `.gitignore`, is merged rather than copied: only stereorepo's block is replaced, or
 appended where the portfolio's file has none, and the portfolio's own lines are
 kept (stereorepo's DR-316). Nothing is committed.
@@ -192,7 +195,8 @@ def plan(source: pathlib.Path, portfolio: pathlib.Path) -> Changes:
     writes = _blocks(new, copies, source, portfolio)
     differing = {dest: path for dest, path in copies.items()
                  if dest not in merged and not _same(source / path, portfolio / dest)}
-    kept = [item.dest_path() for item in (*new.template_items(), *new.symlink_items())]
+    kept = [item.dest_path() for item in
+            (*new.template_items(), *new.symlink_items(), *new.portfolio_items())]
     removed = sorted(
         path for path in _tracked(portfolio)
         if path not in copies and not any(under(path, root) for root in kept)

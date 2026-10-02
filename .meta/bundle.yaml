@@ -75,8 +75,14 @@ items:
   - path: wiki/stereorepo/
     kind: dir
     ownership: managed
-  - path: stakeholders/
-    kind: dir
+  - path: stakeholders/README.md
+    kind: file
+    ownership: managed
+  - path: stakeholders/customers/README.md
+    kind: file
+    ownership: managed
+  - path: stakeholders/internal/README.md
+    kind: file
     ownership: managed
   - path: .gitignore
     kind: file
@@ -89,6 +95,12 @@ items:
   - path: .meta/bundle.yaml
     kind: file
     ownership: managed
+
+  # Portfolio-owned: no copy brings these, and no sync removes anything under them
+  # (stereorepo's DR-317)
+  - path: stakeholders/
+    kind: dir
+    ownership: portfolio
 
   # Template replacements
   - path: .meta/README.md

@@ -46,7 +46,7 @@ def _hash_directory(dir_path: pathlib.Path) -> dict[str, str]:
 
 
 def _check_empty_target(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]:
-    """Validates that an empty target plans all bundle items as CREATE."""
+    """Validates that an empty target plans every bundle item but a portfolio item as CREATE."""
     problems: list[str] = []
     target_dir = tmp / "empty_target"
     target_dir.mkdir(parents=True)
@@ -65,7 +65,8 @@ def _check_empty_target(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[s
         problems.append("brownfield: empty target unexpectedly reported conflicts")
 
     bundle = load_bundle(bundle_path=bundle_path, repo_root=scaffold_dir)
-    expected_creates = len({item.dest_path().rstrip("/") for item in bundle.items})
+    expected_creates = len({item.dest_path().rstrip("/") for item in bundle.items
+                            if item.ownership != "portfolio"})
     create_actions = [a for a in plan.actions if a.classification == PathClassification.CREATE]
     if len(create_actions) != expected_creates:
         problems.append(
@@ -438,12 +439,31 @@ def _check_omits_scaffold_only(scaffold_dir: pathlib.Path, tmp: pathlib.Path) ->
     return problems
 
 
+def _check_portfolio_items(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]:
+    """Validates that a target's own stakeholders are retained, the READMEs created, and
+    neither `stakeholders/` nor the scaffold's example Role planned (stereorepo's DR-317)."""
+    target_dir = tmp / "stakeholders_target"
+    persona = target_dir / "stakeholders" / "customers" / "ada.md"
+    persona.parent.mkdir(parents=True)
+    persona.write_text("# Ada\n", encoding="utf-8")
+    plan = build_adoption_plan(target_dir=target_dir, scaffold_dir=scaffold_dir,
+                               bundle_path=scaffold_dir / ".meta" / "bundle.yaml")
+    planned = {a.path: a.classification for a in plan.actions}
+    expected: dict[str, PathClassification | None] = {
+        "stakeholders/customers/ada.md": PathClassification.RETAIN, "stakeholders": None,
+        "stakeholders/internal/architect/README.md": None} | {
+        f"stakeholders/{readme}": PathClassification.CREATE
+        for readme in ("README.md", "customers/README.md", "internal/README.md")}
+    return [f"brownfield: planned {planned.get(path)} for {path}, expected {want}"
+            for path, want in expected.items() if planned.get(path) != want]
+
+
 @check("brownfield adoption probes", pre=True)
 def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutcome:
     """Probes brownfield adoption planning and CLI dispatcher (stereorepo's DR-217).
 
     Validates that:
-    1. Empty target repository plans all bundle entries as CREATE.
+    1. Empty target repository plans every bundle entry but a portfolio item as CREATE.
     2. Retained product files and default integrations are classified accurately.
     3. Content and filesystem type collisions are detected as CONFLICT.
     4. ProductConfig overrides (retain, integrations, ignore, tokens) are honoured.
@@ -451,6 +471,8 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
     6. Formats (text, JSON, YAML) and CLI execution exit codes adhere to specification.
     7. Scaffold-only paths inside a planned directory are OMIT, with nothing planned below them.
     8. A git target is planned from its tracked files, not its working tree.
+    9. A portfolio item gets no action: the managed files in it are CREATE, the
+       target's own files under it RETAIN (stereorepo's DR-317).
 
     Neither a specialized portfolio nor a repository adopted from a plan has
     a copy of this step (stereorepo's DR-305), so it runs only in the scaffold.
@@ -473,5 +495,6 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
         problems.extend(_check_cli_and_formats(scaffold_dir, tmp))
         problems.extend(_check_omits_scaffold_only(scaffold_dir, tmp))
         problems.extend(_check_tracked_files(scaffold_dir, tmp))
+        problems.extend(_check_portfolio_items(scaffold_dir, tmp))
 
-    return Found(problems) if problems else Passed("8 adoption cases")
+    return Found(problems) if problems else Passed("9 adoption cases")

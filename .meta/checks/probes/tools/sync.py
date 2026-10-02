@@ -24,6 +24,7 @@ items:
   - {path: kit/, kind: dir, ownership: managed}
   - {path: .meta/lib/, kind: dir, ownership: managed}
   - {path: dropped.txt, kind: file, ownership: managed}
+  - {path: people/, kind: dir, ownership: managed}
   - {path: .gitignore, kind: file, ownership: managed}
   - {path: .meta/bundle.yaml, kind: file, ownership: managed}
   - {path: README.md, source: template/README.md, kind: file, ownership: template}
@@ -32,11 +33,15 @@ items:
 
 NEW_BUNDLE = OLD_BUNDLE.replace("source_revision: old", "source_revision: new").replace(
     "dropped.txt", "added.txt").replace(
+    "{path: people/, kind: dir, ownership: managed}",
+    "{path: people/, kind: dir, ownership: portfolio}\n"
+    "  - {path: people/README.md, kind: file, ownership: managed}").replace(
     "{path: .gitignore, kind: file, ownership: managed}",
     "{path: .gitignore, kind: file, ownership: managed, transformations: [block]}")
 """The checkout's bundle, which also marks `.gitignore` as a `block` file
-(stereorepo's DR-316): the portfolio's bundle does not, as one synced before the
-transformation existed."""
+(stereorepo's DR-316), and narrows the managed `people/` to its README inside a
+`portfolio` item (stereorepo's DR-317): the portfolio's bundle does neither, as one
+synced before both existed."""
 
 BLOCK_TEXT = "# >>> stereorepo: replaced by a sync\nnew-scaffold/\n# <<< stereorepo\n"
 """The checkout's block in `.gitignore`."""
@@ -53,9 +58,12 @@ SOURCE = {
     ".meta/lib/keep.py": "kept = True\n",
     ".meta/lib/adapt/plan.py": "scaffold only\n",
     "template/README.md": "# Template\n",
+    "people/README.md": "# People, as the checkout has it\n",
+    "people/example/README.md": "# The checkout's example Role\n",
 }
-"""The checkout's tracked files: `kit/gone.txt` deleted, `kit/stale.txt` changed, and a
-scaffold-only file inside a managed directory."""
+"""The checkout's tracked files: `kit/gone.txt` deleted, `kit/stale.txt` changed, a
+scaffold-only file inside a managed directory, and an example under `people/` that no
+managed item names."""
 
 PORTFOLIO = {
     ".meta/bundle.yaml": OLD_BUNDLE,
@@ -69,8 +77,16 @@ PORTFOLIO = {
     "README.md": "# Portfolio\n",
     "own.txt": "the portfolio's own\n",
     ".meta/baselines/comments.baseline.yaml": "own.txt: 3\n",
+    "people/README.md": "# People, as the last sync left it\n",
+    "people/customers/ada.md": "# Ada, the portfolio's own Persona\n",
+    "people/example/README.md": "# The example Role, as the portfolio edited it\n",
 }
 """The portfolio's tracked files, synced once from the old bundle."""
+
+PEOPLE_OWN = ("people/customers/ada.md", "people/example/README.md")
+"""The portfolio's files under the `portfolio` item `people/`, which no sync removes or
+overwrites, even the one that narrows the old bundle's managed `people/`
+(stereorepo's DR-317)."""
 
 UNTRACKED = "kit/scratch.txt"
 """An untracked file inside a managed directory, which no sync deletes."""
@@ -147,7 +163,7 @@ def _check_sync(cli: types.ModuleType, tmp: pathlib.Path, source: pathlib.Path) 
     if (portfolio / ".meta/lib/adapt").exists():
         problems.append("sync: the emptied .meta/lib/adapt/ was not pruned")
     for path, verb in (("added.txt", "added"), ("kit/stale.txt", "updated"),
-                       (".meta/bundle.yaml", "updated")):
+                       (".meta/bundle.yaml", "updated"), ("people/README.md", "updated")):
         if (portfolio / path).read_text(encoding="utf-8") != SOURCE[path]:
             problems.append(f"sync: {path} does not hold the checkout's content")
         if f"{verb:8s}{path}" not in out:
@@ -205,15 +221,49 @@ def _check_block_helpers(tmp: pathlib.Path) -> list[str]:
     return problems
 
 
+def _check_portfolio_items(cli: types.ModuleType, tmp: pathlib.Path,
+                           source: pathlib.Path) -> list[str]:
+    """A portfolio already on the new bundle gets a deleted managed README back inside a
+    `portfolio` item and keeps its own files there, and the validator accepts the ownership
+    (stereorepo's DR-317)."""
+    portfolio = _portfolio(tmp / "restored")
+    (portfolio / ".meta/bundle.yaml").write_text(NEW_BUNDLE, encoding="utf-8")
+    (portfolio / "people/README.md").unlink()
+    _git(portfolio, "add", "-A")
+    _git(portfolio, "commit", "-q", "-m", "on the new bundle, without the README")
+    before = _snapshot(portfolio)
+    code, out = _run(cli, source, portfolio)
+    if code != 0:
+        return [f"sync: exited {code} on a portfolio missing a managed README"]
+    problems = []
+    readme = portfolio / "people/README.md"
+    if not readme.is_file() or readme.read_text(encoding="utf-8") != SOURCE["people/README.md"]:
+        problems.append("sync: a deleted people/README.md was not restored")
+    if f"{'added':8s}people/README.md" not in out:
+        problems.append("sync: a restored people/README.md is not printed as added")
+    after = _snapshot(portfolio)
+    problems.extend(f"sync: {own} changed on a portfolio already on the new bundle"
+                    for own in PEOPLE_OWN if after[2].get(own) != before[2].get(own))
+    (tmp / "people").mkdir()
+    for ownership, valid in (("portfolio", True), ("borrowed", False)):
+        item = BundleItem(path="people/", kind="dir", ownership=ownership)
+        if (not validate_bundle(Bundle(source_revision="probe", items=(item,)), tmp)) != valid:
+            problems.append(f"sync: validate_bundle {'rejected' if valid else 'accepted'} "
+                            f"an item owned by {ownership}")
+    return problems
+
+
 def _kept(before: Snapshot, after: Snapshot, out: str) -> list[str]:
     """What a sync must leave byte for byte, and must not report, and that it commits nothing."""
     problems = []
     for kept in ("README.md", "own.txt", ".meta/baselines/comments.baseline.yaml", UNTRACKED,
-                 "kit/same.txt", ".meta/lib/keep.py"):
+                 "kit/same.txt", ".meta/lib/keep.py", *PEOPLE_OWN):
         if after[2].get(kept) != before[2].get(kept):
             problems.append(f"sync: {kept} changed")
     if "kit/same.txt" in out:
         problems.append("sync: an identical file is reported as changed")
+    problems.extend(f"sync: the portfolio's own {own} is reported" for own in PEOPLE_OWN
+                    if own in out)
     if after[0] != before[0]:
         problems.append("sync: committed")
     return problems
@@ -294,7 +344,10 @@ def bundle_sync_probes() -> list[str]:
     committed. A `.gitignore` the checkout marks `block` keeps the
     portfolio's own lines around stereorepo's block, or gains the block at
     its end where it had none (stereorepo's DR-316), even though the portfolio's
-    own bundle still lists it as a plain managed file. The sync refuses,
+    own bundle still lists it as a plain managed file. A managed `people/`
+    the checkout narrows to its README inside a `portfolio` item keeps the
+    portfolio's own files under it byte for byte, on that sync and every
+    later one, while the README is updated or restored (stereorepo's DR-317). The sync refuses,
     exiting non-zero and changing nothing, a source with no bundle, an
     uncommitted change or an untracked file at a path it would write, a
     `.gitignore` with an unclosed block or that is a symlink or a directory,
@@ -306,6 +359,7 @@ def bundle_sync_probes() -> list[str]:
         try:
             source = _repo(tmp / "checkout", SOURCE)
             return (_check_sync(cli, tmp, source) + _check_merges(cli, tmp, source)
-                    + _check_refusals(cli, tmp, source) + _check_block_helpers(tmp))
+                    + _check_refusals(cli, tmp, source) + _check_block_helpers(tmp)
+                    + _check_portfolio_items(cli, tmp, source))
         except (OSError, subprocess.CalledProcessError) as exc:
             return [f"sync: could not build a scratch repository: {exc}"]

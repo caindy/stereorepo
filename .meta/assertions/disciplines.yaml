@@ -30,8 +30,11 @@ disciplines:
           (DR-187), `.meta/terms.py` (DR-234), `.meta/bootstrap.py` (DR-206),
           `.meta/bundle.py`, `.meta/bundle.yaml`, `.meta/ruff.toml`, `.meta/mypy.ini`,
           `.meta/hooks/`, `.meta/checks/`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`,
-          `.meta/schemas.md`, `.meta/templates/`, `wiki/stereorepo/` (DR-184), `stakeholders/` and
-          `.gitignore`. `.meta/bundle.yaml` is the same list, read by a program. Not the generated pages:
+          `.meta/schemas.md`, `.meta/templates/`, `wiki/stereorepo/` (DR-184), `stakeholders/README.md`,
+          `stakeholders/customers/README.md`, `stakeholders/internal/README.md` and
+          `.gitignore`. `.meta/bundle.yaml` is the same list, read by a program. The rest of the
+          stakeholders directory is the portfolio's own Personas and Roles, which no sync touches
+          (DR-317). Not the generated pages:
           Specialization's *Render and check* step writes those from the assertions. Not the pair loop
           either: it runs a portfolio's issues from outside the portfolio's tree, so the seats working
           there never read the loop's own code. Nor, inside what is copied, the paths that *Confirm

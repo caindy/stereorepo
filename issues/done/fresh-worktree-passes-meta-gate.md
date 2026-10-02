@@ -54,7 +54,7 @@ portfolio commits it.
 ## The plan
 
 1. **`.gitignore`** (shipped to portfolios as a managed file,
-   `.meta/bundle.yaml:81`): add `!/.meta/apm.yml` on the line after
+   `.meta/bundle.yaml:87`): add `!/.meta/apm.yml` on the line after
    `apm.yml`, with the reason in the existing comment's style (the meta gate
    reads it, so a fresh checkout must carry it). In stereorepo this changes
    nothing tracked; it only makes the ignore file say what the index already
