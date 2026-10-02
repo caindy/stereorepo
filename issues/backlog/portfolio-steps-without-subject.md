@@ -37,28 +37,25 @@ passes with `CI` set.
   step that could not run.
 - The scaffold's own `meta` gate still runs both steps and they pass.
 
-# Needs elaboration
+## The developer's answers (2026-10-02)
 
-Each step can leave the portfolio in one of two ways, and which is right is a
-decision about what a portfolio is, so it is the developer's:
+1. **`brownfield adoption probes`: remove.** Specialization removes
+   `.meta/adapt.py`, `lib/adapt` and their probe from a portfolio, since they
+   have no subject there.
+2. **`comment probes`: keep the Projects in lockstep.** In a portfolio, the
+   synchronization half of the step checks every Python Project's `gate`
+   package (each one `just bootstrap python` laid down, such as
+   `core-lib/gate` in the specialization fixture) against
+   `.meta/checks/comments.py`, in place of the scaffold's seed. A Project's
+   `uv run gate` and the root `just gate` must give the same verdict on the
+   same code. Otherwise a seat's targeted gate can pass a change that the
+   landing gate refuses. The cost is accepted: a change to `comments.py`
+   updates every Python Project's copy in the same change. A portfolio with
+   no Python Project has nothing to synchronize, and the step says so in its
+   scope and passes.
+3. **How removal is expressed: accept nested paths.** `SCAFFOLD_ONLY_PATHS`
+   (`.meta/test_specialization.py`) and `SCAFFOLD_ONLY`
+   (`.meta/checks/files/scaffold.py`) accept paths below the top level, so a
+   single probe module under `.meta/checks/probes/` can be scaffold-only.
 
-1. **`brownfield adoption probes`.** `.meta/adapt.py`, `lib/adapt` and their
-   probe plan adoption from the scaffold's `template/`, which a portfolio
-   does not have. Should specialization remove all three from a portfolio
-   (recommended: they have no subject there), or should a portfolio keep
-   them, with the probe running against a fixture template it carries?
-2. **`comment probes`.** In a portfolio, should the seed gate
-   synchronization check the Python Project that `just bootstrap python` laid
-   down (`core-lib/gate` in the specialization fixture) instead of the
-   scaffold's seed, or does that Project's gate drift from
-   `.meta/checks/comments.py` by design, in which case the synchronization
-   half of the step is scaffold-only and only that half should go?
-3. **How removal is expressed**, if either answer is removal.
-   `SCAFFOLD_ONLY_PATHS` (`.meta/test_specialization.py`) and `SCAFFOLD_ONLY`
-   (`.meta/checks/files/scaffold.py`) match only top-level names, so a single
-   probe module under `.meta/checks/probes/` cannot be one today. Should they
-   accept nested paths (recommended), or should a scaffold-only step instead
-   answer `Passed` with a scope saying it has no subject in a portfolio?
-
-Once these are answered, record them as a Decision Record and drop this
-section.
+Record these answers as a Decision Record, with the change.
