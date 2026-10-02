@@ -364,3 +364,11 @@ cannot read fitch-mvp, so each note carries what it showed.
   `AGENTS.md` integrates rather than copies, and the placeholders, so that
   someone onboarding a second repository need not read `bundle.yaml` to find
   out.
+
+## Desk-check children
+
+Second round:
+
+- `adopt-probe-passes-in-a-portfolio`
+- `sync-keeps-a-portfolios-compiled-skills`
+- `adopt-names-the-template-items`
