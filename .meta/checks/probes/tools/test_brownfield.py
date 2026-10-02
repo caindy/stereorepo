@@ -412,8 +412,10 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
     7. A repository without `template/` is reported as could-not-run.
     8. A git target is planned from its tracked files, not its working tree.
 
-    The plan is drawn from the scaffold's `template/`, which a portfolio does
-    not have, so there the step could not run and says so rather than passing.
+    The plan is drawn from the scaffold's `template/`. A specialized portfolio
+    has no copy of this step (stereorepo's DR-305), but a repository adopted
+    from a plan still does, without `template/`, so there the step could not
+    run and says so rather than passing.
 
     Args:
         scaffold_dir: The repository whose bundle and `template/` the plans are drawn from.

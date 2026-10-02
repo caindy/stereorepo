@@ -1,0 +1,61 @@
+decisions:
+  - id: work:decision/305
+    name: "DR-305 · A portfolio keeps no step whose subject only the scaffold has"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-checks-files-scaffold
+      - work:artifact/meta-test-specialization
+      - work:artifact/meta-checks-probes-tools-lockstep
+      - work:artifact/meta-checks-probes-tools-comments
+    context: >-
+      A freshly specialized portfolio's `meta` gate reported two steps as
+      could-not-run for good. `brownfield adoption probes` plans from
+      `template/`, which a portfolio does not have. `comment probes` checked
+      the Python seed's gate package, under `bootstraps/`, against
+      `comments.py`. A could-not-run step fails the run wherever `CI` is set
+      (DR-261), so every such portfolio failed in CI, and the pair loop held
+      every landing in fitch-mvp.
+    alternatives:
+      - name: Keep reporting the two steps as could-not-run
+        chosen: false
+        reason: >-
+          It fails every CI run of every portfolio, for something no change
+          there can fix.
+      - name: Remove the comment step's synchronization half from a portfolio
+        chosen: false
+        reason: >-
+          A portfolio's Python Projects carry their own copy of the detectors.
+          Left unchecked, a Project's `uv run gate` can pass a change that the
+          root gate refuses.
+      - name: >-
+          Remove the brownfield tool and its probe from a portfolio, and keep
+          every Python Project's gate in lockstep with `comments.py`
+        chosen: true
+        reason: >-
+          Each step then has a subject wherever it runs. The adoption tool
+          plans from the scaffold, so a portfolio has no use for it. A
+          Project's gate and the root gate should give one verdict on one
+          comment.
+    consequences:
+      - >-
+        `SCAFFOLD_ONLY` and `SCAFFOLD_ONLY_PATHS` accept paths below the top
+        level. `.meta/adapt.py`, `.meta/lib/adapt/` and
+        `.meta/checks/probes/tools/test_brownfield.py` are scaffold-only, and
+        Specialization copies the inherited directories without them.
+      - >-
+        The comment step's synchronization reads the Python Projects from
+        `structure.yaml`, and checks each one's `gate/src/gate` package against
+        `comments.py`. In the scaffold that is the Python seed. A failure names
+        the Project. With no such Project, the step passes and its scope says
+        so.
+      - >-
+        A change to `comments.py` updates every Python Project's copy of the
+        detectors in the same change.
+    falsifier: >-
+      A freshly specialized portfolio's gate reports `brownfield adoption
+      probes` or `comment probes` as could-not-run. Or a Project's gate package
+      disagrees with `comments.py` and the step passes.
+    rationale: |-
+      A step that can never run where it is inherited is noise that CI reads
+      as failure. Removing what has no subject, and pointing the lockstep at
+      the copies that do exist, leaves every step something to check.

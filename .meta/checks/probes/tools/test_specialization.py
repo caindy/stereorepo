@@ -5,6 +5,8 @@ Cites stereorepo's DR-239 and stereorepo's DR-244.
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import pathlib
 import tempfile
@@ -90,6 +92,29 @@ def _check_substitute(runner: Any, tmp: pathlib.Path) -> list[str]:
     return problems
 
 
+def _check_scaffold_only(runner: Any, tmp: pathlib.Path) -> list[str]:
+    """Validates that a copy leaves out nested scaffold-only paths and step 7 refuses one."""
+    problems: list[str] = []
+    scaffold, target = tmp / "scaffold", tmp / "target"
+    for file in (".meta/lib/bundle/__init__.py", ".meta/checks/probes/tools/gate.py",
+                 ".meta/lib/adapt/plan.py", ".meta/checks/probes/tools/test_brownfield.py"):
+        (scaffold / file).parent.mkdir(parents=True, exist_ok=True)
+        (scaffold / file).write_text("")
+    for tree in (".meta/lib", ".meta/checks"):
+        runner._copy_item(scaffold / tree, target / tree, scaffold)
+    copied = sorted(p.relative_to(target).as_posix() for p in target.rglob("*") if p.is_file())
+    if copied != [".meta/checks/probes/tools/gate.py", ".meta/lib/bundle/__init__.py"]:
+        problems.append(f"test-specialization: a copy of .meta/lib and .meta/checks kept {copied}, "
+                        "expected the scaffold-only paths left out")
+    (target / ".meta" / "adapt.py").write_text("")
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+        refused = runner.step_7_verify_scaffold_paths(target)
+    if refused != 1:
+        problems.append(f"test-specialization: step 7 over a target holding .meta/adapt.py "
+                        f"returned {refused}, expected 1")
+    return problems
+
+
 def _check_inherited_paths(runner: Any) -> list[str]:
     """Validates that inherited path parsing retrieves expected scaffold assets."""
     problems: list[str] = []
@@ -168,6 +193,8 @@ def test_specialization_probes() -> list[str]:
     4. `retarget_workflows` replaces ARC runner labels with public container runner syntax.
     5. `substitute_tokens` performs substitution and detects surviving placeholder tokens.
     6. `.meta/bundle.yaml` is well-formed and validates against repository disk contents.
+    7. A copy leaves out scaffold-only paths below the top level, and step 7 refuses one
+       (stereorepo's DR-305).
     """
     test_script = META / "test_specialization.py"
     if not test_script.is_file():
@@ -184,6 +211,7 @@ def test_specialization_probes() -> list[str]:
         tmp = pathlib.Path(tmp_str)
         problems.extend(_check_fixture_error_handling(runner, tmp))
         problems.extend(_check_substitute(runner, tmp))
+        problems.extend(_check_scaffold_only(runner, tmp))
 
     problems.extend(_check_inherited_paths(runner))
     problems.extend(_check_bundle(runner))

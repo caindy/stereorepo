@@ -28,13 +28,14 @@ disciplines:
           `.meta/render.py`, `.meta/check.py`, `.meta/lib/` (DR-217), `.meta/apm_compile.py`,
           `.meta/dereference.py`, `.meta/gate`, `.meta/search.py` (DR-194), `.meta/wikisplain.py`
           (DR-187), `.meta/terms.py` (DR-234), `.meta/bootstrap.py` (DR-206),
-          `.meta/bundle.py`, `.meta/bundle.yaml`, `.meta/adapt.py`, `.meta/ruff.toml`, `.meta/mypy.ini`,
+          `.meta/bundle.py`, `.meta/bundle.yaml`, `.meta/ruff.toml`, `.meta/mypy.ini`,
           `.meta/hooks/`, `.meta/checks/`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`,
           `.meta/schemas.md`, `.meta/templates/`, `wiki/stereorepo/` (DR-184), `stakeholders/` and
           `.gitignore`. `.meta/bundle.yaml` is the same list, read by a program. Not the generated pages:
           Specialization's *Render and check* step writes those from the assertions. Not the pair loop
           either: it runs a portfolio's issues from outside the portfolio's tree, so the seats working
-          there never read the loop's own code.
+          there never read the loop's own code. Nor, inside what is copied, the paths that *Confirm
+          scaffold-only paths absent* names, which have no subject in a portfolio (DR-305).
       - id: work:discipline-step/specialization/copy-template-replacements-and-link-agents
         name: Copy template replacements and link agents
         statement: >-
@@ -63,7 +64,9 @@ disciplines:
         name: Confirm scaffold-only paths absent
         statement: >-
           Confirm `SPECIALIZE.md`, `template/`, `bootstraps/` and `pair/` are absent. A portfolio specializes nothing, and leaving
-          either invites someone to run this twice.
+          either invites someone to run this twice. Confirm too that `.meta/adapt.py`, `.meta/lib/adapt/`
+          and `.meta/checks/probes/tools/test_brownfield.py` are absent: brownfield adoption plans from
+          `template/`, which a portfolio does not have (DR-305).
       - id: work:discipline-step/specialization/commit
         name: Commit
         statement: All changes verified, commit the specialized repository under the author's own credential.

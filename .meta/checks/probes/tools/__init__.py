@@ -14,13 +14,18 @@ and asked one case at a time, and a failure names the case. The steps
 register here rather than beside the tools they exercise, because the gate
 over assertions should not take its imports from a test suite
 (stereorepo's DR-150). One module per probe, imported in the order the steps report in
-(stereorepo's DR-218).
+(stereorepo's DR-218). `test_brownfield` is scaffold-only, so it is imported last and only where
+it is present: a specialized portfolio has no adoption tool for it to probe (stereorepo's DR-305).
 """
-import checks.probes.tools.dereference  # noqa: I001  # reason: registration order is deliberate
+import pathlib  # noqa: I001  # reason: registration order is deliberate
+
+import checks.probes.tools.dereference
 import checks.probes.tools.search
 import checks.probes.tools.apm_compile
 import checks.probes.tools.terms
 import checks.probes.tools.test_specialization
-import checks.probes.tools.test_brownfield
 import checks.probes.tools.gate
-import checks.probes.tools.comments  # noqa: F401  # reason: registers check steps
+import checks.probes.tools.comments
+
+if (pathlib.Path(__file__).parent / "test_brownfield.py").is_file():
+    import checks.probes.tools.test_brownfield  # noqa: F401  # reason: registers check steps

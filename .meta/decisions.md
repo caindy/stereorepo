@@ -167,6 +167,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-302](assertions/decisions/DR-302.yaml) | A seat's shell commands run in Claude Code's sandbox, not under an allow-list | Adopted |
 | [DR-303](assertions/decisions/DR-303.yaml) | The loop gates only the Projects a change touches before it lands | Adopted |
 | [DR-304](assertions/decisions/DR-304.yaml) | A Project names its own LinkML schemas, and slot citations resolve against them | Adopted |
+| [DR-305](assertions/decisions/DR-305.yaml) | A portfolio keeps no step whose subject only the scaffold has | Adopted |
 
 ## Holes
 
@@ -220,6 +221,7 @@ and the query a reader in a file actually has.
 | [`.meta/checks/files/prose.py`](checks/files/prose.py) | [DR-144](assertions/decisions/DR-144.yaml), [DR-152](assertions/decisions/DR-152.yaml) |
 | [`.meta/checks/files/python.py`](checks/files/python.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-210](assertions/decisions/DR-210.yaml), [DR-263](assertions/decisions/DR-263.yaml), [DR-268](assertions/decisions/DR-268.yaml) |
 | [`.meta/checks/files/rendered.py`](checks/files/rendered.py) | [DR-201](assertions/decisions/DR-201.yaml) |
+| [`.meta/checks/files/scaffold.py`](checks/files/scaffold.py) | [DR-305](assertions/decisions/DR-305.yaml) |
 | [`.meta/checks/files/sources.py`](checks/files/sources.py) | [DR-150](assertions/decisions/DR-150.yaml) |
 | [`.meta/checks/files/templates.py`](checks/files/templates.py) | [DR-034](assertions/decisions/DR-034.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-183](assertions/decisions/DR-183.yaml) |
 | [`.meta/checks/files/wiki.py`](checks/files/wiki.py) | [DR-184](assertions/decisions/DR-184.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-231](assertions/decisions/DR-231.yaml) |
@@ -236,8 +238,9 @@ and the query a reader in a file actually has.
 | [`.meta/checks/probes/ruleset.py`](checks/probes/ruleset.py) | [DR-263](assertions/decisions/DR-263.yaml) |
 | [`.meta/checks/probes/tools/__init__.py`](checks/probes/tools/__init__.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-192](assertions/decisions/DR-192.yaml), [DR-204](assertions/decisions/DR-204.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-210](assertions/decisions/DR-210.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/probes/tools/apm_compile.py`](checks/probes/tools/apm_compile.py) | [DR-208](assertions/decisions/DR-208.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
-| [`.meta/checks/probes/tools/comments.py`](checks/probes/tools/comments.py) | [DR-171](assertions/decisions/DR-171.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-210](assertions/decisions/DR-210.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-223](assertions/decisions/DR-223.yaml), [DR-225](assertions/decisions/DR-225.yaml) |
+| [`.meta/checks/probes/tools/comments.py`](checks/probes/tools/comments.py) | [DR-171](assertions/decisions/DR-171.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-210](assertions/decisions/DR-210.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-223](assertions/decisions/DR-223.yaml), [DR-225](assertions/decisions/DR-225.yaml), [DR-305](assertions/decisions/DR-305.yaml) |
 | [`.meta/checks/probes/tools/dereference.py`](checks/probes/tools/dereference.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-192](assertions/decisions/DR-192.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
+| [`.meta/checks/probes/tools/lockstep.py`](checks/probes/tools/lockstep.py) | [DR-305](assertions/decisions/DR-305.yaml) |
 | [`.meta/checks/probes/tools/search.py`](checks/probes/tools/search.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/probes/tools/terms.py`](checks/probes/tools/terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml), [DR-279](assertions/decisions/DR-279.yaml) |
 | [`.meta/checks/probes/tools/test_specialization.py`](checks/probes/tools/test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml) |
@@ -290,7 +293,7 @@ and the query a reader in a file actually has.
 | [`.meta/schemas.md`](schemas.md) | [DR-003](assertions/decisions/DR-003.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-183](assertions/decisions/DR-183.yaml) |
 | [`.meta/search.py`](search.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-204](assertions/decisions/DR-204.yaml) |
 | [`.meta/terms.py`](terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml), [DR-279](assertions/decisions/DR-279.yaml) |
-| [`.meta/test_specialization.py`](test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml) |
+| [`.meta/test_specialization.py`](test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml), [DR-305](assertions/decisions/DR-305.yaml) |
 | [`.meta/vocabulary.md`](vocabulary.md) | [DR-051](assertions/decisions/DR-051.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-182](assertions/decisions/DR-182.yaml) |
 | [`.meta/wikisplain.py`](wikisplain.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-231](assertions/decisions/DR-231.yaml) |
 | [`.meta/work/authority.yaml`](work/authority.yaml) | [DR-008](assertions/decisions/DR-008.yaml) |

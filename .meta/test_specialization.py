@@ -27,7 +27,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from lib.bundle import Bundle, load_bundle
 
@@ -44,7 +44,10 @@ ROOT = META.parent
 FIXTURES_DIR = META / "fixtures" / "specialization"
 DEFAULT_TOKENS_PATH = FIXTURES_DIR / "tokens.json"
 TOKEN_RE = re.compile(r"__[A-Z0-9_]+__")
-SCAFFOLD_ONLY_PATHS = ("SPECIALIZE.md", "template", "bootstraps", "pair")
+SCAFFOLD_ONLY_PATHS = ("SPECIALIZE.md", "template", "bootstraps", "pair", ".meta/adapt.py",
+                       ".meta/lib/adapt", ".meta/checks/probes/tools/test_brownfield.py")
+"""Paths the scaffold has and a portfolio does not, relative to the root; the same paths as
+`checks.files.scaffold.SCAFFOLD_ONLY`, which spells a directory with a trailing slash."""
 
 NO_FIXTURE = "Tokens fixture file not found: {path}"
 """What `load_tokens` raises where nothing is at the path it was given."""
@@ -178,13 +181,21 @@ def run_command(
     return res.returncode, res.stdout, res.stderr
 
 
-def _copy_item(src: pathlib.Path, dest: pathlib.Path) -> None:
-    """Copies a source file or directory tree to destination path."""
-    if not src.exists():
+def _scaffold_only(path: pathlib.Path, root: pathlib.Path) -> bool:
+    """Whether `path` is one of `SCAFFOLD_ONLY_PATHS` below `root`."""
+    return path.is_relative_to(root) and path.relative_to(root).as_posix() in SCAFFOLD_ONLY_PATHS
+
+
+def _copy_item(src: pathlib.Path, dest: pathlib.Path, root: pathlib.Path = ROOT) -> None:
+    """Copies a file or tree to its destination, leaving out every scaffold-only path in it,
+    such as `.meta/lib/adapt/` inside `.meta/lib/`."""
+    if not src.exists() or _scaffold_only(src, root):
         return
     dest.parent.mkdir(parents=True, exist_ok=True)
     if src.is_dir():
-        shutil.copytree(src, dest, dirs_exist_ok=True)
+        def left_out(where: str, names: list[str]) -> list[str]:
+            return [name for name in names if _scaffold_only(pathlib.Path(where) / name, root)]
+        shutil.copytree(src, dest, dirs_exist_ok=True, ignore=left_out)
     else:
         shutil.copy2(src, dest)
 
@@ -326,10 +337,8 @@ def step_7_verify_scaffold_paths(target_path: pathlib.Path) -> int:
             return 1
 
     run_command(["git", "add", "."], target_path)
-    run_command(
-        ["git", "commit", "-m", "feat: specialize portfolio from stereorepo scaffold"],
-        target_path,
-    )
+    run_command(["git", "commit", "-m", "feat: specialize portfolio from stereorepo scaffold"],
+                target_path)
     return 0
 
 
@@ -388,39 +397,28 @@ def execute_specialization_test(
         return 1
 
     bundle: Bundle | None = None
-    if load_bundle is not None:
-        bundle_file = META / "bundle.yaml"
-        if bundle_file.is_file():
-            try:
-                bundle = load_bundle(bundle_file, repo_root=ROOT)
-            except (FileNotFoundError, ValueError, OSError) as exc:
-                print(
-                    f"test-specialization: warning — failed to load bundle: {exc}",
-                    file=sys.stderr,
-                )
+    bundle_file = META / "bundle.yaml"
+    if bundle_file.is_file():
+        try:
+            bundle = load_bundle(bundle_file, repo_root=ROOT)
+        except (FileNotFoundError, ValueError, OSError) as exc:
+            print(f"test-specialization: warning — failed to load bundle: {exc}", file=sys.stderr)
 
-    code = step_1_init_repo(target_path)
-    if code != 0:
-        return code
-    code = step_2_copy_inherited(target_path, inherited_tokens, verbose, bundle=bundle)
-    if code != 0:
-        return code
-    code = step_3_copy_template(target_path, bundle=bundle)
-    if code != 0:
-        return code
-    code = step_4_substitute_tokens(target_path, tokens)
-    if code != 0:
-        return code
-    code = step_5_bootstrap_project(target_path, lang, verbose)
-    if code != 0:
-        return code
-    code = step_6_render_portfolio(target_path)
-    if code != 0:
-        return code
-    code = step_7_verify_scaffold_paths(target_path)
-    if code != 0:
-        return code
-    return step_8_run_gate(target_path, verbose)
+    steps: tuple[Callable[[], int], ...] = (
+        lambda: step_1_init_repo(target_path),
+        lambda: step_2_copy_inherited(target_path, inherited_tokens, verbose, bundle=bundle),
+        lambda: step_3_copy_template(target_path, bundle=bundle),
+        lambda: step_4_substitute_tokens(target_path, tokens),
+        lambda: step_5_bootstrap_project(target_path, lang, verbose),
+        lambda: step_6_render_portfolio(target_path),
+        lambda: step_7_verify_scaffold_paths(target_path),
+        lambda: step_8_run_gate(target_path, verbose),
+    )
+    for step in steps:
+        code = step()
+        if code != 0:
+            return code
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:

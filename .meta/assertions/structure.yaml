@@ -499,6 +499,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-comments
     name: .meta/checks/probes/tools/comments.py
     path: .meta/checks/probes/tools/comments.py
+  - id: work:artifact/meta-checks-probes-tools-lockstep
+    name: .meta/checks/probes/tools/lockstep.py
+    path: .meta/checks/probes/tools/lockstep.py
   - id: work:artifact/meta-checks-probes-tools-terms
     name: .meta/checks/probes/tools/terms.py
     path: .meta/checks/probes/tools/terms.py
