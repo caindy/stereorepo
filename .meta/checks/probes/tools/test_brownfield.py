@@ -13,12 +13,14 @@ import os
 import pathlib
 import subprocess
 import tempfile
+from collections.abc import Mapping
 
 import yaml
 
 from checks.collect import META, Found, Passed, StepOutcome, check
 from checks.probes.harness import load_module
 from lib.adapt import (
+    AdoptionPlan,
     PathClassification,
     build_adoption_plan,
     load_product_config,
@@ -43,6 +45,14 @@ def _hash_directory(dir_path: pathlib.Path) -> dict[str, str]:
                 digest = hashlib.sha256(content).hexdigest()
                 hashes[str(file_path.relative_to(dir_path))] = digest
     return hashes
+
+
+def _misplanned(plan: AdoptionPlan,
+                expected: Mapping[str, PathClassification | None]) -> list[str]:
+    """One problem for each path the plan does not classify as `expected` says."""
+    got = {a.path: a.classification for a in plan.actions}
+    return [f"brownfield: {path} was planned {got.get(path)}, expected {want}"
+            for path, want in expected.items() if got.get(path) != want]
 
 
 def _check_empty_target(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]:
@@ -78,7 +88,6 @@ def _check_empty_target(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[s
 
 def _check_retains_and_integrations(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]:
     """Validates classification of retained product files and default integrations."""
-    problems: list[str] = []
     target_dir = tmp / "target_repo"
     target_dir.mkdir(parents=True)
 
@@ -106,29 +115,10 @@ def _check_retains_and_integrations(scaffold_dir: pathlib.Path, tmp: pathlib.Pat
         scaffold_dir=scaffold_dir,
     )
 
-    action_map = {a.path: a for a in plan.actions}
-
-    app_act = action_map.get("src/app.py")
-    if not app_act or app_act.classification != PathClassification.RETAIN:
-        problems.append("brownfield: src/app.py was not classified as RETAIN")
-
-    agents_act = action_map.get("AGENTS.md")
-    if not agents_act or agents_act.classification != PathClassification.INTEGRATE:
-        problems.append("brownfield: AGENTS.md was not classified as INTEGRATE")
-
-    readme_act = action_map.get("README.md")
-    if not readme_act or readme_act.classification != PathClassification.INTEGRATE:
-        problems.append("brownfield: README.md was not classified as INTEGRATE")
-
-    meta_act = action_map.get(".meta/README.md")
-    if not meta_act or meta_act.classification != PathClassification.RETAIN:
-        problems.append("brownfield: matching .meta/README.md was not classified as RETAIN")
-
-    claude_act = action_map.get("CLAUDE.md")
-    if not claude_act or claude_act.classification != PathClassification.RETAIN:
-        problems.append("brownfield: matching CLAUDE.md symlink was not classified as RETAIN")
-
-    return problems
+    retain, integrate = PathClassification.RETAIN, PathClassification.INTEGRATE
+    return _misplanned(plan, {"src/app.py": retain, "AGENTS.md": integrate,
+                              "README.md": integrate, ".meta/README.md": retain,
+                              "CLAUDE.md": retain})
 
 
 def _check_conflicts(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]:
@@ -155,21 +145,9 @@ def _check_conflicts(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]
 
     if not plan.has_conflicts:
         problems.append("brownfield: expected conflicts were not detected")
-
-    action_map = {a.path: a for a in plan.actions}
-
-    render_act = action_map.get(".meta/render.py")
-    if not render_act or render_act.classification != PathClassification.CONFLICT:
-        problems.append("brownfield: conflicting .meta/render.py not marked CONFLICT")
-
-    gem_act = action_map.get("GEMINI.md")
-    if not gem_act or gem_act.classification != PathClassification.CONFLICT:
-        problems.append("brownfield: symlink-to-file GEMINI.md not marked CONFLICT")
-
-    struct_act = action_map.get(".meta/assertions/structure.yaml")
-    if not struct_act or struct_act.classification != PathClassification.CONFLICT:
-        problems.append("brownfield: file-to-dir structure.yaml not marked CONFLICT")
-
+    problems.extend(_misplanned(plan, dict.fromkeys(
+        (".meta/render.py", "GEMINI.md", ".meta/assertions/structure.yaml"),
+        PathClassification.CONFLICT)))
     return problems
 
 
@@ -439,6 +417,22 @@ def _check_omits_scaffold_only(scaffold_dir: pathlib.Path, tmp: pathlib.Path) ->
     return problems
 
 
+def _check_template_items_named(scaffold_dir: pathlib.Path) -> list[str]:
+    """Validates that the step "Integrate the template items" names every template item.
+
+    An item is named when its target path appears in full between backticks,
+    so that `.meta/README.md` does not stand in for `README.md`.
+    """
+    step_id = "work:discipline-step/adoption/integrate-the-template-items"
+    disciplines = yaml.safe_load(
+        (scaffold_dir / ".meta" / "assertions" / "disciplines.yaml").read_text(encoding="utf-8"))
+    statement = next((step["statement"] for discipline in disciplines["disciplines"]
+                      for step in discipline["steps"] if step["id"] == step_id), "")
+    bundle = load_bundle(bundle_path=scaffold_dir / ".meta" / "bundle.yaml", repo_root=scaffold_dir)
+    return [f"brownfield: step Integrate the template items does not name {item.dest_path()}"
+            for item in bundle.template_items() if f"`{item.dest_path()}`" not in statement]
+
+
 def _check_portfolio_items(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> list[str]:
     """Validates that a target's own stakeholders are retained, the READMEs created, and
     neither `stakeholders/` nor the scaffold's example Role planned (stereorepo's DR-317)."""
@@ -448,14 +442,12 @@ def _check_portfolio_items(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> lis
     persona.write_text("# Ada\n", encoding="utf-8")
     plan = build_adoption_plan(target_dir=target_dir, scaffold_dir=scaffold_dir,
                                bundle_path=scaffold_dir / ".meta" / "bundle.yaml")
-    planned = {a.path: a.classification for a in plan.actions}
     expected: dict[str, PathClassification | None] = {
         "stakeholders/customers/ada.md": PathClassification.RETAIN, "stakeholders": None,
         "stakeholders/internal/architect/README.md": None} | {
         f"stakeholders/{readme}": PathClassification.CREATE
         for readme in ("README.md", "customers/README.md", "internal/README.md")}
-    return [f"brownfield: planned {planned.get(path)} for {path}, expected {want}"
-            for path, want in expected.items() if planned.get(path) != want]
+    return _misplanned(plan, expected)
 
 
 @check("brownfield adoption probes", pre=True)
@@ -473,6 +465,8 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
     8. A git target is planned from its tracked files, not its working tree.
     9. A portfolio item gets no action: the managed files in it are CREATE, the
        target's own files under it RETAIN (stereorepo's DR-317).
+    10. The Adoption Discipline's step "Integrate the template items" names every
+        template item in the bundle, so `ADOPT.md` says what step 5 copies.
 
     Neither a specialized portfolio nor a repository adopted from a plan has
     a copy of this step (stereorepo's DR-305), so it runs only in the scaffold.
@@ -496,5 +490,6 @@ def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutc
         problems.extend(_check_omits_scaffold_only(scaffold_dir, tmp))
         problems.extend(_check_tracked_files(scaffold_dir, tmp))
         problems.extend(_check_portfolio_items(scaffold_dir, tmp))
+    problems.extend(_check_template_items_named(scaffold_dir))
 
-    return Found(problems) if problems else Passed("9 adoption cases")
+    return Found(problems) if problems else Passed("10 adoption cases")

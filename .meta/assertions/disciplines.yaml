@@ -130,9 +130,20 @@ disciplines:
         name: Integrate the template items
         statement: >-
           Work through the plan's integrate and conflict entries by hand: no tool applies them,
-          except the `.gitignore` entry, which the sync has already merged. `README.md` and
-          `AGENTS.md` keep the product's content beside the conventions, and
-          `.meta/assertions/` takes the template's files with the placeholders filled. Then link
+          except the `.gitignore` entry, which the sync has already merged. The sync leaves out the
+          template items, each of which comes from the same path under the checkout's
+          `template/`: `.meta/README.md`, `.meta/assertions/structure.yaml`,
+          `.meta/assertions/domain_vocabulary.yaml`, `.meta/assertions/personas.yaml`,
+          `.meta/assertions/decisions/DR-001.yaml`, `issues/README.md`, `README.md` and
+          `AGENTS.md`. Where the repository already has its own `README.md` or `AGENTS.md`,
+          integrate the template's file into it: keep the product's content beside the template's
+          conventions. Copy the rest. Four placeholders wait to be filled, each an upper-case
+          name between double underscores: the portfolio's name, its slug, its description, and
+          why it exists.
+          `structure.yaml` and `domain_vocabulary.yaml` carry the name, slug and description, and
+          `README.md` and `AGENTS.md` the name and description. `DR-001.yaml` carries the name
+          and why it exists, but is copied only for its shape: "Record the adoption" rewrites it
+          and fills both there. Then link
           `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` to `AGENTS.md`.
       - id: work:discipline-step/adoption/move-harness-skills
         name: Move harness skills
