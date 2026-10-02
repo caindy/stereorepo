@@ -1,0 +1,64 @@
+decisions:
+  - id: work:decision/315
+    name: "DR-315 · `just sync` mirrors a checkout's managed items into a portfolio, removes what the bundle dropped, and never commits"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-lib-bundle-sync
+      - work:artifact/meta-lib-bundle-init
+      - work:artifact/meta-bundle
+      - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-checks-probes-tools-sync
+    context: >-
+      Nothing synced a portfolio with stereorepo. fitch-mvp was synced twice
+      by copying the bundle's managed items over it, which never deletes.
+      When DR-305 made `.meta/adapt.py`, `.meta/lib/adapt/` and the
+      brownfield probe scaffold-only, fitch-mvp kept its copies, and their
+      probe reported `?` until the developer removed them by hand.
+    alternatives:
+      - name: Copy the managed items over the portfolio, as before
+        chosen: false
+        reason: >-
+          A copy never deletes, so every file stereorepo removes or makes
+          scaffold-only stays in the portfolio until someone notices it.
+      - name: Replace each managed directory wholesale
+        chosen: false
+        reason: >-
+          It would delete the portfolio's untracked and ignored files inside
+          those directories, and copy the checkout's, such as `__pycache__/`.
+      - name: Mirror the tracked files, with the old bundle read from the portfolio
+        chosen: true
+        reason: >-
+          The checkout's git says what stereorepo ships, and the portfolio's
+          own `.meta/bundle.yaml`, read before the copy replaces it, says
+          what the last sync brought. Together they name every file to copy
+          and every file to remove, and the portfolio's git can recover
+          anything removed.
+    consequences:
+      - >-
+        `just sync <checkout>` (`.meta/bundle.py sync`) copies the files the
+        checkout tracks under each managed item, leaving out
+        `SCAFFOLD_ONLY_PATHS`. It removes each tracked portfolio file that a
+        managed item of the new bundle covers but the checkout lacks, that
+        only the old bundle's managed items covered, or that is
+        scaffold-only. It leaves template and symlink items, untracked and
+        ignored files, `.meta/baselines/` (DR-314) and every unmanaged path
+        alone, and prints each path it updated, added or removed.
+      - >-
+        It refuses, exiting non-zero and changing nothing, when the checkout
+        has no `.meta/bundle.yaml`, when the target holds `template/` and so
+        is the scaffold, or when `git status` reports a path it would write
+        or delete, an untracked file included. It never commits and never
+        re-renders: the developer reviews the diff, runs `just render`, and
+        commits.
+      - >-
+        A portfolio that has never synced has no `sync` recipe yet, so its
+        first sync runs the checkout's tool:
+        `<checkout>/.meta/bundle.py --root <portfolio> sync <checkout>`.
+    falsifier: >-
+      After a sync, a portfolio still holds a file that stereorepo removed
+      or made scaffold-only, or it has lost a file of its own outside the
+      managed items.
+    rationale: |-
+      What the checkout tracks is what stereorepo ships, and the bundle the
+      portfolio already holds is what it shipped last time, so the
+      difference between them is exactly what a sync must remove.

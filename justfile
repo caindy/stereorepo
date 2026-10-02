@@ -32,6 +32,10 @@ apm *args:
 bootstrap *args:
     uvx --python 3.13 --with pyyaml python .meta/bootstrap.py {{args}}
 
+# copy a stereorepo checkout's managed items here and remove what it dropped (stereorepo's DR-315)
+sync *args:
+    .meta/bundle.py sync {{args}}
+
 # the pair loop: carry issues to main (--once, --push, --flight SLUG, --model, --STAGE-model)
 pair *args:
     uv run --quiet --script pair/pair.py run {{args}}

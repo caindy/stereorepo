@@ -61,6 +61,11 @@ def justfile() -> str:
         "# instantiate a Project from a language Bootstrap on demand (stereorepo's DR-206)",
         "bootstrap *args:",
         "    uvx --python 3.13 --with pyyaml python .meta/bootstrap.py {{args}}",
+        "",
+        "# copy a stereorepo checkout's managed items here and remove what it dropped"
+        " (stereorepo's DR-315)",
+        "sync *args:",
+        "    .meta/bundle.py sync {{args}}",
     ]
 
     artifacts = {art["id"] for art in structure.get("artifacts") or [] if "id" in art}

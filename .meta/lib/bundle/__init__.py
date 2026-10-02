@@ -32,6 +32,25 @@ spells a directory with a trailing slash.
 """
 
 
+def under(relative: str, root: str) -> bool:
+    """Whether a repository-relative path is `root` or lies beneath it.
+
+    Args:
+        relative: A repository-relative path, in posix form.
+        root: A file or directory path, with or without a trailing slash.
+
+    Returns:
+        bool: True where `relative` equals `root` or starts with `root/`.
+    """
+    root = root.rstrip("/")
+    return relative == root or relative.startswith(f"{root}/")
+
+
+def scaffold_only(relative: str) -> bool:
+    """Whether a repository-relative path is under `SCAFFOLD_ONLY_PATHS`."""
+    return any(under(relative, path) for path in SCAFFOLD_ONLY_PATHS)
+
+
 class BundleError(Exception):
     """Base exception for installation bundle errors."""
 
@@ -142,14 +161,9 @@ class Bundle:
             bool: True where a managed item is the path or one of its parent
             directories, and the path is not under `SCAFFOLD_ONLY_PATHS`.
         """
-        def under(root: str) -> bool:
-            """Whether `relative` is `root` or lies beneath it."""
-            root = root.rstrip("/")
-            return relative == root or relative.startswith(f"{root}/")
-
-        if any(under(path) for path in SCAFFOLD_ONLY_PATHS):
+        if scaffold_only(relative):
             return False
-        return any(under(item.dest_path()) for item in self.managed_items())
+        return any(under(relative, item.dest_path()) for item in self.managed_items())
 
     def items_with_transformation(self, name: str) -> list[BundleItem]:
         """Returns all items requiring the specified transformation."""

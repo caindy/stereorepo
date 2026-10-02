@@ -502,6 +502,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-comments
     name: .meta/checks/probes/tools/comments.py
     path: .meta/checks/probes/tools/comments.py
+  - id: work:artifact/meta-checks-probes-tools-sync
+    name: .meta/checks/probes/tools/sync.py
+    path: .meta/checks/probes/tools/sync.py
   - id: work:artifact/meta-checks-probes-tools-lockstep
     name: .meta/checks/probes/tools/lockstep.py
     path: .meta/checks/probes/tools/lockstep.py
@@ -526,6 +529,9 @@ artifacts:
   - id: work:artifact/meta-lib-bundle-init
     name: .meta/lib/bundle/__init__.py
     path: .meta/lib/bundle/__init__.py
+  - id: work:artifact/meta-lib-bundle-sync
+    name: .meta/lib/bundle/sync.py
+    path: .meta/lib/bundle/sync.py
   - id: work:artifact/meta-dereference
     name: .meta/dereference.py
     path: .meta/dereference.py

@@ -39,6 +39,7 @@ from lib.bundle import (  # noqa: E402  # reason: sys.path order
     BundleItem,
     get_source_revision,
     load_bundle,
+    sync,
     validate_bundle,
 )
 
@@ -119,7 +120,31 @@ def _cmd_manifest(args: argparse.Namespace) -> int:
     return 0
 
 
-def main() -> None:
+def _cmd_sync(args: argparse.Namespace) -> int:
+    """Syncs the portfolio at `--root` from the stereorepo checkout named (stereorepo's DR-315)."""
+    source = pathlib.Path(args.source).resolve()
+    portfolio = pathlib.Path(args.root).resolve() if args.root else _META_DIR.parent
+    try:
+        changes = sync.plan(source, portfolio)
+    except (sync.SyncRefusedError, ValueError, OSError) as exc:
+        print(f"sync: refused, nothing changed: {exc}", file=sys.stderr)
+        return 1
+    try:
+        sync.apply(changes, source, portfolio)
+    except OSError as exc:
+        print(f"sync: failed part way, so the portfolio is partly synced: {exc}; "
+              "`git status` shows what changed", file=sys.stderr)
+        return 1
+    for verb, paths in (("updated", changes.updated), ("added", changes.added),
+                        ("removed", changes.removed)):
+        for path in paths:
+            print(f"{verb:8s}{path}")
+    print(f"sync: {len(changes.updated)} updated, {len(changes.added)} added, "
+          f"{len(changes.removed)} removed; nothing committed. Run `just render` next.")
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
     """CLI dispatcher for bundle operations."""
     parser = argparse.ArgumentParser(
         description="Inspect and validate the stereorepo installation bundle."
@@ -157,9 +182,21 @@ def main() -> None:
     manifest_p = subparsers.add_parser("manifest", help="Dump complete manifest as JSON")
     manifest_p.set_defaults(func=_cmd_manifest)
 
-    args = parser.parse_args()
-    sys.exit(args.func(args))
+    sync_p = subparsers.add_parser(
+        "sync",
+        help="Copy a stereorepo checkout's managed items into the portfolio at --root, "
+        "and remove what its bundle dropped",
+    )
+    sync_p.add_argument(
+        "source",
+        help="Path to the stereorepo checkout; under `just` a relative path is read "
+        "from the portfolio's root",
+    )
+    sync_p.set_defaults(func=_cmd_sync)
+
+    args = parser.parse_args(argv)
+    return int(args.func(args))
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
