@@ -321,3 +321,47 @@ whatever was hand-copied before them.
   without rendering: `apm package` and `rendered prose` should pass.
 - Read `ADOPT.md` as someone onboarding a second repository and check that
   every judgement fitch-mvp needed has a step.
+
+## Desk-check notes
+
+Second round, tried in fitch-mvp. Its ratchet entries moved to
+`.meta/baselines/comments.baseline.yaml` and survived both a first sync by
+`bundle.py --root . sync` and a second by `just sync`. Its `.gitignore` lines
+stayed outside the marked block, and a fresh worktree passed `apm package` and
+`rendered prose` without rendering. Three things did not hold. The seats
+cannot read fitch-mvp, so each note carries what it showed.
+
+- **`_probe_adopt` fails every portfolio's `meta` gate.** In fitch-mvp, after
+  the sync, `rendered artifact probes` fails with "assertions/disciplines.yaml
+  holds no Adoption Discipline". `_probe_adopt` in
+  `.meta/checks/probes/files/rendered.py` reads `assertions/disciplines.yaml`,
+  which only stereorepo has: a portfolio's Disciplines are under
+  `assertions/imported/`, which holds no Adoption. So the probe fails in every
+  portfolio, specialized or adopted. Its docstring says that in a portfolio it
+  must render no `ADOPT.md`, which is what it should check there instead.
+  Wanted: the probe passes in a portfolio, and checks there that
+  `pages.adopt()` writes nothing. Also find out why `just test-specialization`,
+  whose step 8 runs a specialized portfolio's gate, did not catch this, and
+  close that gap so that a probe failing only in a portfolio fails before it
+  lands.
+- **A sync deletes the portfolio's compiled skills.** `.meta/.apm/` is a
+  managed item, so each sync removes what render compiled there from the
+  portfolio's own `.claude/skills/`. In fitch-mvp both syncs reported
+  "removed .meta/.apm/skills/generate-decision-graph/SKILL.md" and the same
+  for `generate-schema-code`, and `just render` put them back. Nothing is
+  lost, but between the sync and the render the working tree shows two
+  deleted skills, and a sync that is committed before rendering commits
+  their deletion. Wanted: a sync leaves the compiled output of the
+  portfolio's own skills alone, so that a sync followed by nothing shows
+  only stereorepo's changes.
+- **`ADOPT.md` step 5 does not say where the template items come from.** It
+  says `.meta/assertions/` "takes the template's files with the placeholders
+  filled", but the sync copies only managed items, and the step does not
+  name the checkout's `template/` or the placeholders to fill
+  (`__PORTFOLIO_NAME__`, `__PORTFOLIO_SLUG__`, `__PORTFOLIO_DESCRIPTION__`,
+  `__WHY_THIS_PORTFOLIO_EXISTS__`). In fitch-mvp the first round copied them
+  with `lib.bundle`'s `template_items()`. Wanted: the step names where the
+  template items are, which of them a repository with its own `README.md` and
+  `AGENTS.md` integrates rather than copies, and the placeholders, so that
+  someone onboarding a second repository need not read `bundle.yaml` to find
+  out.
