@@ -77,7 +77,7 @@ repeated or side-by-side comparisons (`prompts/primary.md`,
    | backlog (file in `underway/`) | `difficulty` is set; a `hard` Issue has children | `todo/`; for `hard`, landing the children, with the parent moved back to `backlog/` as a Flight |
    | Flight check (file in `underway/`) | a new child for each gap, or a new `## Desk-check brief` section, and nothing outside `issues/` changed; after desk-check notes, a child for each note listed in one new `## Desk-check children` section, and no brief | landing; the Flight goes to `desk-check/` unless a child left it waiting |
    | `todo/` | a `## The plan` section | `in-progress/` |
-   | `in-progress/` | code outside `issues/` changed, and the gate of what it touches passes after a rebase onto `main` | `desk-check/` for `developer`, otherwise landing |
+   | `in-progress/` | code outside `issues/` changed, and the gate of what it touches passes after a rebase onto `main` | `desk-check/` for `developer`, otherwise landing; a landing overtaken by another whose rebase then conflicts leaves the Issue in `done/`, and the next run sends it back to `in-progress/`. No turn runs in `done/` |
    | `desk-check/` | `just pair-accept` | landing; `just pair-resume` sends it back to `in-progress/`, as does an accept whose gate fails or whose rebase conflicts. No turn runs in this stage. A Flight here holds nothing: see below |
 
    If the requirement does not hold, acceptance is cleared and the next turn is

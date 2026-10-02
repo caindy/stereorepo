@@ -1017,6 +1017,75 @@ class LoopTest(unittest.TestCase):
         log = sh(b.loop.wt, "log", "--format=%s", "-3")
         self.assertIn("developer: edits on h", log)
 
+    def main_edits_a(self, repo: Path) -> None:
+        """Another process lands a change to `a.txt` on `main`."""
+        write("a.txt", "main's")(repo)
+        sh(repo, "add", "-A")
+        sh(repo, "commit", "-q", "-m", "main's a.txt")
+
+    def test_a_landing_overtaken_and_conflicting_goes_back_to_in_progress(
+        self,
+    ) -> None:
+        """`main` moves while the Issue lands from `done/`, and the rebase conflicts.
+
+        `start` lands too, so `before_land` holds a quiet action for it first.
+        """
+        b = self.b
+        b.issue("backlog", "h", "Ordinary")
+        b.before_land = [quiet, self.main_edits_a]
+        b.script(
+            ("primary", front("h", difficulty="easy")),
+            ("secondary", quiet),
+            ("primary", append("h", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "x")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "paused")
+        st = b.state()
+        self.assertEqual((st.stage, st.retry), ("done", None))
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.run(once=True), "stopped")
+        self.assertEqual(b.state().stage, "in-progress")
+        self.assertEqual(board.locations(b.loop.wt, "h"), ["in-progress"])
+        self.assertIn("Implement issues/in-progress/h.md", b.sent[-1][1])
+        self.assertIn("This came back from done/", b.sent[-1][1])
+        self.assertIn("conflicts with main", b.sent[-1][1])
+        self.assertNotIn("The developer changed things", b.sent[-1][1])
+
+    def test_an_accept_overtaken_and_conflicting_goes_back_to_its_desk_check(
+        self,
+    ) -> None:
+        """`main` moves while an accepted Issue lands, and the rebase conflicts.
+
+        The developer resolves the conflict in the worktree, as the pause asks,
+        and the changed code goes back under their check.
+        """
+        b = self.b
+        b.issue("backlog", "h", "Developer", difficulty="developer")
+        b.before_land = [quiet, self.main_edits_a]
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("h", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "x")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(), "desk-check")
+        self.assertEqual(b.loop.accept(), "paused")
+        st = b.state()
+        self.assertEqual((st.stage, st.retry), ("done", None))
+        sh(b.loop.wt, "rebase", "-q", "-X", "theirs", "main")
+        b.script(("primary", quiet), ("secondary", quiet))
+        self.assertEqual(b.loop.run(), "desk-check")
+        st = b.state()
+        self.assertEqual((st.stage, st.retry), ("desk-check", "desk-check"))
+        self.assertEqual(board.locations(b.loop.wt, "h"), ["desk-check"])
+        self.assertIn("This came back from done/", b.sent[-2][1])
+        self.assertIn("The developer changed things", b.sent[-2][1])
+
     def test_a_hard_issue_is_split_into_backlog_children(self) -> None:
         b = self.b
         b.issue("backlog", "big", "Big")

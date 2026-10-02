@@ -463,24 +463,31 @@ class Loop:
         outcome = self.merge(st, force_gate=changed)
         if outcome:
             return outcome
-        self.leave_desk_check(st, st.note)
+        self.send_back(st, st.note)
         return self.work(st)
 
-    def leave_desk_check(self, st: State, why: str) -> None:
-        """Send an Issue that left its desk check without landing back to the pair.
+    def send_back(self, st: State, why: str) -> None:
+        """Send an Issue left in `desk-check` or `done` back to the pair.
 
-        A `developer` Issue goes back to `in-progress`, and a Flight to its
-        Flight check in `underway/`; no turn runs in `desk-check`. The note
-        says so, followed by `why`, and by the developer's edits if there are
-        any. Those are absorbed before the move, because `move` resets
-        `st.head`, and a conflict the developer resolved and committed would
-        then no longer read as theirs.
+        A Flight goes back to its Flight check in `underway/`, and any other
+        Issue to `in-progress`; no turn runs in `desk-check` or `done`. An
+        Issue is left in `done` when its landing is overtaken by another and
+        the rebase onto the new `main` then conflicts: `merge` has already
+        moved it there. A `developer` Issue sent back from either stage goes
+        to its desk check again once the pair agrees `in-progress`. The note
+        says where the Issue came back from, followed by `why`, and by the
+        developer's edits if there are any. Those are absorbed before the
+        move, because `move` resets `st.head`, and a conflict the developer
+        resolved and committed would then no longer read as theirs.
         """
+        came_from = (
+            "its desk check" if st.stage == "desk-check" else f"{home(st.stage)}/"
+        )
         absorbed = self.absorb_developer(st)
         to = FLIGHT_CHECK if board.children(self.wt, "HEAD", st.slug) else "in-progress"
         self.move(st, to, into=home(to))
         parts = [
-            f"This came back from its desk check to {home(to)}/ without landing.",
+            f"This came back from {came_from} to {home(to)}/ without landing.",
             why,
         ]
         if absorbed:
@@ -676,8 +683,8 @@ class Loop:
                 return self.kick_back(st, None)
             elif st.retry == GROOMING:
                 st.turn = 0
-            if st.stage == "desk-check":
-                self.leave_desk_check(st, st.paused or "")
+            if st.stage in ("desk-check", "done"):
+                self.send_back(st, st.paused or "")
             st.retry = st.paused = None
             while True:
                 if self.stop_requested:
