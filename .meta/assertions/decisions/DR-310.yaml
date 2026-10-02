@@ -1,0 +1,48 @@
+decisions:
+  - id: work:decision/310
+    name: "DR-310 · An Issue lands by a local squash-merge to `main`, with no pull request"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+      - work:artifact/agents
+    context: >-
+      Under the old discipline work reached `main` through a pull request, so
+      every transition was a GitHub round-trip, a session waited on its pull
+      request by polling, and rebases and answers to review were separate
+      runs. With the seats pairing in one worktree (DR-309), the review a pull
+      request held already happens in the turns. The question was how an
+      Issue's branch reaches `main`.
+    alternatives:
+      - name: A pull request on GitHub for each Issue
+        chosen: false
+        reason: >-
+          It puts a network service and its polling between the loop and
+          `main`, to hold a review the pair has already done.
+      - name: A merge of the branch's commits as they stand
+        chosen: false
+        reason: >-
+          Every seat's turn is a commit, so `main` would carry the pair's
+          working history rather than one change per Issue.
+      - name: A local rebase and squash onto `main`, fast-forwarded in the developer's checkout
+        chosen: true
+        reason: >-
+          `main` gets one commit per Issue, including the move to `done/`, and
+          nothing leaves the machine unless asked to. The cost is that no
+          review lives on GitHub: what the seats argued is in the Issue file,
+          and the branch's own commits are not kept.
+    consequences:
+      - >-
+        The loop rebases the branch onto `main`, gates what the branch touches
+        (DR-303), squashes it, and fast-forwards `main` with `--ff-only`, which
+        refuses rather than overwrite the developer's local edits. A
+        `developer` Issue first waits at its desk check for `just pair-accept`.
+      - >-
+        `just pair --push` pushes `main` after each landing; otherwise nothing
+        is pushed.
+    falsifier: >-
+      The developer keeps needing a seat's individual commits after an Issue
+      has landed.
+    rationale: |-
+      The pair already reviewed the change, so landing it is a local git
+      operation, not a conversation with a service.

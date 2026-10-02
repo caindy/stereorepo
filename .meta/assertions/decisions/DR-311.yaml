@@ -1,0 +1,41 @@
+decisions:
+  - id: work:decision/311
+    name: "DR-311 · A repository is the unit of parallelism, and within it Issues run one at a time"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+    context: >-
+      One developer runs the loop over several repositories. The question was
+      where work may happen at once: across Issues in one repository, or only
+      across repositories.
+    alternatives:
+      - name: Several Issues at once in one repository, each in its own worktree
+        chosen: false
+        reason: >-
+          Each landing would rebase the others, their rebases would conflict in
+          the code they share, and the developer would answer desk checks
+          against a `main` that kept moving.
+      - name: One Issue at a time in a repository, and parallel work across repositories
+        chosen: true
+        reason: >-
+          Serial work leaves the seats one worktree and nothing to
+          synchronise, and a repository has one board. The cost is that Issues
+          in one repository never run at once, however independent they are.
+    consequences:
+      - >-
+        The loop holds `.pair/run.lock`, so two loops cannot work Issues in one
+        repository at once. A grooming pass changes no code and runs alongside
+        the loop in its own worktree (DR-300).
+      - >-
+        The running order in `issues/backlog/ORDER` says which Flight or
+        standalone Issue comes next (DR-299). A `waits_on` entry naming another
+        repository's Issue holds its Issue until the developer removes it
+        (DR-301).
+    falsifier: >-
+      A repository's backlog routinely holds independent Issues that wait
+      only because another is underway, long enough that the developer splits
+      the repository to get them run.
+    rationale: |-
+      Parallelism is bought where it costs no coordination, between
+      repositories that share nothing.

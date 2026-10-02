@@ -1,0 +1,56 @@
+decisions:
+  - id: work:decision/307
+    name: "DR-307 · Agreement is a quiet turn, and sending an Issue back is a `Needs elaboration` section, never a verdict"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+    context: >-
+      A supervisor that decides from what it observes (DR-306) still has to
+      learn when the two seats are done with a stage, and when an Issue cannot
+      be done as written, without asking either seat to tell it. Both seats
+      write code, and a seat that finds a problem in the other's work fixes it
+      rather than describing it.
+    alternatives:
+      - name: A hand-off command the seat runs to end its turn
+        chosen: false
+        reason: >-
+          A seat that forgets to run it stalls the loop. The supervisor has to
+          decide whose turn it is.
+      - name: A `verdict:` field in the Issue file
+        chosen: false
+        reason: >-
+          It brings back a coder and a reviewer, which pairing does away with,
+          and it is protocol for the seats to carry.
+      - name: A semaphore, such as the Open Knowledge Format's `verified` fields
+        chosen: false
+        reason: >-
+          Any semaphore is protocol for the agents to carry, which is what
+          stalled the choreography DR-306 replaced.
+      - name: A quiet turn after a turn that changed something, and sending back as a consequence
+        chosen: true
+        reason: >-
+          A turn that changes nothing accepts the state it found. When a quiet
+          turn follows a change, the second seat has seen the change and let
+          it stand, and the stage advances if its requirement holds. A seat
+          that judges an Issue cannot be done as written writes a `Needs
+          elaboration` section saying why, and the supervisor sends the Issue
+          back; nobody rules on the other seat's work. The cost is that a seat
+          that disagrees must say so by changing something, and a pair that
+          keeps changing a stage runs it to its round cap.
+    consequences:
+      - >-
+        When both seats have accepted the same state, the stage advances with
+        `git mv` if its requirement holds. An edit the developer makes between
+        turns clears acceptance for both seats.
+      - >-
+        A `Needs elaboration` section, or a stage that runs past its round
+        cap, sends the Issue to `issues/backlog/` on `main` with that section
+        and without its code. It sits out of the running order until the
+        developer answers the section and removes it.
+    falsifier: >-
+      Seats go quiet on states they would have changed, so stages advance on
+      work neither seat accepts.
+    rationale: |-
+      Agreement and refusal are read from the tree, as every other
+      transition is, so neither is something a seat has to remember to say.

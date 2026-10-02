@@ -1,0 +1,56 @@
+decisions:
+  - id: work:decision/312
+    name: "DR-312 · The fork kept the knowledge and quality disciplines, and a bootstrap is a reference and an audit for a brownfield product"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/agents
+      - work:artifact/meta-bootstrap
+      - work:artifact/bootstraps-python-readme
+      - work:artifact/bootstraps-rust-readme
+    context: >-
+      Removing the old delivery discipline removed its verbs, its vocabulary,
+      its records and its workflows. The question was what else went with it,
+      and how the bootstraps relate to a product that already exists.
+    alternatives:
+      - name: Remove everything that came with the old delivery discipline
+        chosen: false
+        reason: >-
+          The knowledge and quality disciplines did not depend on how work was
+          delivered, and they worked.
+      - name: Impose a bootstrap on a brownfield product
+        chosen: false
+        reason: >-
+          An existing product has its own build and gate, and forcing a
+          bootstrap over it replaces working tooling for the sake of
+          uniformity.
+      - name: Keep the disciplines that worked, and use the bootstraps as a reference and an audit for an existing product
+        chosen: true
+        reason: >-
+          The Diátaxis compass and knowledge management, the Ubiquitous
+          Language with one wiki page for every term, technical writing and
+          literate programming, the `wikisplain` and `search` tools, the gate
+          contract, the bootstraps and distribution through APM all survive.
+          An audit is to compare an existing product with the reference, and
+          each gap it finds is to become an Issue in the backlog. The cost is
+          that two products need not look alike, so reading one product's
+          tooling teaches nothing about another's beyond what the gate
+          contract fixes.
+    consequences:
+      - >-
+        A greenfield product still gets a gate on its first day from a
+        bootstrap.
+      - >-
+        The audit is not built yet. `.meta/adapt.py` plans how stereorepo is
+        installed into an existing repository, but nothing yet compares that
+        repository's products with a bootstrap and reports the gaps. Until it
+        exists, a brownfield product keeps its own tooling unexamined.
+      - >-
+        Every gate reports each step in one shape, so anyone who can read one
+        Project's gate can read every other's, whether or not it came from a
+        bootstrap.
+    falsifier: >-
+      Brownfield products that took the audit's Issues keep drifting from the
+      reference in ways the audit does not report.
+    rationale: |-
+      What did not depend on delivery stayed, and consistency across products
+      is checked rather than imposed.

@@ -1,0 +1,58 @@
+decisions:
+  - id: work:decision/306
+    name: "DR-306 · A supervisor that is a program carries an Issue to `main`, deciding every transition from what it observes"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+      - work:artifact/justfile
+    context: >-
+      The delivery discipline this repository forked away from ran as a
+      choreography: nothing coordinated the parts, and each GitHub Actions
+      workflow reacted to an event by starting an agent from cold. The state
+      of the work lived in labels, assignees, review requests and threads,
+      and the agents were expected to drive it themselves: set labels, request
+      reviews, answer and resolve threads, mark drafts ready. It cost a cold
+      start and a discarded prompt cache on every hand-off, a GitHub
+      round-trip and a poll on every transition, and a reviewer that described
+      fixes in English for another run to carry out. Worse, the agents got
+      stuck on protocol state that was never part of the work, and whenever an
+      agent ignored an instruction, the work stalled. Each record written to
+      patch the mechanics followed one more such stall. The question was what
+      should decide that an Issue moves on.
+    alternatives:
+      - name: A choreography, in which the agents drive the state machine through events
+        chosen: false
+        reason: >-
+          It is what stalled: a state machine that needs every agent to follow
+          its instructions stops at the first one that does not.
+      - name: An agent at the top, a model that orchestrates the seats
+        chosen: false
+        reason: >-
+          A model deciding transitions can ignore an instruction as the seats
+          can, so it moves the failure up a level instead of removing it.
+      - name: A deterministic supervisor deciding from what it can observe for itself
+        chosen: true
+        reason: >-
+          The supervisor reads where the Issue file sits, whether a turn
+          changed anything, and the exit code of the gate. A seat that ignores
+          an instruction cannot stall it, because it asks nothing of the seat.
+          The cost is that the supervisor cannot act on what it cannot
+          observe, so every requirement of a stage has to be stated as
+          something visible in the tree or in git.
+    consequences:
+      - >-
+        `just pair` runs the supervisor, `pair/loop.py`. Two seats take one
+        Issue at a time from `issues/backlog/` to `main`, and each turn are
+        told only the Issue file, what the stage is for and what changed since
+        their last turn. They are never told a protocol exists.
+      - >-
+        No agent sits at the top. The supervisor holds nothing but a lock, its
+        state file and its process handles, and the developer may edit any
+        file between turns.
+    falsifier: >-
+      Issues regularly stop moving because a seat failed to do something the
+      supervisor relies on, rather than because the work itself is unfinished.
+    rationale: |-
+      An agent that ignores an instruction can only stall a protocol it is
+      part of, so the agents are given no part in it.

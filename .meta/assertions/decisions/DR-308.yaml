@@ -1,0 +1,62 @@
+decisions:
+  - id: work:decision/308
+    name: "DR-308 · An Issue's stage is the directory its file sits in, and its front matter holds only `difficulty`, `waits_on` and `parent`"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+      - work:artifact/agents
+    context: >-
+      The supervisor (DR-306) has to read where an Issue stands, and the
+      developer has to add work without interrupting anything. Under the old
+      discipline the state lived in GitHub labels and assignees, which an
+      agent had to set and which git did not carry. The question was where an
+      Issue's stage and its other facts are kept.
+    alternatives:
+      - name: GitHub Issues, with the stage in labels or a status field
+        chosen: false
+        reason: >-
+          State that git does not carry takes a network round-trip to read and
+          an agent to set, and it can disagree with the history.
+      - name: Front matter carrying `state`, `phase`, `round`, `landed` or `branch`
+        chosen: false
+        reason: >-
+          Each can be derived from the directory or from git, and a field that
+          repeats an observable fact can disagree with it.
+      - name: Numeric ids
+        chosen: false
+        reason: >-
+          A number has to be reserved before the Issue is written, so adding
+          work could collide; the filename slug is the id instead.
+      - name: The Open Knowledge Format as the Issue file format
+        chosen: false
+        reason: >-
+          Its one required field, `type`, costs little, but its generated
+          `index.md` and `log.md` would conflict between `main` and an Issue's
+          branch. Conformance can be added later if it proves useful.
+      - name: A board of directories an Issue file is moved between with `git mv`, with front matter only for what cannot be observed
+        chosen: true
+        reason: >-
+          Moving a file with `git mv` keeps the board and the history
+          consistent, and the directory is the only record of the stage.
+          `difficulty` is an estimate, and `waits_on` and `parent` are intent,
+          which nothing else records. The cost is that every view of the
+          board, such as `just pair-status`, is computed from the files each
+          time, because nothing stores it.
+    consequences:
+      - >-
+        The board is `issues/`, and its stages are `roadmap`, `backlog`,
+        `underway`, `todo`, `in-progress`, `desk-check` and `done`. The board
+        on `main` is the authoritative one. The developer adds Issues to
+        `roadmap` and `backlog`, and the supervisor makes every other move.
+      - >-
+        Adding to the backlog is committing a file to `issues/backlog/` on
+        `main`, and its filename slug is its id. All three front-matter fields
+        are optional, and `difficulty` is one of `easy`, `medium`, `hard` or
+        `developer`.
+    falsifier: >-
+      A fact the loop needs keeps being added to front matter because neither
+      the directory nor git can give it.
+    rationale: |-
+      Record nothing that can be observed: the stage is where the file is,
+      and git holds the rest.

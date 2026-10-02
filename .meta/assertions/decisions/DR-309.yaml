@@ -1,0 +1,50 @@
+decisions:
+  - id: work:decision/309
+    name: "DR-309 · The seats are the vendors' own harness CLIs, each keeping one session for the Issue, in one shared worktree"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+    context: >-
+      Under the old discipline every turn of work was a new process on a new
+      runner with a new prompt, so each one discarded the prompt cache, and a
+      rebase or an answer to review was a run of its own. The supervisor
+      (DR-306) needs two seats that take many turns on one Issue. The question
+      was what a seat is, and how long it lives.
+    alternatives:
+      - name: An agent SDK driving the model directly
+        chosen: false
+        reason: >-
+          It gives up subscription billing, and the prompts and tooling the
+          vendors build into their own harnesses.
+      - name: A fresh process for every turn
+        chosen: false
+        reason: >-
+          It is the cold start that discarded the cache on every hand-off.
+      - name: The vendors' harness CLIs, one long-lived session per seat, both in one worktree
+        chosen: true
+        reason: >-
+          A CLI draws on a subscription and brings its vendor's harness, and a
+          session kept for the whole Issue keeps the prompt cache warm. The
+          work is serial (DR-311), so one worktree has nothing to synchronise
+          between turns. The cost is an adapter for each harness, and a loop
+          bound to what each CLI's headless mode exposes.
+    consequences:
+      - >-
+        A seat is a `claude -p` process in stream-json mode, running in
+        `worktrees/pair` on the branch `pair/<slug>`. It loads the repository's
+        own settings, `CLAUDE.md` and skills, and nothing from the developer's
+        machine, and its shell commands run in the harness's sandbox (DR-302).
+      - >-
+        A seat keeps its session while the model stays the same. A stage that
+        names another model starts the seat fresh on it, which costs the seat
+        its conversation and a fresh write to the prompt cache.
+      - >-
+        Claude Code is the first harness. A harness that does not draw on
+        subscription tokens is not a candidate.
+    falsifier: >-
+      Most turns start fresh sessions anyway, so the cache a long session keeps
+      warm is rarely read.
+    rationale: |-
+      The seat is the harness its vendor already built, kept alive for the
+      Issue so that each turn starts warm.

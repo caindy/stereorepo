@@ -1,0 +1,63 @@
+decisions:
+  - id: work:decision/313
+    name: "DR-313 · A term is the common word where it would be guessed right, and a coined word only for a new concept"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-assertions-vocabulary
+      - work:artifact/wiki-stereorepo-ubiquitous-language
+      - work:artifact/agents
+    context: >-
+      The ontology of work the old discipline built (Actor, Agency, Job, Role,
+      Capability, Challenge) coined words that every session had to be
+      taught, and its vocabulary became clutter for every reader of
+      `AGENTS.md`. A *Challenge* was a GitHub Issue with a difficulty label,
+      and the word carried wrong defaults: a contest, an objection,
+      difficulty. The question was how a term is chosen, so that the fork's
+      vocabulary stays small.
+    alternatives:
+      - name: Keep *Challenge* as the unit of work
+        chosen: false
+        reason: >-
+          A reader guesses its meaning wrong until it is taught, and the
+          directory, the file and the prose already say *issue*.
+      - name: Keep *Epic* as a type of Issue
+        chosen: false
+        reason: >-
+          A split Issue is an Issue with children, which their `parent:` front
+          matter already expresses, and *parent issue* needs no teaching.
+      - name: Carry inherited terms into the fork untested
+        chosen: false
+        reason: >-
+          Most of the ontology of work named concepts the fork drops, and its
+          coined structure would stay as words with nothing to name.
+      - name: The common word where it would be guessed right, a coined word only for a new concept, and inherited terms re-tested
+        chosen: true
+        reason: >-
+          A common word brings a meaning a model or an engineer already has,
+          so it needs a definition only where this usage narrows it, and that
+          definition says what it is not. A coined word is paid for once, in
+          the ontology, and only a concept that is new earns one: *seat*,
+          *quiet turn* and *desk check* do. The cost is that a common word's
+          wrong defaults must be written down: an Issue has no number, no
+          status, labels or assignee, and no comment thread.
+    consequences:
+      - >-
+        *Issue* replaces *Challenge*, which is retired with no synonym. An
+        Issue's slug is its id, its stage is its directory, and the seats'
+        notes and the developer's desk-check notes are written in its file.
+      - >-
+        *Epic* is not a type. An Issue that other Issues name in `parent:` is a
+        Flight. *Flight* is coined, where *parent issue* is not enough, because
+        the concept is new: a Flight runs its parts in place, then is checked
+        as a whole against its own "Done when", and waits at a desk check of
+        its own that does not hold the loop.
+      - >-
+        Each term still carries one wiki page (DR-190), a word that names no
+        new concept is not minted, as *stakeholder* is not (DR-041), and
+        unminted candidates are audited as before (DR-234).
+    falsifier: >-
+      Sessions keep misreading a common word the vocabulary chose, in the way
+      its definition says it does not mean.
+    rationale: |-
+      A word a reader already knows costs nothing to teach, so a word is
+      coined only where nothing known will do.
