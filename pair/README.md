@@ -93,7 +93,9 @@ repeated or side-by-side comparisons (`prompts/primary.md`,
    developer's checkout with `--ff-only`, which refuses rather than overwrite local
    edits. The squashed commit sits on the `main` the branch was rebased onto,
    so a commit made on `main` while the gate runs is never reverted: the loop
-   rebases onto it and gates again. A Flight that still has a child outside
+   rebases onto it and gates again. Where that gate fails, the Issue stays in
+   its stage and the next turn goes to the primary seat with the gate's
+   output, as for a failed requirement. A Flight that still has a child outside
    `done/` lands back in `backlog/` instead, and keeps its place in `ORDER`.
 
 An Issue that other Issues name in `parent:` is a Flight. It is not ripe while

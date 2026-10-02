@@ -540,6 +540,33 @@ class LoopTest(unittest.TestCase):
         self.assertIn("FAILED: test_widget", b.sent[7][1])
         self.assertEqual(b.gate_runs, 2)
 
+    def test_a_gate_that_fails_while_landing_goes_to_the_primary(self) -> None:
+        b = self.b
+
+        def commits(repo: Path) -> None:
+            write("b.txt", "main\n")(repo)
+            sh(repo, "add", "b.txt")
+            sh(repo, "commit", "-q", "-m", "add b.txt")
+
+        b.issue("backlog", "x", "X", difficulty="easy")
+        b.gates = [True, False]
+        b.during_gate = [commits]
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("x", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "1")),
+            ("secondary", write("a.txt", "2")),
+            ("primary", quiet),
+            ("primary", write("a.txt", "3")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.sent[7][0], "primary")
+        self.assertIn("FAILED: test_widget", b.sent[7][1])
+        self.assertEqual(b.gate_runs, 3)
+
     def test_an_unmet_requirement_other_than_the_gate_goes_to_the_other_seat(
         self,
     ) -> None:

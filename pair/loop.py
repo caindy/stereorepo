@@ -1260,7 +1260,11 @@ class Loop:
         """Squash the branch onto `main` and fast-forward the developer's checkout.
 
         When the other process lands first, the branch is rebased onto the new
-        `main` and landed again, up to `LAND_TRIES` times.
+        `main` and landed again, up to `LAND_TRIES` times. Where the gate runs,
+        because a rebase moved the branch or `force_gate` is set, and fails
+        with the Issue still in its stage, nothing lands: the gate's output
+        becomes the note, acceptance is cleared, the primary seat takes the
+        next turn, and the result is `None`.
 
         A landing logs `landed` once it is on `main`. Only a Flight lands in
         `desk-check/`, so that landing also logs `desk-check`; a `developer`
@@ -1282,7 +1286,7 @@ class Loop:
                             "main moved and the gate now fails on the squashed issue",
                             "merge",
                         )
-                    st.approvals, st.note = [], failure
+                    st.approvals, st.note, st.next_role = [], failure, "primary"
                     self.save(st)
                     return None
             force_gate = False
