@@ -86,3 +86,26 @@ finds it:
   board replace them.
 - A repository may use another version-control layer over git. The procedure
   checks that layer holds nothing git lacks before removing it.
+- No tool applies the plan. The first pass copied `managed_items`,
+  `template_items` and `symlink_items` from `lib.bundle` as
+  `test_specialization.py` does, and integrated `.gitignore`, `AGENTS.md` and
+  `README.md` by hand.
+- stereorepo's `.gitignore` ignores `.agents/` as a compiled harness
+  directory. fitch-mvp tracks two hand-written skills there. The integrated
+  `.gitignore` leaves `.agents/` out of the ignore list, and where a product's
+  own skills belong is still open.
+- The template's DR-001 says the portfolio was specialized from stereorepo.
+  An adopted repository needs an entry that says it was adopted, and
+  rejects starting a new repository.
+- An existing product needs a gate that prints Article 21 lines, and
+  `just bootstrap` only creates seed projects. fitch-mvp has a hand-written
+  `gate.py` that wraps its build and pytest.
+- The gate in the loop's worktree has no `.venv`. A portfolio cannot declare
+  the `just setup` recipe the loop runs, because the `justfile` is rendered
+  (`.meta/lib/render/writers.py`). fitch-mvp avoids the need: its gate runs
+  under `uv run --with-requirements`.
+- An existing codebase fails the comment, suppression and size ratchets on
+  its first gate. The checks' own remedy is a baseline under `.meta/checks/`,
+  which the bundle owns as managed, so a sync could overwrite it.
+- A Product needs a primary Persona, and fitch-mvp has none yet, so its
+  structure declares Projects and no Product.
