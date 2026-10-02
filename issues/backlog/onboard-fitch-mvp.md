@@ -357,9 +357,8 @@ cannot read fitch-mvp, so each note carries what it showed.
 - **`ADOPT.md` step 5 does not say where the template items come from.** It
   says `.meta/assertions/` "takes the template's files with the placeholders
   filled", but the sync copies only managed items, and the step does not
-  name the checkout's `template/` or the placeholders to fill
-  (`__PORTFOLIO_NAME__`, `__PORTFOLIO_SLUG__`, `__PORTFOLIO_DESCRIPTION__`,
-  `__WHY_THIS_PORTFOLIO_EXISTS__`). In fitch-mvp the first round copied them
+  name the checkout's `template/` or the four placeholders to fill: the
+  portfolio's name, slug and description, and why it exists. In fitch-mvp the first round copied them
   with `lib.bundle`'s `template_items()`. Wanted: the step names where the
   template items are, which of them a repository with its own `README.md` and
   `AGENTS.md` integrates rather than copies, and the placeholders, so that
