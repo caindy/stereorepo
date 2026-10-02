@@ -372,3 +372,51 @@ Second round:
 - `adopt-probe-passes-in-a-portfolio`
 - `sync-keeps-a-portfolios-compiled-skills`
 - `adopt-names-the-template-items`
+
+## Desk-check brief
+
+**Third round.**
+
+**What was delivered, in stereorepo.** The three children written from the
+second round's notes. Each is in `issues/done/` with its change on `main`:
+
+- `adopt-probe-passes-in-a-portfolio`: `_probe_adopt` in
+  `.meta/checks/probes/files/rendered.py` passes where
+  `assertions/disciplines.yaml` is absent or holds no Adoption, and checks
+  there that `pages.adopt()` writes nothing. Stereorepo's own `meta` gate
+  now runs that portfolio branch too (`_probe_adopt_in_a_portfolio`), so the
+  old early return fails here before it lands. The Issue confirmed why
+  `just test-specialization` did not catch it: nothing runs that recipe
+  before landing. It was run once after the fix, and passed all nine steps.
+- `sync-keeps-a-portfolios-compiled-skills`: a sync no longer removes
+  `.meta/.apm/skills/<name>/SKILL.md` where the portfolio holds
+  `.claude/skills/<name>/SKILL.md` (`_own_skills` in
+  `.meta/lib/bundle/sync.py`, DR-318). A compiled skill with no source in
+  `.claude/skills/` is still removed when stereorepo stops shipping it.
+- `adopt-names-the-template-items`: step 5 of `ADOPT.md` lists each
+  template item by its path, says each comes from the same path under the
+  checkout's `template/`, says that `README.md` and `AGENTS.md` are
+  integrated where the repository already has them, and names which
+  placeholders each file carries. It says DR-001 is finished in step 7. A
+  tenth case of the brownfield probes fails if a template item in
+  `.meta/bundle.yaml` goes unnamed in that step.
+
+**Where to see it.** `ADOPT.md` step 5,
+`.meta/checks/probes/files/rendered.py`, `.meta/lib/bundle/sync.py`
+(`_own_skills`), `.meta/checks/probes/tools/sync.py` (`SKILL_OWN`), and
+DR-318. Run from `.meta/`, `rendered_artifact_probes()` returns `[]` on
+`main`.
+
+**Not checked: fitch-mvp itself.** The seats cannot read fitch-mvp, so
+nothing here confirms that it took these changes.
+
+**Worth trying.**
+
+- In fitch-mvp, run `just sync <stereorepo>` and then `git status` without
+  rendering. Only stereorepo's changes should show: no deleted
+  `generate-decision-graph` or `generate-schema-code` skill under
+  `.meta/.apm/skills/`.
+- Run `just gate meta` there. `rendered artifact probes` should pass, with
+  no "holds no Adoption Discipline".
+- Read `ADOPT.md` step 5 as someone onboarding a second repository, and
+  check that it is enough without opening `.meta/bundle.yaml`.
