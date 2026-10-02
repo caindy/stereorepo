@@ -91,9 +91,15 @@ finds it:
   `test_specialization.py` does, and integrated `.gitignore`, `AGENTS.md` and
   `README.md` by hand.
 - stereorepo's `.gitignore` ignores `.agents/` as a compiled harness
-  directory. fitch-mvp tracks two hand-written skills there. The integrated
-  `.gitignore` leaves `.agents/` out of the ignore list, and where a product's
-  own skills belong is still open.
+  directory, and fitch-mvp tracked two hand-written skills there. Moving them
+  to `.claude/skills/` merges them: render compiles that directory, with the
+  inherited skills, into `.meta/.apm/skills/` and `.agents/`
+  (`lib/apm_compile/skills.py`), so `.agents/` can be ignored as it is here.
+  The procedure moves a product's harness skills to `.claude/skills/`.
+- stereorepo's inherited vocabulary and wiki have Claim, Evidence and
+  Decision, and fitch-mvp's domain has its own Claim, Evidence and Decision.
+  The procedure lists the domain terms that share a label with an inherited
+  one, so that each is recorded as confusable in `domain_vocabulary.yaml`.
 - The template's DR-001 says the portfolio was specialized from stereorepo.
   An adopted repository needs an entry that says it was adopted, and
   rejects starting a new repository.
