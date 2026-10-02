@@ -12,10 +12,12 @@ alone, and so is a path the old bundle managed that the new one lists as a
 template or symlink item. Nothing under a portfolio item, such as `stakeholders/`, is
 ever removed, even where the old bundle managed it or a later bundle stops managing
 a file inside it; the managed files the bundle names inside it are still copied
-(stereorepo's DR-317). A managed file with the `block` transformation, such as
-`.gitignore`, is merged rather than copied: only stereorepo's block is replaced, or
-appended where the portfolio's file has none, and the portfolio's own lines are
-kept (stereorepo's DR-316). Nothing is committed.
+(stereorepo's DR-317). Nor is a skill render compiled into the managed `.meta/.apm/`
+from the portfolio's own `.claude/skills/`, which render would compile back; one
+the checkout ships is still copied over it (stereorepo's DR-318). A managed file
+with the `block` transformation, such as `.gitignore`, is merged rather than
+copied: only stereorepo's block is replaced, or appended where the portfolio's
+file has none, and the portfolio's own lines are kept (stereorepo's DR-316). Nothing is committed.
 """
 
 from __future__ import annotations
@@ -104,6 +106,19 @@ def _uncommitted(repo: pathlib.Path) -> set[str]:
         if entry[0] in "RC":
             paths.add(next(entries, ""))
     return paths
+
+
+def _own_skills(portfolio: pathlib.Path) -> set[str]:
+    """The compiled skills render would write back from the portfolio's `.claude/skills/`.
+
+    Mirrors the last source of `lib.apm_compile.skills.skill_primitives`: each
+    directory there holding a `SKILL.md` compiles to `.meta/.apm/skills/<name>/SKILL.md`.
+    """
+    skills = portfolio / ".claude" / "skills"
+    if not skills.is_dir():
+        return set()
+    return {f".meta/.apm/skills/{skill.name}/SKILL.md" for skill in skills.iterdir()
+            if (skill / "SKILL.md").is_file()}
 
 
 def _same(a: pathlib.Path, b: pathlib.Path) -> bool:
@@ -197,9 +212,11 @@ def plan(source: pathlib.Path, portfolio: pathlib.Path) -> Changes:
                  if dest not in merged and not _same(source / path, portfolio / dest)}
     kept = [item.dest_path() for item in
             (*new.template_items(), *new.symlink_items(), *new.portfolio_items())]
+    own = _own_skills(portfolio)
     removed = sorted(
         path for path in _tracked(portfolio)
-        if path not in copies and not any(under(path, root) for root in kept)
+        if path not in copies and path not in own
+        and not any(under(path, root) for root in kept)
         and (scaffold_only(path) or new.manages(path) or old.manages(path))
     )
     written = {*differing, *writes}

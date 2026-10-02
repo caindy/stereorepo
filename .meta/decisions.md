@@ -180,6 +180,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-315](assertions/decisions/DR-315.yaml) | `just sync` mirrors a checkout's managed items into a portfolio, removes what the bundle dropped, and never commits | Adopted |
 | [DR-316](assertions/decisions/DR-316.yaml) | A managed file marked `block` keeps a portfolio's own lines: a sync replaces only stereorepo's marked block | Adopted |
 | [DR-317](assertions/decisions/DR-317.yaml) | A bundle item owned by the portfolio is never removed by a sync: `stakeholders/` ships only its READMEs | Adopted |
+| [DR-318](assertions/decisions/DR-318.yaml) | A sync keeps the skills render compiles into `.meta/.apm/` from the portfolio's own `.claude/skills/` | Adopted |
 
 ## Holes
 
@@ -259,7 +260,7 @@ and the query a reader in a file actually has.
 | [`.meta/checks/probes/tools/dereference.py`](checks/probes/tools/dereference.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-192](assertions/decisions/DR-192.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/probes/tools/lockstep.py`](checks/probes/tools/lockstep.py) | [DR-305](assertions/decisions/DR-305.yaml) |
 | [`.meta/checks/probes/tools/search.py`](checks/probes/tools/search.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
-| [`.meta/checks/probes/tools/sync.py`](checks/probes/tools/sync.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
+| [`.meta/checks/probes/tools/sync.py`](checks/probes/tools/sync.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml), [DR-318](assertions/decisions/DR-318.yaml) |
 | [`.meta/checks/probes/tools/terms.py`](checks/probes/tools/terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml), [DR-279](assertions/decisions/DR-279.yaml) |
 | [`.meta/checks/probes/tools/test_brownfield.py`](checks/probes/tools/test_brownfield.py) | [DR-317](assertions/decisions/DR-317.yaml) |
 | [`.meta/checks/probes/tools/test_specialization.py`](checks/probes/tools/test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
@@ -284,7 +285,7 @@ and the query a reader in a file actually has.
 | [`.meta/lib/apm_compile/primitives.py`](lib/apm_compile/primitives.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/apm_compile/skills.py`](lib/apm_compile/skills.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/bundle/__init__.py`](lib/bundle/__init__.py) | [DR-314](assertions/decisions/DR-314.yaml), [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
-| [`.meta/lib/bundle/sync.py`](lib/bundle/sync.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
+| [`.meta/lib/bundle/sync.py`](lib/bundle/sync.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml), [DR-318](assertions/decisions/DR-318.yaml) |
 | [`.meta/lib/dereference/__init__.py`](lib/dereference/__init__.py) | [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/dereference/asking.py`](lib/dereference/asking.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/lib/dereference/cli.py`](lib/dereference/cli.py) | [DR-217](assertions/decisions/DR-217.yaml) |

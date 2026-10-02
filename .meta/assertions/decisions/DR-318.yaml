@@ -1,0 +1,50 @@
+decisions:
+  - id: work:decision/318
+    name: "DR-318 · A sync keeps the skills render compiles into `.meta/.apm/` from the portfolio's own `.claude/skills/`"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-lib-bundle-sync
+      - work:artifact/meta-checks-probes-tools-sync
+    context: >-
+      `.meta/.apm/` is a managed directory item, so `just sync` (DR-315)
+      removes every tracked file in it that the checkout lacks. Render also
+      compiles each `.claude/skills/<name>/SKILL.md` a portfolio holds into
+      `.meta/.apm/skills/<name>/SKILL.md`. Every sync therefore removed the
+      portfolio's own compiled skills and the next render put them back, so
+      a sync committed before rendering committed their deletion.
+    alternatives:
+      - name: Compile the portfolio's own skills outside `.meta/.apm/`
+        chosen: false
+        reason: >-
+          The APM package is one directory, and splitting it would change
+          every reader of the compiled primitives to fix one writer.
+      - name: Call `skill_primitives` from the sync
+        chosen: false
+        reason: >-
+          It imports `render`, which reads the whole assertion record and
+          would make `lib.bundle` depend on the compiler.
+      - name: Mirror render's rule for its last source in the sync
+        chosen: true
+        reason: >-
+          The rule is one line: a directory under `.claude/skills/` holding
+          a `SKILL.md` compiles to the same name under `.meta/.apm/skills/`.
+          `.claude/skills/` is not a bundle item, so it is always the
+          portfolio's own.
+    consequences:
+      - >-
+        A sync does not remove a tracked `.meta/.apm/skills/<name>/SKILL.md`
+        when the portfolio holds `.claude/skills/<name>/SKILL.md`. One the
+        checkout ships is still copied over it, and a compiled skill with no
+        source in `.claude/skills/` is still removed when the checkout stops
+        shipping it.
+      - >-
+        `_own_skills` in `.meta/lib/bundle/sync.py` copies the rule from
+        `skill_primitives` in `.meta/lib/apm_compile/skills.py`, so a change
+        to where render reads or writes skills changes both.
+    falsifier: >-
+      After a sync and before any render, `git status` in a portfolio shows
+      a compiled skill deleted under `.meta/.apm/skills/` whose source is in
+      the portfolio's `.claude/skills/`.
+    rationale: |-
+      A sync followed by nothing should show only stereorepo's changes, not
+      a deletion the next render undoes.

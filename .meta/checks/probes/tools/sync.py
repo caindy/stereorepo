@@ -23,6 +23,7 @@ source_revision: old
 items:
   - {path: kit/, kind: dir, ownership: managed}
   - {path: .meta/lib/, kind: dir, ownership: managed}
+  - {path: .meta/.apm/, kind: dir, ownership: managed}
   - {path: dropped.txt, kind: file, ownership: managed}
   - {path: people/, kind: dir, ownership: managed}
   - {path: .gitignore, kind: file, ownership: managed}
@@ -80,6 +81,9 @@ PORTFOLIO = {
     "people/README.md": "# People, as the last sync left it\n",
     "people/customers/ada.md": "# Ada, the portfolio's own Persona\n",
     "people/example/README.md": "# The example Role, as the portfolio edited it\n",
+    ".claude/skills/own/SKILL.md": "# The portfolio's own skill\n",
+    ".meta/.apm/skills/own/SKILL.md": "# The portfolio's own skill\n",
+    ".meta/.apm/skills/gone/SKILL.md": "# A skill the checkout stopped shipping\n",
 }
 """The portfolio's tracked files, synced once from the old bundle."""
 
@@ -87,6 +91,10 @@ PEOPLE_OWN = ("people/customers/ada.md", "people/example/README.md")
 """The portfolio's files under the `portfolio` item `people/`, which no sync removes or
 overwrites, even the one that narrows the old bundle's managed `people/`
 (stereorepo's DR-317)."""
+
+SKILL_OWN = (".meta/.apm/skills/own/SKILL.md", ".claude/skills/own/SKILL.md")
+"""A skill of the portfolio's own and what render compiled from it into the managed
+`.meta/.apm/`, which no sync removes, because render would compile it back."""
 
 UNTRACKED = "kit/scratch.txt"
 """An untracked file inside a managed directory, which no sync deletes."""
@@ -155,7 +163,8 @@ def _check_sync(cli: types.ModuleType, tmp: pathlib.Path, source: pathlib.Path) 
         return [f"sync: exited {code} on a clean portfolio"]
     after = _snapshot(portfolio)
     problems = []
-    for gone in ("dropped.txt", "kit/gone.txt", ".meta/lib/adapt/plan.py"):
+    for gone in ("dropped.txt", "kit/gone.txt", ".meta/lib/adapt/plan.py",
+                 ".meta/.apm/skills/gone/SKILL.md"):
         if (portfolio / gone).exists():
             problems.append(f"sync: {gone} is still present")
         if f"removed {gone}" not in out:
@@ -257,13 +266,13 @@ def _kept(before: Snapshot, after: Snapshot, out: str) -> list[str]:
     """What a sync must leave byte for byte, and must not report, and that it commits nothing."""
     problems = []
     for kept in ("README.md", "own.txt", ".meta/baselines/comments.baseline.yaml", UNTRACKED,
-                 "kit/same.txt", ".meta/lib/keep.py", *PEOPLE_OWN):
+                 "kit/same.txt", ".meta/lib/keep.py", *PEOPLE_OWN, *SKILL_OWN):
         if after[2].get(kept) != before[2].get(kept):
             problems.append(f"sync: {kept} changed")
     if "kit/same.txt" in out:
         problems.append("sync: an identical file is reported as changed")
-    problems.extend(f"sync: the portfolio's own {own} is reported" for own in PEOPLE_OWN
-                    if own in out)
+    problems.extend(f"sync: the portfolio's own {own} is reported"
+                    for own in (*PEOPLE_OWN, *SKILL_OWN) if own in out)
     if after[0] != before[0]:
         problems.append("sync: committed")
     return problems
@@ -338,8 +347,10 @@ def bundle_sync_probes() -> list[str]:
     `.meta/lib/` holds the scaffold-only `.meta/lib/adapt/`. Synced from it, a
     portfolio of the old bundle loses the dropped item, the deleted file and
     its own copy of the scaffold-only path, gains the added file and the
-    checkout's bundle, and keeps its template item, its own file, its
-    baseline under `.meta/baselines/` and an untracked file in a managed
+    checkout's bundle, loses a compiled skill under the managed `.meta/.apm/`
+    that the checkout no longer ships, and keeps the one render compiled from
+    its own `.claude/skills/` (stereorepo's DR-318), its template item, its
+    own file, its baseline under `.meta/baselines/` and an untracked file in a managed
     directory byte for byte. Each change is printed, and nothing is
     committed. A `.gitignore` the checkout marks `block` keeps the
     portfolio's own lines around stereorepo's block, or gains the block at
