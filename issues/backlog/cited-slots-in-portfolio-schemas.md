@@ -10,16 +10,17 @@ across the repository and resolves each `Class.slot` it finds against
 stereorepo's LinkML schemas (`SCHEMA_PATHS`). A product that has LinkML
 schemas of its own fails the step wherever its documentation cites them.
 fitch-mvp is a decision management product, and its `README.md` and
-`ROADMAP.md` cite `Decision.outcomes`, `Decision.posits` and 25 more of its
-own slots. Each one fails against stereorepo's `Decision` (a Decision Record),
+`ROADMAP.md` cite 27 slots of its own `Decision` class, such as its
+outcomes and its posits. Each one fails against stereorepo's `Decision` (a Decision Record),
 which has a class of the same name and different slots.
 
 ## How to reproduce it
 
 In a temporary portfolio, add a LinkML schema outside `.meta/` that declares
-class `Decision` with slot `outcomes`, and a `README.md` that mentions
-`Decision.outcomes`. Run the `meta` gate. `cited schema slots` fails with
-"cites slot 'outcomes', which is not declared on class Decision".
+a class `Decision` with a slot that stereorepo's `Decision` lacks, and a
+`README.md` that cites that slot in the qualified `Class.slot` form. Run the
+`meta` gate. `cited schema slots` fails, saying the slot is not declared on
+class `Decision`.
 
 ## Wanted
 
