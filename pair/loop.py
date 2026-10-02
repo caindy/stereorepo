@@ -47,6 +47,7 @@ from __future__ import annotations
 import dataclasses
 import json
 import os
+import re
 import signal
 import subprocess
 import time
@@ -71,6 +72,15 @@ NOTES = "Desk-check notes"
 CHILDREN = "Desk-check children"
 DIFF_LIMIT = 40_000
 GATE_TAIL = 6_000
+GATE = "gate"
+"""The `retry` of a pause for a gate step that could not run: resuming runs the gate again first."""
+COULD_NOT = re.compile(r"^\?  (?P<step>\S[^:\n]*): (?P<why>.*)$", re.MULTILINE)
+"""A gate step that could not run, in the shape `.meta/gate` reads it in (its `COULD_NOT`).
+
+`.meta/gate` is a script, not a module, so the pattern is copied. The summary
+line of `closing_block`, `?  steps that could not run (n) — …`, has no colon
+after its step, and its detail lines are indented, so neither matches.
+"""
 DELIVER_TAIL = 2_000
 """Less than `GATE_TAIL`: a failed delivery's tail goes into a pause reason, which is also notified."""
 LAND_TRIES = 5
@@ -173,6 +183,26 @@ def gate_fails(out: str, targets: Sequence[str] | None = None) -> GateFailure:
     """The requirement a failed gate leaves: what was gated, and the tail of its output."""
     command = " ".join(["just gate", *(targets or [])])
     return GateFailure(f"`{command}` fails:\n```\n{out[-GATE_TAIL:]}\n```")
+
+
+class GateUnrunnable(str):
+    """A gate that passed with steps that could not run, which only the developer can supply."""
+
+
+def gate_unrunnable(out: str) -> GateUnrunnable | None:
+    """The pause reason naming each step of `out` that could not run, or None when every step ran.
+
+    A seat's sandbox cannot provide what such a step lacks (a Docker daemon,
+    say), so the loop holds the landing for the developer rather than handing
+    it back to the seats.
+    """
+    steps = [f"- {m['step']}: {m['why']}" for m in COULD_NOT.finditer(out)]
+    if not steps:
+        return None
+    return GateUnrunnable(
+        f"the gate could not run {len(steps)} step(s); "
+        "supply what they need, then run again:\n" + "\n".join(steps)
+    )
 
 
 def home(stage: str) -> str:
@@ -675,8 +705,17 @@ class Loop:
     def work(self, st: State) -> str:
         try:
             if st.retry == "merge":
-                st.retry = None
-                outcome = self.merge(st)
+                st.retry = st.paused = None
+                outcome = self.merge(st, force_gate=True)
+                if outcome:
+                    return outcome
+                if st.stage in ("desk-check", "done"):
+                    self.send_back(st, st.note)
+            elif st.retry == GATE:
+                st.retry = st.paused = None
+                grooming = st.stage == GROOMING
+                issue = None if grooming else board.read(self.wt, st.slug)
+                outcome = self.close_stage(st, issue)
                 if outcome:
                     return outcome
             elif st.retry == "kickback":
@@ -973,18 +1012,9 @@ class Loop:
         st.next_role = other(role)
         st.approvals = sorted(set(st.approvals) | {role}) if quiet else [role]
         if set(st.approvals) >= set(ROLES):
-            missing = self.requirement(st, issue)
-            if missing is None:
-                return self.advance(st, issue)
-            if missing == "paused":
-                return "paused"
-            st.approvals = []
-            st.note = (
-                "Both of you left this stage as it stands, "
-                f"but it is not finished yet: {missing}"
-            )
-            if isinstance(missing, GateFailure):
-                st.next_role = "primary"
+            outcome = self.close_stage(st, issue)
+            if outcome:
+                return outcome
         difficulty = "medium" if issue is None else issue.difficulty
         cap = self.round_cap or ROUND_CAP.get(difficulty, ROUND_CAP[None])
         if st.turn >= 2 * cap and grooming:
@@ -1000,6 +1030,31 @@ class Loop:
                 f"The pair did not settle the {st.stage} stage within {st.turn} turns.",
             )
         self.save(st)
+        return None
+
+    def close_stage(self, st: State, issue: board.Issue | None) -> str | None:
+        """Advance a stage both seats left as it stands, or say what it still lacks.
+
+        A gate step that could not run pauses the loop with `retry` set to
+        `GATE`, keeping the approvals, note and next seat, so that resuming
+        closes the stage again before any seat takes a turn. Any other unmet
+        requirement clears the approvals and becomes the note, and a failed
+        gate goes to the primary seat; the result is then None.
+        """
+        missing = self.requirement(st, issue)
+        if missing is None:
+            return self.advance(st, issue)
+        if missing == "paused":
+            return "paused"
+        if isinstance(missing, GateUnrunnable):
+            return self.pause(st, missing, retry=GATE)
+        st.approvals = []
+        st.note = (
+            "Both of you left this stage as it stands, "
+            f"but it is not finished yet: {missing}"
+        )
+        if isinstance(missing, GateFailure):
+            st.next_role = "primary"
         return None
 
     def requirement(self, st: State, issue: board.Issue | None) -> str | None:
@@ -1171,8 +1226,12 @@ class Loop:
 
     # --- landing ---------------------------------------------------------------
 
-    def run_gate(self) -> GateFailure | None:
+    def run_gate(self) -> GateFailure | GateUnrunnable | None:
         """Gate what the branch changes against `main`, or None when it passes.
+
+        A gate that passes with a step that could not run is a
+        `GateUnrunnable`, not a pass. A gate that fails is a `GateFailure`
+        even when its output also holds such a step.
 
         Only the Projects the change touches and the Products built from them
         are gated (`touched.select`, stereorepo's DR-303); a branch that
@@ -1187,7 +1246,7 @@ class Loop:
             return None
         targets = touched.select(self.wt, changed)
         ok, out = self.gate(self.wt, targets)
-        return None if ok else gate_fails(out, targets)
+        return gate_unrunnable(out) if ok else gate_fails(out, targets)
 
     def touches_code(self) -> bool:
         changed = git(
@@ -1276,6 +1335,8 @@ class Loop:
                 return "paused"
             if (moved or force_gate) and self.touches_code():
                 failure = self.run_gate()
+                if isinstance(failure, GateUnrunnable):
+                    return self.pause(st, failure, retry="merge")
                 if failure is not None:
                     if st.stage == "done" or (
                         st.stage != GROOMING
@@ -1283,7 +1344,7 @@ class Loop:
                     ):
                         return self.pause(
                             st,
-                            "main moved and the gate now fails on the squashed issue",
+                            "the gate now fails on the squashed issue",
                             "merge",
                         )
                     st.approvals, st.note, st.next_role = [], failure, "primary"

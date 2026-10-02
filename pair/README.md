@@ -84,6 +84,14 @@ repeated or side-by-side comparisons (`prompts/primary.md`,
    told what is missing. Where the gate failed, that turn goes to the primary
    seat with the gate's output, whichever seat went quiet last; otherwise it
    goes to the seat that did not take the settling turn.
+
+   A gate that passes with a step that could not run (a `?` line, Article 6)
+   is not a pass here, though it is where a person runs the gate. A seat
+   cannot supply what the step lacks, such as a Docker daemon, so the loop
+   pauses instead, naming each step and why, and keeps the stage, approvals
+   and note. Once the developer has supplied it, `just pair` runs that gate
+   again before any seat takes a turn. This holds for the gate at the end of
+   a stage and for the gate while landing.
 3. **Sending back.** An Issue file that gains a `Needs elaboration` section, or
    a stage that runs past its round cap, sends the Issue to `issues/backlog/` on
    `main` with that section, without its code. It sits out of the running order

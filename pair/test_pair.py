@@ -26,7 +26,16 @@ from unittest import mock
 
 import board
 import touched
-from loop import Loop, State, append_event, event_log, status, status_json, status_view
+from loop import (
+    Loop,
+    State,
+    append_event,
+    event_log,
+    gate_unrunnable,
+    status,
+    status_json,
+    status_view,
+)
 from seats import (
     ALLOWED,
     DISALLOWED,
@@ -273,7 +282,8 @@ class Bench:
         self.sent: list[tuple[str, str]] = []
         self.opened: list[tuple[str, str | None]] = []
         self.models: list[tuple[str, str | None]] = []
-        self.gates: list[bool] = []
+        self.gates: list[bool | tuple[bool, str]] = []
+        """Each gate's verdict in turn, alone or with its output; a gate past the end passes."""
         self.gate_runs = 0
         self.gate_targets: list[list[str] | None] = []
         self.delivers: list[tuple[bool, str]] = []
@@ -329,6 +339,8 @@ class Bench:
             if self.during_gate:
                 self.during_gate.pop(0)(self.repo)
             ok = self.gates.pop(0) if self.gates else True
+            if isinstance(ok, tuple):
+                return ok
             return ok, "" if ok else "FAILED: test_widget"
 
         def deliver(_tree: Path) -> tuple[bool, str] | None:
@@ -403,6 +415,8 @@ class Bench:
 
 
 PLAN = "\n## The plan\n\nChange a.txt.\n"
+UNRUNNABLE = (True, "ok a — 1 test\n?  proj/neo4j tests: no Docker daemon\n")
+"""A gate that passes with a step that could not run."""
 
 
 class LoopTest(unittest.TestCase):
@@ -565,6 +579,81 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertEqual(b.sent[7][0], "primary")
         self.assertIn("FAILED: test_widget", b.sent[7][1])
+        self.assertEqual(b.gate_runs, 3)
+
+    def implemented(self, slug: str) -> None:
+        """Script an easy Issue through to both seats leaving `in-progress` as it stands."""
+        self.b.issue("backlog", slug, "X", difficulty="easy")
+        self.b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append(slug, PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "1")),
+            ("secondary", quiet),
+        )
+
+    def test_a_gate_step_that_could_not_run_pauses_until_the_developer_supplies_it(
+        self,
+    ) -> None:
+        b = self.b
+        self.implemented("x")
+        b.gates = [UNRUNNABLE]
+        self.assertEqual(b.loop.run(once=True), "paused")
+        st = b.state()
+        self.assertEqual(st.retry, "gate")
+        assert st.paused is not None
+        self.assertIn("proj/neo4j tests: no Docker daemon", st.paused)
+        self.assertEqual(st.approvals, ["primary", "secondary"])
+        self.assertEqual(board.locations(b.loop.wt, "x"), ["in-progress"])
+        self.assertFalse(b.on_main("a.txt"))
+        sent = len(b.sent)
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(len(b.sent), sent)
+        self.assertEqual(b.gate_runs, 2)
+        self.assertTrue(b.on_main("a.txt"))
+
+    def test_a_resumed_gate_that_still_could_not_run_pauses_again(self) -> None:
+        b = self.b
+        self.implemented("x")
+        b.gates = [UNRUNNABLE, UNRUNNABLE]
+        self.assertEqual(b.loop.run(once=True), "paused")
+        sent = len(b.sent)
+        self.assertEqual(b.loop.run(once=True), "paused")
+        self.assertEqual(len(b.sent), sent)
+        self.assertEqual(b.state().retry, "gate")
+        self.assertFalse(b.on_main("a.txt"))
+
+    def test_a_failed_gate_with_a_step_that_could_not_run_goes_to_the_primary(
+        self,
+    ) -> None:
+        b = self.b
+        self.implemented("x")
+        b.gates = [(False, "x  a (1)\n     boom\n?  b: no tool\n"), True]
+        b.script(("primary", write("a.txt", "2")), ("secondary", quiet))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.sent[6][0], "primary")
+        self.assertIn("x  a (1)", b.sent[6][1])
+
+    def test_a_gate_step_that_could_not_run_while_landing_pauses_the_landing(
+        self,
+    ) -> None:
+        b = self.b
+
+        def commits(repo: Path) -> None:
+            write("b.txt", "main\n")(repo)
+            sh(repo, "add", "b.txt")
+            sh(repo, "commit", "-q", "-m", "add b.txt")
+
+        self.implemented("x")
+        b.gates = [True, UNRUNNABLE]
+        b.during_gate = [commits]
+        self.assertEqual(b.loop.run(once=True), "paused")
+        self.assertEqual(b.state().retry, "merge")
+        self.assertFalse(b.on_main("a.txt"))
+        sent = len(b.sent)
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(len(b.sent), sent)
         self.assertEqual(b.gate_runs, 3)
 
     def test_an_unmet_requirement_other_than_the_gate_goes_to_the_other_seat(
@@ -1001,6 +1090,35 @@ class LoopTest(unittest.TestCase):
         self.assertIn("without landing", b.sent[-1][1])
         self.assertIn("FAILED: test_widget", b.sent[-1][1])
 
+    def test_an_accept_whose_gate_could_not_run_pauses_then_goes_back_on_failure(
+        self,
+    ) -> None:
+        b = self.b
+        b.issue("backlog", "h", "Developer", difficulty="developer")
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("h", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "x")),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.loop.run(), "desk-check")
+        (b.repo / "b.txt").write_text("elsewhere")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "main moves")
+        b.gates = [UNRUNNABLE]
+        self.assertEqual(b.loop.accept(), "paused")
+        self.assertEqual(b.state().retry, "merge")
+        self.assertFalse(b.on_main("a.txt"))
+        b.gates = [False]
+        b.stop_when_empty = True
+        b.script(("primary", quiet))
+        self.assertEqual(b.loop.run(), "stopped")
+        self.assertEqual(board.locations(b.loop.wt, "h"), ["in-progress"])
+        self.assertIn("FAILED: test_widget", b.sent[-1][1])
+        self.assertNotIn("no Docker daemon", b.sent[-1][1])
+
     def accept_that_conflicts(self) -> None:
         """Bring a developer Issue to its desk check, then accept it into a conflict."""
         b = self.b
@@ -1265,6 +1383,27 @@ def unappend(slug: str, text: str) -> Action:
         path.write_text(before + after)
 
     return act
+
+
+class GateUnrunnableTest(unittest.TestCase):
+    def test_each_step_that_could_not_run_is_named_with_why(self) -> None:
+        out = (
+            "ok meta/schemas — 3\n"
+            "?  meta: no gate asserted\n"
+            "?  python-seed/mutation: mutmut is not installed\n"
+            "?  steps that could not run (1) — zero where a person runs the gate, "
+            "non-zero under CI\n"
+            "  mutation: mutmut is not installed\n"
+        )
+        reason = gate_unrunnable(out)
+        assert reason is not None
+        self.assertIn("could not run 2 step(s)", reason)
+        self.assertIn("- meta: no gate asserted", reason)
+        self.assertIn("- python-seed/mutation: mutmut is not installed", reason)
+        self.assertNotIn("steps that could not run (1)", reason)
+
+    def test_a_gate_where_every_step_ran_is_none(self) -> None:
+        self.assertIsNone(gate_unrunnable("ok a — 1\nok b — 2\nok portfolio — 3 steps\n"))
 
 
 class SeatModelTest(unittest.TestCase):
@@ -2007,6 +2146,23 @@ class GroomingTest(unittest.TestCase):
         self.assertEqual(b.sent[3][0], "primary")
         self.assertIn("FAILED: test_widget", b.sent[3][1])
         self.assertEqual(b.gate_runs, 2)
+
+    def test_a_pass_whose_gate_could_not_run_pauses_then_lands(self) -> None:
+        b = self.b
+        b.issue("backlog", "a", "A")
+        b.gates = [UNRUNNABLE]
+        b.script(
+            (
+                "primary",
+                both(front("a", difficulty="easy"), order("# groomed below\na\n")),
+            ),
+            ("secondary", quiet),
+        )
+        self.assertEqual(b.groomer.groom(), "paused")
+        self.assertEqual(b.state(b.groomer).retry, "gate")
+        sent = len(b.sent)
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertEqual(len(b.sent), sent)
 
     def test_nothing_to_groom_sends_no_turn(self) -> None:
         b = self.b
