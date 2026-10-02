@@ -169,13 +169,63 @@ class Confinement:
     `allow` and `deny` become the sandbox's `filesystem.allowWrite` and
     `filesystem.denyWrite`; a denied path wins over an allowed one that holds
     it. `sockets` become `network.allowUnixSockets`, and `env` is added to the
-    seat's environment.
+    seat's environment. `gitconfig` is the text of the file the seat's
+    `GIT_CONFIG_GLOBAL` names; the seat's owner writes it where the seat
+    cannot.
     """
 
     allow: list[Path]
     deny: list[Path]
     env: dict[str, str]
     sockets: list[Path] = field(default_factory=list)
+    gitconfig: str = ""
+
+
+SEAT_GPG = Path(__file__).resolve().parent / "seat-gpg"
+"""The gpg program git runs for a seat: the real gpg with `--trust-model always`.
+
+It is the loop's copy, in the developer's checkout, so a seat that edits its
+worktree's copy does not change what it runs. Only git runs it: a `gpg` the
+seat runs by name still opens the trust database and hangs.
+"""
+
+
+def quoted(value: str) -> str:
+    """`value` as a git config value, double-quoted with `\\` and `"` escaped."""
+    return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+
+
+def real_gpg(cwd: Path) -> str | None:
+    """The gpg that git in `cwd` runs to sign and verify, or None if there is none.
+
+    git reads `gpg.program` and `gpg.openpgp.program` into one setting, and the
+    last one read wins, so this takes the last line git lists for either. In a
+    seat started by a seat, that is `SEAT_GPG` itself, and the real gpg is the
+    outer seat's `PAIR_SEAT_GPG`.
+    """
+    listed = subprocess.run(
+        ["git", "config", "--get-regexp", r"^gpg\.(openpgp\.)?program$"],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+    ).stdout.splitlines()
+    program = listed[-1].split(" ", 1)[1] if listed else None
+    if program and Path(program).expanduser() == SEAT_GPG:
+        program = os.environ.get("PAIR_SEAT_GPG")
+    return program or shutil.which("gpg")
+
+
+def global_includes() -> list[Path]:
+    """The global git config files git reads, in order, as absolute paths.
+
+    That is `GIT_CONFIG_GLOBAL` alone when it is set. A relative path is made
+    absolute, because git resolves an included relative path against the file
+    that includes it, not the working directory.
+    """
+    if "GIT_CONFIG_GLOBAL" in os.environ:
+        return [Path(os.environ["GIT_CONFIG_GLOBAL"]).absolute()]
+    xdg = Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config"))
+    return [xdg / "git" / "config", Path.home() / ".gitconfig"]
 
 
 def confinement(cwd: Path) -> Confinement:
@@ -202,11 +252,23 @@ def confinement(cwd: Path) -> Confinement:
     denied except the sockets, so that its configuration (which can name a
     program for the agent to run) and its keys stay out of reach.
 
-    Verifying a signature hangs in the sandbox, so a developer's
-    `log.showSignature = true` would hang every `git show` and `git log` a
-    seat runs. `env` turns that setting off with a `GIT_CONFIG_COUNT` entry,
-    which outranks every config file, after any entries the loop's own
-    environment already holds. Signing a commit is unaffected.
+    In the sandbox, `trustdb.gpg` is read-only, and `gpg --verify` opens it
+    for writing, fails, and then never exits; a `git show` or `git log` that
+    shows signatures hangs with it, and killing git leaves the gpg behind
+    (observed 2026-10-01). So the seat's git runs `SEAT_GPG`, which adds
+    `--trust-model always`, under which gpg does not open the trust database,
+    and `PAIR_SEAT_GPG` in `env` names the real gpg. The seat's git also has
+    `log.showSignature` off, so a developer's `log.showSignature = true`
+    does not run a verify on every `git show` and `git log`.
+
+    Both settings are in `gitconfig`, which includes the developer's own
+    global files and then overrides them; `env` points `GIT_CONFIG_GLOBAL` at
+    it. A `GIT_CONFIG_COUNT` entry would outrank every file, but Claude
+    Code's sandboxed Bash replaces the `GIT_CONFIG_*` entries with its own
+    `safe.directory` ones (observed 2026-10-01), so the seat's shell never
+    saw one. A repository's own `gpg.program` or `log.showSignature`
+    outranks the global file. Signing a commit runs `SEAT_GPG` too, and does
+    not consult trust.
     """
 
     def out(*argv: str) -> str:
@@ -235,12 +297,15 @@ def confinement(cwd: Path) -> Confinement:
         refs / "heads" / "pair",
         common / "logs" / "refs" / "heads" / "pair",
     ]
-    n = int(os.environ.get("GIT_CONFIG_COUNT", "0"))
-    env = {
-        "GIT_CONFIG_COUNT": str(n + 1),
-        f"GIT_CONFIG_KEY_{n}": "log.showSignature",
-        f"GIT_CONFIG_VALUE_{n}": "false",
-    }
+    env: dict[str, str] = {}
+    gitconfig = ["[include]"]
+    gitconfig += [f"\tpath = {quoted(str(p))}" for p in global_includes()]
+    gitconfig += ["[log]", "\tshowSignature = false"]
+    gpg = real_gpg(cwd)
+    if gpg:
+        env["PAIR_SEAT_GPG"] = gpg
+        program = f"\tprogram = {quoted(str(SEAT_GPG))}"
+        gitconfig += ["[gpg]", program, '[gpg "openpgp"]', program]
     if shutil.which("uv"):
         cache = Path(out("uv", "cache", "dir"))
         allow.append(cache)
@@ -261,7 +326,7 @@ def confinement(cwd: Path) -> Confinement:
             deny |= {p for p in gnupg.iterdir() if not p.name.startswith(("S.", ".#lk"))}
             deny -= {p for p in deny if p.name.endswith(".lock")}
         sockets += [gnupg / "S.gpg-agent", gnupg / "S.keyboxd"]
-    return Confinement(allow, sorted(deny), env, sockets)
+    return Confinement(allow, sorted(deny), env, sockets, "\n".join(gitconfig) + "\n")
 
 
 def command(
@@ -350,6 +415,10 @@ class ClaudeSeat:
         argv = command(system_prompt, confined, model=model, resume=resume)
         env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
         env.update(confined.env)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        gitconfig = log_dir / f"{role}.gitconfig"
+        gitconfig.write_text(confined.gitconfig)
+        env["GIT_CONFIG_GLOBAL"] = str(gitconfig)
         self.proc = subprocess.Popen(
             argv,
             cwd=cwd,
@@ -361,7 +430,6 @@ class ClaudeSeat:
             stderr=subprocess.PIPE,
             start_new_session=True,
         )
-        log_dir.mkdir(parents=True, exist_ok=True)
         (log_dir / f"{role}.pid").write_text(f"{self.proc.pid}\n")
         self.lines: queue.Queue[str | None] = queue.Queue()
         self.tasks: dict[str, str] = {}

@@ -1,0 +1,12 @@
+#!/bin/sh
+# The gpg that git runs for a seat, named by the seat's git configuration
+# (see `confinement` in seats.py). It runs the real gpg, `$PAIR_SEAT_GPG`,
+# with `--trust-model always`.
+#
+# In the seat's sandbox, `trustdb.gpg` is read-only. Under every trust model
+# that consults it, `gpg --verify` opens it for writing, prints
+# "Fatal: can't open ... Operation not permitted", and then never exits
+# (gpg 2.5, observed 2026-10-01). The `always` model does not open it, and the
+# verify ends in milliseconds. It reports the key's validity as unknown, so
+# git shows `%G?` as `U` rather than `G`; a seat never decides on trust.
+exec "${PAIR_SEAT_GPG:?the real gpg is not set}" --trust-model always "$@"

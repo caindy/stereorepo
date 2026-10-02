@@ -29,6 +29,7 @@ from loop import Loop, State, append_event, event_log, status, status_json, stat
 from seats import (
     ALLOWED,
     DISALLOWED,
+    SEAT_GPG,
     ClaudeSeat,
     Confinement,
     TurnResult,
@@ -3306,37 +3307,81 @@ class ConfinementTest(unittest.TestCase):
             tools = Path(confined.env["UV_TOOL_DIR"])
             self.assertTrue(any(tools.is_relative_to(a) for a in confined.allow))
 
-    def git_config(self, env: dict[str, str], *args: str) -> str:
+    def seat_git(self, confined: Confinement, *args: str) -> str:
+        """What `git config args` reads in the worktree under the seat's environment."""
+        gitconfig = self.tmp / "seat.gitconfig"
+        gitconfig.write_text(confined.gitconfig)
         return subprocess.run(
             ["git", "config", *args],
             cwd=self.wt,
-            env={**os.environ, **env},
+            env={**os.environ, **confined.env, "GIT_CONFIG_GLOBAL": str(gitconfig)},
             capture_output=True,
             text=True,
             check=True,
         ).stdout.strip()
 
-    def test_signature_display_is_off_for_the_seat(self) -> None:
-        sh(self.repo, "config", "log.showSignature", "true")
-        confined = confinement(self.wt)
-        self.assertEqual(self.git_config(confined.env, "--bool", "log.showSignature"), "false")
+    def developer(self, text: str) -> None:
+        """Make `text` the developer's global git config, with no system config."""
+        path = self.tmp / "developer.gitconfig"
+        path.write_text(text)
+        patched = mock.patch.dict(
+            os.environ, {"GIT_CONFIG_GLOBAL": str(path), "GIT_CONFIG_NOSYSTEM": "1"}
+        )
+        patched.start()
+        self.addCleanup(patched.stop)
 
-    def test_existing_git_config_overrides_are_kept(self) -> None:
-        theirs = {
-            "GIT_CONFIG_COUNT": "1",
-            "GIT_CONFIG_KEY_0": "core.abbrev",
-            "GIT_CONFIG_VALUE_0": "12",
-        }
-        sh(self.repo, "config", "log.showSignature", "true")
-        with mock.patch.dict(os.environ, theirs):
+    def test_signature_display_is_off_and_the_developers_settings_are_kept(self) -> None:
+        self.developer("[log]\n\tshowSignature = true\n[core]\n\tabbrev = 12\n")
+        confined = confinement(self.wt)
+        self.assertEqual(self.seat_git(confined, "--bool", "log.showSignature"), "false")
+        self.assertEqual(self.seat_git(confined, "core.abbrev"), "12")
+
+    def test_a_relative_global_config_is_still_included(self) -> None:
+        self.developer("[core]\n\tabbrev = 12\n")
+        below = self.tmp / "below"
+        below.mkdir()
+        self.addCleanup(os.chdir, os.getcwd())
+        os.chdir(below)
+        with mock.patch.dict(os.environ, {"GIT_CONFIG_GLOBAL": "../developer.gitconfig"}):
             confined = confinement(self.wt)
-            self.assertEqual(confined.env["GIT_CONFIG_COUNT"], "2")
-            self.assertEqual(confined.env["GIT_CONFIG_KEY_1"], "log.showSignature")
-            self.assertNotIn("GIT_CONFIG_KEY_0", confined.env)
-            self.assertEqual(self.git_config(confined.env, "core.abbrev"), "12")
-            self.assertEqual(
-                self.git_config(confined.env, "--bool", "log.showSignature"), "false"
-            )
+        self.assertEqual(self.seat_git(confined, "core.abbrev"), "12")
+
+    def test_the_seats_git_runs_seat_gpg_in_front_of_the_gpg_git_would_run(self) -> None:
+        both = "[gpg]\n\tprogram = /a/gpg\n[gpg \"openpgp\"]\n\tprogram = /b/gpg\n"
+        self.developer(both)
+        confined = confinement(self.wt)
+        self.assertEqual(confined.env["PAIR_SEAT_GPG"], "/b/gpg")
+        for key in ("gpg.program", "gpg.openpgp.program"):
+            self.assertEqual(self.seat_git(confined, key), str(SEAT_GPG), key)
+        self.developer("[gpg \"openpgp\"]\n\tprogram = /b/gpg\n[gpg]\n\tprogram = /a/gpg\n")
+        self.assertEqual(confinement(self.wt).env["PAIR_SEAT_GPG"], "/a/gpg")
+
+    def test_a_seat_started_by_a_seat_keeps_the_real_gpg(self) -> None:
+        self.developer(f"[gpg]\n\tprogram = {SEAT_GPG}\n")
+        with mock.patch.dict(os.environ, {"PAIR_SEAT_GPG": "/real/gpg"}):
+            self.assertEqual(confinement(self.wt).env["PAIR_SEAT_GPG"], "/real/gpg")
+
+    def test_without_a_gpg_the_seat_gets_no_gpg_program(self) -> None:
+        self.developer("")
+        with mock.patch("seats.shutil.which", return_value=None):
+            confined = confinement(self.wt)
+        self.assertNotIn("PAIR_SEAT_GPG", confined.env)
+        self.assertNotIn("gpg", confined.gitconfig)
+
+    def test_seat_gpg_runs_the_real_gpg_with_the_always_trust_model(self) -> None:
+        stand_in = self.tmp / "gpg"
+        stand_in.write_text('#!/bin/sh\necho "$@"\n')
+        stand_in.chmod(0o755)
+        ran = subprocess.run(
+            [str(SEAT_GPG), "a", "b c"],
+            env={**os.environ, "PAIR_SEAT_GPG": str(stand_in)},
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(ran.stdout, "--trust-model always a b c\n")
+        env = {k: v for k, v in os.environ.items() if k != "PAIR_SEAT_GPG"}
+        unset = subprocess.run([str(SEAT_GPG)], env=env, capture_output=True, text=True)
+        self.assertNotEqual(unset.returncode, 0)
 
     def test_the_main_checkout_is_refused(self) -> None:
         with self.assertRaises(ValueError):
@@ -3375,6 +3420,8 @@ def play(steps):
             time.sleep(step["sleep"])
         elif "write" in step:
             Path(step["write"]).write_text("late\\n")
+        elif "env" in step:
+            Path(step["to"]).write_text(os.environ.get(step["env"], ""))
         else:
             print(json.dumps(step["emit"]), flush=True)
 
@@ -3436,6 +3483,14 @@ class ClaudeSeatTest(unittest.TestCase):
     def logged(self) -> list[dict[str, Any]]:
         lines = (self.log / "primary.jsonl").read_text().splitlines()
         return [json.loads(line) for line in lines]
+
+    def test_the_seat_reads_its_git_config_from_a_file_outside_the_worktree(self) -> None:
+        seen = self.tmp / "seen"
+        seat = self.seat([], [{"env": "GIT_CONFIG_GLOBAL", "to": str(seen)}, result("ok")])
+        self.assertTrue(seat.send("go").ok)
+        gitconfig = Path(seen.read_text())
+        self.assertEqual(gitconfig, self.log / "primary.gitconfig")
+        self.assertIn("showSignature = false", gitconfig.read_text())
 
     def test_a_background_task_holds_the_turn_until_the_session_is_idle(self) -> None:
         seat = self.seat(
