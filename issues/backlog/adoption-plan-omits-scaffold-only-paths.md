@@ -1,3 +1,8 @@
+---
+difficulty: easy
+parent: onboard-fitch-mvp
+---
+
 # Leave scaffold-only paths out of a brownfield adoption plan
 
 `.meta/lib/adapt/plan.py` plans each `dir` item of `.meta/bundle.yaml` as a

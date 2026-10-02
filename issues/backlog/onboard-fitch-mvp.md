@@ -243,3 +243,13 @@ it showed.
   runs under `--python 3.13`. Third, prose about a product's own schema slots
   is checked against that schema only once the Project's `schemas` names it,
   so the procedure declares the schemas before the first gate.
+
+## Desk-check children
+
+- `adoption-discipline`
+- `fresh-worktree-passes-meta-gate`
+- `portfolio-owns-ratchet-baselines`
+- `sync-portfolio-recipe`
+
+The existing backlog Issue `adoption-plan-omits-scaffold-only-paths` is a
+part too: its `parent:` now names this Flight.
