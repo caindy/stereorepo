@@ -1,6 +1,7 @@
 """Tests for the pair loop: every turn and stopping rule, over a real git repository.
 
 Run: uv run --with pyyaml python -m unittest discover -s pair -p 'test_*.py'
+Run across worker processes: uv run --script pair/gate.py
 """
 
 from __future__ import annotations
@@ -3992,9 +3993,8 @@ class ConfinementTest(unittest.TestCase):
         for name in ("gpg-agent.conf", "trustdb.gpg", "S.gpg-agent", "trustdb.gpg.lock"):
             (gnupg / name).write_text("")
         sh(self.repo, "config", "commit.gpgsign", "true")
-        os.environ["GNUPGHOME"] = str(gnupg)
-        self.addCleanup(os.environ.pop, "GNUPGHOME")
-        confined = confinement(self.wt)
+        with mock.patch.dict(os.environ, {"GNUPGHOME": str(gnupg)}):
+            confined = confinement(self.wt)
         self.assertIn(gnupg, confined.allow)
         self.assertIn(gnupg / "S.gpg-agent", confined.sockets)
         for name in ("gpg-agent.conf", "gpg.conf", "trustdb.gpg", "private-keys-v1.d"):
@@ -4097,7 +4097,8 @@ class ClaudeSeatTest(unittest.TestCase):
     def test_the_seat_reads_its_git_config_from_a_file_outside_the_worktree(self) -> None:
         seen = self.tmp / "seen"
         seat = self.seat([], [{"env": "GIT_CONFIG_GLOBAL", "to": str(seen)}, result("ok")])
-        self.assertTrue(seat.send("go").ok)
+        turn = seat.send("go")
+        self.assertTrue(turn.ok, turn.error)
         gitconfig = Path(seen.read_text())
         self.assertEqual(gitconfig, self.log / "primary.gitconfig")
         self.assertIn("showSignature = false", gitconfig.read_text())
