@@ -6,6 +6,7 @@ pass evaluates target functions once into a snapshot, passing the shared snapsho
 expensive target generators.
 """
 
+from collections.abc import Callable
 from typing import Any
 
 from checks.collect import check
@@ -93,27 +94,42 @@ def _probe_fallbacks_without_specialize() -> list[str]:
 def _probe_adopt() -> list[str]:
     """`pages.adopt()` writes a page only where the scaffold's own Disciplines hold Adoption.
 
-    A portfolio's `assertions/disciplines.yaml` is absent or holds none of the
-    scaffold's procedures, and it must render no `ADOPT.md`. Over the real
-    assertions the page carries every step's name.
+    Where `assertions/disciplines.yaml` is absent or holds no Adoption, as in
+    every portfolio, `adopt()` must answer `None` and render no `ADOPT.md`.
+    Where it holds Adoption, as in stereorepo, the page carries every step's
+    name, and `adopt()` answers `None` over both views shaped like a portfolio.
     """
-    problems: list[str] = []
     real = record.load("assertions/disciplines.yaml") or {}
     adoption = next((d for d in real.get("disciplines") or [] if d["name"] == "Adoption"), None)
     if adoption is None:
-        return ["assertions/disciplines.yaml holds no Adoption Discipline"]
+        if pages.adopt() is None:
+            return []
+        return ["adopt() answers a page though assertions/disciplines.yaml holds no Adoption"]
     page = pages.adopt() or ""
-    problems.extend(f"ADOPT.md lacks the step {s['name']!r}"
-                    for s in adoption["steps"] if f"**{s['name'].rstrip('.')}.**" not in page)
-    without = {"disciplines": [d for d in real["disciplines"] if d["name"] != "Adoption"]}
-    for label, held in (("absent", None), ("holding no Adoption", without)):
-        if _adopt_over(held) is not None:
+    problems = [f"ADOPT.md lacks the step {s['name']!r}"
+                for s in adoption["steps"] if f"**{s['name'].rstrip('.')}.**" not in page]
+    for label, held in _portfolio_views(real):
+        if _disciplines_as(held, pages.adopt) is not None:
             problems.append(f"adopt() answers a page with assertions/disciplines.yaml {label}")
     return problems
 
 
-def _adopt_over(held: Any) -> str | None:
-    """`pages.adopt()` with `assertions/disciplines.yaml` read as `held`, every other file as is."""
+def _probe_adopt_in_a_portfolio() -> list[str]:
+    """`_probe_adopt` judged over both views of `assertions/disciplines.yaml` a portfolio holds."""
+    real = record.load("assertions/disciplines.yaml") or {}
+    return [f"with assertions/disciplines.yaml {label}: {problem}"
+            for label, held in _portfolio_views(real)
+            for problem in _disciplines_as(held, _probe_adopt)]
+
+
+def _portfolio_views(real: dict[str, Any]) -> tuple[tuple[str, Any], ...]:
+    """The two shapes a portfolio's `assertions/disciplines.yaml` takes, each with its label."""
+    without = {"disciplines": [d for d in real.get("disciplines") or [] if d["name"] != "Adoption"]}
+    return (("absent", None), ("holding no Adoption", without))
+
+
+def _disciplines_as[T](held: Any, fn: Callable[[], T]) -> T:
+    """`fn()` with `assertions/disciplines.yaml` read as `held`, every other file as is."""
     saved = record.load
 
     def load(rel: str) -> Any | None:
@@ -121,7 +137,7 @@ def _adopt_over(held: Any) -> str | None:
 
     record.load = load
     try:
-        return pages.adopt()
+        return fn()
     finally:
         record.load = saved
 
@@ -167,4 +183,5 @@ def rendered_artifact_probes() -> list[str]:
     problems.extend(_probe_fallbacks())
     problems.extend(_probe_fallbacks_without_specialize())
     problems.extend(_probe_adopt())
+    problems.extend(_probe_adopt_in_a_portfolio())
     return problems
