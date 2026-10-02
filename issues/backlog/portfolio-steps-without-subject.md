@@ -1,5 +1,6 @@
 ---
 difficulty: medium
+parent: onboard-fitch-mvp
 ---
 
 # Leave a portfolio no step that can never run there
@@ -13,6 +14,10 @@ good: `brownfield adoption probes` (no `template/` to adopt from) and
 DR-261). So a portfolio whose CI sets `CI` fails on every run, and so does
 `just test-specialization` run under CI, since `step_8_run_gate` passes the
 environment through.
+
+Since `landing-gate-holds-on-could-not-run`, the pair loop also holds every
+landing whose gate reports a step that could not run. fitch-mvp's `meta` gate
+reports both, so no Issue can land in fitch-mvp until this one does.
 
 ## How to reproduce it
 
