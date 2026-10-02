@@ -8,14 +8,16 @@ from checks.collect import META, check
 from checks.probes.harness import load_module
 
 SELECTIONS = (
-    ((), ("meta", "rust-seed", "python-seed", "pair")),
+    ((), ("meta", "rust-seed", "python-seed", "pair", "app")),
+    (("app",), ("app",)),
     (("pair", "rust-standard"), ("rust-seed", "pair")),
     (("scaffold", "pair"), ("meta", "pair")),
     (("python-seed", "meta"), ("meta", "python-seed")),
 )
 """Words put to `select_all`, and the Projects it must choose, once each, in declared order
 (stereorepo's DR-303): none is every Project, a Product brings its Projects, and an overlap or
-an order other than the declared one changes nothing."""
+an order other than the declared one changes nothing, and a Project at the repository root
+(`name: .`) is chosen by its id like any other."""
 
 
 @check("gate runner probes", pre=True)
@@ -46,6 +48,7 @@ def gate_runner_probes() -> list[str]:
 
     projects = {f"work:project/{name}": {"id": f"work:project/{name}"}
                 for name in ("meta", "rust-seed", "python-seed", "pair")}
+    projects["work:project/app"] = {"id": "work:project/app", "name": "."}
     products = {
         "work:product/scaffold": {"built_from": ["work:project/meta", "work:project/pair"]},
         "work:product/rust-standard": {"built_from": ["work:project/rust-seed"]},

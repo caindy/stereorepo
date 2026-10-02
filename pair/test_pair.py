@@ -1560,6 +1560,52 @@ class GateSelectionTest(unittest.TestCase):
         self.assertIsNone(touched.select(self.b.repo, ["wiki/x.md"]))
         self.assertIsNone(touched.select(self.b.repo, ["widgets/x.py"]))
 
+    def root_structure(self, root: str, *more: str) -> None:
+        """Commit Projects `meta` and `app` at `root`, plus `more`, beside a three-item bundle."""
+        bundle = self.b.repo / touched.BUNDLE
+        bundle.parent.mkdir(parents=True, exist_ok=True)
+        bundle.write_text(
+            "items:\n"
+            "  - path: README.md\n    kind: file\n"
+            "  - path: wiki/stereorepo/\n    kind: dir\n"
+            "  - path: stakeholders\n    kind: dir\n"
+        )
+        extra = "".join(project(name, name) for name in more)
+        self.b.structure("projects:\n" + project("meta", ".meta") + project("app", root) + extra)
+
+    def test_a_project_at_the_root_holds_what_no_deeper_project_or_the_bundle_holds(
+        self,
+    ) -> None:
+        cases = {
+            ("tests/test_x.py",): ["app"],
+            ("build.py",): ["app"],
+            ("lib/x.py",): ["lib"],
+            ("issues/backlog/a.md",): ["meta"],
+            (".meta/assertions/structure.yaml",): ["meta"],
+            ("README.md",): ["meta"],
+            ("wiki/stereorepo/x.md",): ["meta"],
+            ("wiki/app/x.md",): ["app"],
+            ("stakeholders/p.md",): ["meta"],
+            ("stakeholders.md",): ["app"],
+            ("tests/test_x.py", "issues/backlog/a.md"): ["meta", "app"],
+        }
+        for root in (".", "./"):
+            self.root_structure(root, "lib")
+            for paths, expected in cases.items():
+                with self.subTest(root=root, paths=paths):
+                    self.assertEqual(touched.select(self.b.repo, paths), expected)
+
+    def test_the_root_project_and_meta_together_are_the_whole_gate(self) -> None:
+        self.root_structure(".")
+        self.assertIsNone(touched.select(self.b.repo, ["tests/test_x.py", "issues/backlog/a.md"]))
+
+    def test_with_no_bundle_the_board_and_meta_still_stay_with_meta(self) -> None:
+        self.b.structure("projects:\n" + project("meta", ".meta") + project("app", "."))
+        for path in ("issues/backlog/a.md", ".meta/x.py"):
+            with self.subTest(path=path):
+                self.assertEqual(touched.select(self.b.repo, [path]), ["meta"])
+        self.assertEqual(touched.select(self.b.repo, ["README.md"]), ["app"])
+
     def run_widget_issue(self, *, gates: list[bool]) -> None:
         """Carry an Issue that changes `widgets/x.py` to landing, under `STRUCTURE`."""
         b = self.b

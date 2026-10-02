@@ -51,13 +51,15 @@ only the gate of each Project its change touches: `just gate meta` always, and
 (`prompts/stage-in-progress.md`). The loop's own gate runs before the Issue
 lands (see the table below), and a failure goes back to the seats with its
 output and the targets gated. It gates the Projects whose directories the
-branch changes against `main`, a path under none of them counting as `meta`'s,
-and every Project of each Product built from one of them (`touched.py`,
-stereorepo's DR-303). When that is every Project it is the whole `just gate`,
-and a branch with no change passes without one. A break that the directories
-do not show, through a shared tool or a generated file, lands unchecked: the
-decision accepts that risk for the minutes the whole gate cost on every
-landing. No seat runs the whole `just gate` in any stage, even when an Issue names it
+branch changes against `main`, a path under none of them counting as `meta`'s
+(or, when a Project is named `.`, as that root Project's, unless the board,
+`.meta/` or `.meta/bundle.yaml` places it), and every Project of each Product
+built from one of them (`touched.py`, stereorepo's DR-303). When that is every
+Project it is the whole `just gate`, and a branch with no change passes
+without one. A break that the directories do not show, through a shared tool
+or a generated file, lands unchecked: the decision accepts that risk for the
+minutes the whole gate cost on every landing. No seat runs the whole
+`just gate` in any stage, even when an Issue names it
 (`prompts/primary.md`, `prompts/secondary.md`), and grooming states how an
 Issue will be known done in behaviour and tests, never as a gate
 (`prompts/stage-backlog.md`, `prompts/stage-grooming.md`). A seat working

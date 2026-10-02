@@ -42,6 +42,12 @@ decisions:
         built from it, and the loop gates every Project those Products are
         built from (`pair/touched.py`).
       - >-
+        A Project named `.` sits at the repository root, as an adopted
+        product often does, and holds every path no deeper Project holds,
+        except the board under `issues/`, everything under `.meta/`, and
+        every path `.meta/bundle.yaml` places, which stay with `meta` so that
+        a change to the board alone does not run the product's gate.
+      - >-
         When the selection is every Project, or the repository asserts no
         structure, the loop runs `just gate` with no argument, as before. A
         branch with no change against `main` passes without a gate.
