@@ -1,0 +1,54 @@
+decisions:
+  - id: work:decision/304
+    name: "DR-304 · A Project names its own LinkML schemas, and slot citations resolve against them"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-work-structure
+      - work:artifact/meta-checks-citations-slots
+    context: >-
+      The `cited schema slots` step resolves every slot that prose cites in the
+      qualified form against stereorepo's ontologies alone. fitch-mvp, the
+      first repository onboarded, has LinkML schemas of its own, and its
+      `README.md` and `ROADMAP.md` cite 27 slots of its own class `Decision`.
+      stereorepo declares a class of the same name, the Decision Record, with
+      other slots, so each of those citations failed. A portfolio had no way
+      to say which schemas are its product's.
+    alternatives:
+      - name: Discover every LinkML schema outside `.meta/`
+        chosen: false
+        reason: >-
+          Any YAML file with `classes:` would be read as a schema, including
+          fixtures and generated copies, and a product would have no way to
+          leave one out.
+      - name: Leave product documentation out of the step
+        chosen: false
+        reason: >-
+          It would stop checking the citations a product makes of its own
+          schemas, which are as likely to drift as stereorepo's.
+      - name: A multivalued `schemas` slot on Project, naming paths
+        chosen: true
+        reason: >-
+          A schema belongs to a build unit, and the portfolio already asserts
+          its Projects in `structure.yaml`, which the gate reads into its index.
+    consequences:
+      - >-
+        The step loads every schema the Projects name beside stereorepo's
+        ontologies. Where both declare a class of one name, a citation passes
+        when either declares the slot, because which class a sentence means
+        cannot be told from the sentence.
+      - >-
+        A named schema that is missing, does not load or declares no class
+        fails the step, naming the path and the Project.
+      - >-
+        Only this step reads them. Assertions are still validated against
+        stereorepo's schemas, and slots removed in git history are still
+        derived from stereorepo's schemas alone.
+    falsifier: >-
+      A product's documentation cites a slot of a class it shares a name with
+      stereorepo, the slot exists only on stereorepo's class, and the step
+      passes a citation that a reader took to mean the product's class.
+    rationale: |-
+      Naming the schemas where the Project is asserted costs one line a
+      Project and keeps the step's reach explicit. The union over a shared
+      class name gives up some precision for a pair of confusable classes,
+      which the product's domain vocabulary records rather than this check.

@@ -14,7 +14,7 @@ import tempfile
 from typing import Any
 
 from checks.citations import slots
-from checks.collect import ROOT, CouldNotRun, check
+from checks.collect import ROOT, CouldNotRun, Found, Index, check
 
 
 class _FakeClass:
@@ -48,6 +48,92 @@ class _FakeSchemaView:
         if key == "articles" and root == "Ontology":
             return _FakeSlot()
         return None
+
+
+class _FakeDecisionView:
+    """Stand-in for stereorepo's schemas: a class `Decision` declaring `rationale`."""
+
+    def all_classes(self) -> dict[str, Any]:
+        """Return the one probe class keyed by identifier."""
+        return {"Decision": _FakeClass(tree_root=True)}
+
+    def class_slots(self, cls: str) -> list[str]:
+        """Return the slots the probe class declares."""
+        return ["rationale"] if cls == "Decision" else []
+
+    def all_slots(self) -> dict[str, Any]:
+        """Return every slot the stand-in declares."""
+        return {"rationale": None}
+
+
+PRODUCT_SCHEMA = """\
+id: https://example.org/product
+name: product
+default_prefix: product
+prefixes:
+  product: https://example.org/product/
+classes:
+  Decision:
+    slots:
+      - posit_kind
+slots:
+  posit_kind:
+    range: string
+"""
+"""A product schema declaring its own class `Decision`, with a slot stereorepo's lacks."""
+
+
+def _project_index(*schemas: str) -> Index:
+    """Build an assertion index holding one Project that names the given schema paths."""
+    project = {"id": "work:project/product", "name": "product", "schemas": list(schemas)}
+    return {"work:project/product": ("Project", project, "structure.yaml")}
+
+
+def _probe_product_citations(product: list[Any]) -> list[str]:
+    """Test citations of a class both a product schema and stereorepo's declare."""
+    problems: list[str] = []
+    class_slots, all_slots = slots._compile_schema_indices([_FakeDecisionView(), *product])
+    indices = slots.SlotIndices(class_slots=class_slots, all_slots=all_slots, former_slots={})
+    cases = (("posit_kind", False), ("nonsense_xyz", True), ("rationale", False))
+    for slot, should_fail in cases:
+        span = [f"The README cites Decision.{slot} here."]
+        res = slots.check_prose_spans(span, "README.md", indices, set())
+        if bool(res) != should_fail:
+            expected = "a finding" if should_fail else "none"
+            problems.append(f"product schema citation of {slot}: expected {expected}, got {res!r}")
+    return problems
+
+
+def _probe_product_schemas() -> list[str]:
+    """Test that a Project's product schemas resolve citations, and that a bad one is named."""
+    problems: list[str] = []
+    with tempfile.TemporaryDirectory() as tmpdir:
+        schema = pathlib.Path(tmpdir) / "product.yaml"
+        schema.write_text(PRODUCT_SCHEMA, encoding="utf-8")
+        not_schema = pathlib.Path(tmpdir) / "notes.yaml"
+        not_schema.write_text("notes:\n  - one\n", encoding="utf-8")
+        missing = str(pathlib.Path(tmpdir) / "absent.yaml")
+
+        product, unloaded = slots.product_views(_project_index(str(schema)))
+        if unloaded or len(product) != 1:
+            return [f"product schema: expected one view, got {product!r} and {unloaded!r}"]
+        problems.extend(_probe_product_citations(product))
+
+        for rel in (missing, str(not_schema)):
+            _views, res = slots.product_views(_project_index(rel))
+            if len(res) != 1 or rel not in res[0] or "work:project/product" not in res[0]:
+                problems.append(f"product schema {rel}: expected one finding, got {res!r}")
+
+        bare, res = slots.product_views({"work:project/meta": ("Project", {"name": ".meta"}, "")})
+        if bare or res:
+            problems.append(f"no product schema: expected nothing, got {bare!r} and {res!r}")
+
+        outcome = slots.cited_schema_slots(
+            views=[], index=_project_index(missing), deleted=lambda: ({}, None)
+        )
+        if not isinstance(outcome, Found) or not any(missing in p for p in outcome.problems):
+            problems.append(f"step: expected Found naming {missing}, got {outcome!r}")
+    return problems
 
 
 def _probe_qualified_and_former(indices: slots.SlotIndices, rel: str) -> list[str]:
@@ -141,7 +227,7 @@ def _probe_phrases_and_seams(indices: slots.SlotIndices, rel: str) -> list[str]:
         )
 
     custom_outcome = slots.cited_schema_slots(
-        views=[], deleted=lambda: (None, "custom failure cause from seam")
+        views=[], index={}, deleted=lambda: (None, "custom failure cause from seam")
     )
     if (
         not isinstance(custom_outcome, CouldNotRun)
@@ -152,7 +238,7 @@ def _probe_phrases_and_seams(indices: slots.SlotIndices, rel: str) -> list[str]:
         )
 
     fallback_outcome = slots.cited_schema_slots(
-        views=[], deleted=lambda: (None, None)
+        views=[], index={}, deleted=lambda: (None, None)
     )
     expected_fallback = "git history could not be read to derive former schema slots"
     if (
@@ -246,7 +332,8 @@ def cited_schema_slot_probes() -> list[str]:
     """Verify that schema slot citation checking resolves valid and invalid forms correctly.
 
     Pins qualified `Class.slot` citations, explicit slot phrases, former slot scoping,
-    YAML comment scanning in durable files, and `CouldNotRun` cause attribution.
+    YAML comment scanning in durable files, `CouldNotRun` cause attribution, and
+    citations resolved against a Project's own schemas (stereorepo's DR-304).
 
     Returns:
         list[str]: Findings naming cases whose outcome did not match expectations.
@@ -270,5 +357,6 @@ def cited_schema_slot_probes() -> list[str]:
         + _probe_phrases_and_seams(indices, rel)
         + _probe_diff_parsing()
         + _probe_yaml_comment_scanning(indices)
+        + _probe_product_schemas()
     )
 

@@ -121,6 +121,16 @@ slots:
       File paths or glob patterns excluded from artifact completeness checks.
     multivalued: true
 
+  schemas:
+    description: >-
+      The repository-relative paths of the LinkML schemas a Project owns: a
+      Product's own model, beside the ontologies stereorepo brings. Read only
+      by the step that resolves slots cited in prose, so that documentation
+      citing the product's slots is checked against the product's schemas
+      (stereorepo's DR-304).
+    range: string
+    multivalued: true
+
   discipline_implementations:
     description: >-
       How this Bootstrap satisfies or exempts Disciplines.
@@ -258,6 +268,7 @@ classes:
       - language
       - gate
       - excluded_paths
+      - schemas
     slot_usage:
       name:
         required: true

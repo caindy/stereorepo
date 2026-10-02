@@ -86,3 +86,16 @@ and document-scoped former slot names against LinkML schema declarations across
 living durable prose (excluding historical decision records and challenges).
 
 Evidence: `.meta/checks/probes/citations.py::cited_schema_slot_probes`
+
+### A product's own schema slots cited in its documentation
+
+fitch-mvp, the first repository onboarded, cites slots of its own class
+`Decision` in its `README.md` and `ROADMAP.md`. `cited_schema_slots()`
+resolved them against stereorepo's Decision Record, a class of the same name
+with other slots, and failed each one. Established: a Project names its
+LinkML schemas in its `schemas` slot, `product_views()` loads them, and a
+citation passes when stereorepo's schemas or a product's declare the slot
+on the class it names. A named schema that is missing, does not load or
+declares no class fails the step (stereorepo's DR-304).
+
+Evidence: `.meta/checks/probes/citations.py::_probe_product_schemas`

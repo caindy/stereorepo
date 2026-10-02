@@ -23,9 +23,10 @@ from collections.abc import Callable, Sequence
 from typing import Any, NamedTuple
 
 import yaml
+from linkml_runtime import SchemaView
 
 from checks.citations import loaders, prose
-from checks.collect import ROOT, CouldNotRun, Found, Passed, StepOutcome, check, view_for
+from checks.collect import ROOT, CouldNotRun, Found, Index, Passed, StepOutcome, check, view_for
 
 QUALIFIED_SLOT = re.compile(r"`?(?P<class>[A-Z][a-zA-Z0-9]+)\.(?P<slot>[a-z][a-z0-9_]+)`?")
 SLOT_PHRASES = (
@@ -324,29 +325,81 @@ def _former_slots(
     return former_slots
 
 
+def product_views(
+    index: Index,
+    load: Callable[[str], Any] = SchemaView,
+) -> tuple[list[Any], list[str]]:
+    """Load the LinkML schemas the portfolio's Projects name in their `schemas` slot.
+
+    `SchemaView` parses lazily, so each view is asked for its classes here: a
+    file that is not a schema fails where its path and Project can be named,
+    and so does one that declares no class, which YAML that is not LinkML
+    loads as (stereorepo's DR-304).
+
+    Parameters:
+        index (Index): The identified objects of the assertions.
+        load (Callable[[str], Any]): Builds a schema view from a file path.
+
+    Returns:
+        tuple[list[Any], list[str]]: The loaded views, and one problem line per
+        named schema that is missing, does not load, or declares no class.
+    """
+    views: list[Any] = []
+    problems: list[str] = []
+    for ident, (cls, obj, _where) in sorted(index.items()):
+        if cls != "Project":
+            continue
+        for rel in obj.get("schemas") or []:
+            path = ROOT / rel
+            if not path.is_file():
+                problems.append(f"{ident}: schema '{rel}' does not exist")
+                continue
+            try:
+                sv = load(str(path))
+                declared = sv.all_classes()
+            except Exception as err:  # noqa: BLE001  # reason: LinkML and the YAML parser raise their own hierarchies for a file that is not a schema, and any of them is a problem to name rather than a crash
+                problems.append(f"{ident}: schema '{rel}' does not load: {err}")
+                continue
+            if not declared:
+                problems.append(f"{ident}: schema '{rel}' declares no class")
+                continue
+            views.append(sv)
+    return views, problems
+
+
 @check("cited schema slots")
 def cited_schema_slots(
     views: Sequence[Any],
+    index: Index,
     deleted: Callable[[], tuple[dict[str, set[str]] | None, str | None]] = deleted_schema_slots,
 ) -> StepOutcome:
     """Validate that schema slots cited in living durable prose resolve against LinkML declarations.
 
-    Excludes historical decision records (`assertions/decisions/`) and test
-    probe suites (`checks/probes/`).
+    Resolves against stereorepo's schemas and the product schemas the
+    portfolio's Projects name. A class both declare passes a citation of a
+    slot either one declares, since which of them a sentence means cannot be
+    told (stereorepo's DR-304). Excludes historical decision records
+    (`assertions/decisions/`) and test probe suites (`checks/probes/`).
 
     Parameters:
         views (Sequence[Any]): Loaded LinkML SchemaView instances.
+        index (Index): The identified objects of the assertions, read for Projects' `schemas`.
         deleted (Callable): Supplier yielding class-scoped deleted slot names or error from diffs.
 
     Returns:
         StepOutcome: Passed with file and slot metrics, Found naming unresolved slot
-        citations, or CouldNotRun if git history is truncated or unreadable.
+        citations or product schemas that do not load, or CouldNotRun if git
+        history is truncated or unreadable.
     """
     raw_deleted, reason = deleted()
     if raw_deleted is None:
         return CouldNotRun(reason or "git history could not be read to derive former schema slots")
 
-    class_slots, all_slots = _compile_schema_indices(views)
+    product, unloaded = product_views(index)
+    if unloaded:
+        return Found(unloaded)
+
+    class_slots, all_slots = _compile_schema_indices([*views, *product])
     former_slots = _former_slots(raw_deleted, class_slots, all_slots)
 
     indices = SlotIndices(class_slots=class_slots, all_slots=all_slots, former_slots=former_slots)
@@ -367,5 +420,6 @@ def cited_schema_slots(
         return Found(problems)
     return Passed(
         f"{scanned} living durable files scanned (excluding decisions, "
-        f"and probes) against {len(all_slots)} schema slots across {len(class_slots)} classes"
+        f"and probes) against {len(all_slots)} schema slots across {len(class_slots)} classes "
+        f"in {len(views) + len(product)} schemas, {len(product)} of them the portfolio's own"
     )
