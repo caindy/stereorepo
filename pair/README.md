@@ -239,7 +239,7 @@ path the landing changes pause it at once.
 | groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | run one Flight | `just pair --flight <slug>` |
-| watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway, the running order with each Flight's parts and what holds each item back, and the counts per stage; `just pair-status --json` prints the same state as one JSON object, keyed `waiting`, `underway`, `order`, `to_groom`, `counts`, `sessions` and `turns`, whose fields `status_view` in `loop.py` describes; `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
+| watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway, the running order with each Flight's parts and what holds each item back, and the counts per stage; `just pair-status --json` prints the same state as one JSON object, keyed `waiting`, `underway`, `order`, `to_groom`, `counts`, `sessions` and `turns`, whose fields `status_view` in `loop.py` describes, and which the loop also publishes for a cockpit (see [The published status](#the-published-status)); `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
 | wait for the loop | `just pair-watch --until landed`, `--until developer` (a desk check, a pause or a send-back) or `--until flight <slug>` (that Flight reaches `desk-check/`); see [The event log](#the-event-log) |
 | steer an Issue or a pass underway | edit files in `worktrees/pair`, or `worktrees/groom` for a pass, between turns; the next seat sees the change |
 | take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` (`worktrees/groom` for a pass) with the id `just pair-status` prints; `just pair` or `just groom` again afterwards |
@@ -324,3 +324,22 @@ logs nothing.
 
 The loop's tests run as the `pair` Project's gate, `just gate pair`, against
 fake seats over a temporary git repository.
+
+## The published status
+
+A cockpit, one view across every repository the developer runs a pair loop
+in, reads each loop's status from `~/.pairs/<basename>.json`, where
+`<basename>` is the last component of the developer's checkout; the
+environment variable `PAIRS_DIR` names another directory. The file is one
+JSON object: `repo`, the checkout's absolute path, which tells apart two
+checkouts with the same basename, and then the keys of `just pair-status
+--json` (`waiting`, `underway`, `order`, `to_groom`, `counts`, `sessions`,
+`turns`), whose fields `status_view` in `loop.py` describes.
+
+Either loop rewrites it whenever its state changes: when it saves or clears
+`state.json`, when it logs an event, and when a Flight's desk check is
+answered. Each write goes to a temporary file in the same directory and is
+renamed into place, so a reader never sees half of it. The file holds
+nothing the board, `.pair/` and git do not, and the loop never reads it
+back. A write that fails is reported on the loop's output and does not stop
+it.

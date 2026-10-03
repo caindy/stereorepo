@@ -50,6 +50,8 @@ import os
 import re
 import signal
 import subprocess
+import sys
+import tempfile
 import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -139,12 +141,20 @@ def event_log(repo: Path) -> Path:
 
 
 def append_event(
-    repo: Path, loop: str, kind: str, slug: str | None = None, **fields: Any
+    repo: Path,
+    loop: str,
+    kind: str,
+    slug: str | None = None,
+    *,
+    main: str = "main",
+    report: Callable[[str], None] = lambda message: print(message, file=sys.stderr),
+    **fields: Any,
 ) -> None:
-    """Append one event to the log, as one line in one write.
+    """Append one event to the log, as one line in one write, then `publish`.
 
     An append this small to a local file is not split, so the loop working
     Issues and a grooming pass write the one file without interleaving.
+    A publish that fails is told to `report`, and the event stands.
     """
     row: dict[str, Any] = {
         "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -158,6 +168,9 @@ def append_event(
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a") as f:
         f.write(json.dumps(row) + "\n")
+    failed = publish(repo, main)
+    if failed:
+        report(failed)
 
 
 def groom_targets(repo: Path) -> frozenset[str]:
@@ -276,13 +289,23 @@ class Loop:
     def save(self, st: State) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
         self.state_file.write_text(json.dumps(dataclasses.asdict(st), indent=1))
+        self.publish()
 
     def clear(self) -> None:
         self.state_file.unlink(missing_ok=True)
+        self.publish()
+
+    def publish(self) -> None:
+        """Rewrite the published status (`publish`), and `say` why if that fails."""
+        failed = publish(self.repo, self.main)
+        if failed:
+            self.say(failed)
 
     def event(self, kind: str, slug: str | None = None, **fields: Any) -> None:
         """Log a transition of this loop to `.pair/events.jsonl` (`append_event`)."""
-        append_event(self.repo, self.kind, kind, slug, **fields)
+        append_event(
+            self.repo, self.kind, kind, slug, main=self.main, report=self.say, **fields
+        )
 
     def pause(
         self, st: State, reason: str, retry: str | None, kind: str = "paused"
@@ -578,6 +601,7 @@ class Loop:
             return "none"
         paths = self.commit_move(slug, "done", f"Accept {slug} at its desk check")
         self.say(f"accepted {slug} ({paths})")
+        self.publish()
         return "accepted"
 
     def resume_flight(self, slug: str) -> str:
@@ -620,6 +644,7 @@ class Loop:
             slug, "backlog", f"Send {slug} back from its desk check", board.ORDER
         )
         self.say(f"sent {slug} back to backlog/ with your notes ({paths})")
+        self.publish()
         return "resumed"
 
     def commit_move(self, slug: str, to: str, subject: str, *also: str) -> str:
@@ -1943,3 +1968,43 @@ def status(repo: Path, main: str = "main") -> str:
 def status_json(repo: Path, main: str = "main") -> str:
     """`status_view` as one line of JSON, for a session that drives the loop; `status_view` documents the fields."""
     return json.dumps(status_view(repo, main))
+
+
+def pairs_dir() -> Path:
+    """Where every checkout's loop publishes its status: `PAIRS_DIR`, or `~/.pairs`."""
+    named = os.environ.get("PAIRS_DIR")
+    return Path(named) if named else Path.home() / ".pairs"
+
+
+def publish(repo: Path, main: str = "main") -> str | None:
+    """Write `status_view` and the checkout's path to `<pairs_dir>/<basename>.json`.
+
+    This is the convention by which a cockpit reads every repository's loop
+    without running anything in it. The file is written beside its final
+    name under a name unique to this write and renamed into place, so a
+    reader never sees half of it and, when the `pair` and `groom` loops
+    publish at once, the last whole view wins. Nothing reads it back.
+
+    Return None, or one line saying why the file could not be written.
+    """
+    here = repo.resolve()
+    target = pairs_dir() / f"{here.name}.json"
+    temporary: str | None = None
+    try:
+        text = json.dumps({"repo": str(here), **status_view(repo, main)})
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with tempfile.NamedTemporaryFile(
+            "w",
+            dir=target.parent,
+            prefix=f".{here.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as f:
+            temporary = f.name
+            f.write(text)
+        Path(temporary).replace(target)
+    except Exception as error:  # noqa: BLE001  # reason: `status_view` raises too, on a board it cannot read or the other loop's `state.json` caught half-written, and the published file must never stop the loop
+        if temporary is not None:
+            Path(temporary).unlink(missing_ok=True)
+        return f"could not publish {target}: {error}"
+    return None

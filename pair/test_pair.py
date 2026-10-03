@@ -245,6 +245,11 @@ change to the loop's code."""
 TEMPLATES = tempfile.TemporaryDirectory()
 """Where `board_repository` builds its repository, once per process."""
 
+os.environ["PAIRS_DIR"] = str(Path(TEMPLATES.name) / "pairs")
+"""Where a loop under test publishes its status (`loop.publish`) until a `Bench`
+points it at its own: never the developer's `~/.pairs`, from any test or any
+`pair.py` a test runs, which inherits it."""
+
 
 @functools.cache
 def board_repository() -> Path:
@@ -279,6 +284,10 @@ class Bench:
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name) / "developer"
         shutil.copytree(board_repository(), self.repo, symlinks=True)
+        self.pairs = Path(self.tmp.name) / "pairs"
+        """Where this `Bench`'s loop publishes; a worker process runs one test at a time, so it is the one in force until `close`."""
+        self.pairs_before = os.environ["PAIRS_DIR"]
+        os.environ["PAIRS_DIR"] = str(self.pairs)
         self.turns: collections.deque[tuple[str, object]] = collections.deque()
         self.sent: list[tuple[str, str]] = []
         self.opened: list[tuple[str, str | None]] = []
@@ -404,6 +413,7 @@ class Bench:
         )
 
     def close(self) -> None:
+        os.environ["PAIRS_DIR"] = self.pairs_before
         self.tmp.cleanup()
 
     def events(self, kind: str | None = None) -> list[dict[str, Any]]:
@@ -3067,7 +3077,10 @@ class WatchTest(unittest.TestCase):
         self.addCleanup(thread.join, 10)
 
     def emit(self, kind: str, **fields: Any) -> Callable[[], None]:
-        return lambda: append_event(self.repo, "pair", kind, **fields)
+        """An event to log later, whose publish, in a directory with no git repository, fails unheard."""
+        return lambda: append_event(
+            self.repo, "pair", kind, report=lambda _: None, **fields
+        )
 
     def watch(self, *until: str) -> int:
         result: list[int] = []
@@ -3311,6 +3324,80 @@ class StatusTest(unittest.TestCase):
             check=True,
         ).stdout
         self.assertEqual(json.loads(printed), shown)
+
+
+class PublishTest(unittest.TestCase):
+    """`~/.pairs/<repo>.json`: the loop's status, published for a cockpit to read."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+        self.said: list[str] = []
+        self.b.loop.say = self.said.append
+
+    def to_desk_check(self) -> str:
+        """Run a `developer` Issue, `h`, to its desk check, and return the loop's outcome."""
+        b = self.b
+        b.issue("backlog", "h", "Developer", difficulty="developer")
+        b.script(
+            ("primary", quiet),
+            ("secondary", quiet),
+            ("primary", append("h", PLAN)),
+            ("secondary", quiet),
+            ("primary", write("a.txt", "x")),
+            ("secondary", quiet),
+        )
+        return b.loop.run()
+
+    def published(self) -> dict[str, Any]:
+        return json.loads((self.b.pairs / "developer.json").read_text())
+
+    def test_the_file_is_the_status_view(self) -> None:
+        b = self.b
+        self.assertEqual(self.to_desk_check(), "desk-check")
+        shown = self.published()
+        self.assertEqual(shown, {"repo": str(b.repo.resolve()), **status_view(b.repo)})
+        self.assertEqual([st["slug"] for st in shown["underway"]], ["h"])
+        self.assertEqual([item["slug"] for item in shown["waiting"]], ["h"])
+        self.assertEqual(os.listdir(b.pairs), ["developer.json"])
+        self.assertFalse([line for line in self.said if "could not publish" in line])
+
+    def test_an_event_alone_republishes(self) -> None:
+        b = self.b
+        append_event(b.repo, "pair", "x")
+        (b.pairs / "developer.json").unlink()
+        append_event(b.repo, "pair", "x")
+        self.assertEqual(self.published()["underway"], [])
+
+    def test_accepting_a_flight_republishes(self) -> None:
+        b = self.b
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("done", "part", "Part", difficulty="easy", parent="big")
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        b.loop.run(once=True)
+        self.assertEqual([item["slug"] for item in self.published()["waiting"]], ["big"])
+        self.assertEqual(b.loop.accept("big"), "accepted")
+        self.assertEqual(self.published()["waiting"], [])
+
+    def test_resuming_a_flight_republishes(self) -> None:
+        b = self.b
+        b.issue("backlog", "big", "Big", difficulty="hard")
+        b.issue("done", "part", "Part", difficulty="easy", parent="big")
+        b.script(("primary", append("big", BRIEF)), ("secondary", quiet))
+        b.loop.run(once=True)
+        flight = b.repo / "issues/desk-check/big.md"
+        flight.write_text(flight.read_text() + NOTES)
+        self.assertEqual(b.loop.resume("big"), "resumed")
+        self.assertEqual(self.published()["waiting"], [])
+        self.assertIn("big", self.published()["counts"]["backlog"])
+
+    def test_a_publish_failure_does_not_stop_the_loop(self) -> None:
+        blocked = self.b.pairs.with_name("blocked")
+        blocked.write_text("a file where the directory would be\n")
+        with mock.patch.dict(os.environ, {"PAIRS_DIR": str(blocked)}):
+            self.assertEqual(self.to_desk_check(), "desk-check")
+        self.assertIn(f"could not publish {blocked / 'developer.json'}", "\n".join(self.said))
+        self.assertEqual(self.b.state().retry, "desk-check")
 
 
 class BoardTest(unittest.TestCase):
