@@ -336,7 +336,8 @@ with `just pair-accept <slug>` or `just pair-resume <slug>` holds no lock and
 logs nothing.
 
 The loop's tests run as the `pair` Project's gate, `just gate pair`, against
-fake seats over a temporary git repository.
+fake seats over a temporary git repository. The same gate then runs ruff over
+`pair/` with `.meta/ruff.toml`, so a `# noqa` written here is enforced.
 
 ## The published status
 

@@ -25,7 +25,7 @@ import shutil
 import subprocess
 import threading
 import time
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -99,6 +99,15 @@ def denied(entry: object) -> str:
     tool_input = entry.get("tool_input")
     command = tool_input.get("command") if isinstance(tool_input, dict) else None
     return command if name == "Bash" and isinstance(command, str) else name
+
+
+def summed(usage: dict[str, Any], more: Mapping[str, Any]) -> None:
+    """Add one `result` event's `usage` into `usage`: numbers add, anything else is replaced."""
+    for key, value in more.items():
+        if isinstance(value, int | float) and not isinstance(value, bool):
+            usage[key] = usage.get(key, 0) + value
+        else:
+            usage[key] = value
 
 
 def is_refusal(error: str | None) -> bool:
@@ -256,6 +265,7 @@ def real_gpg(cwd: Path) -> str | None:
     """
     listed = subprocess.run(
         ["git", "config", "--get-regexp", r"^gpg\.(openpgp\.)?program$"],
+        check=False,
         cwd=cwd,
         capture_output=True,
         text=True,
@@ -330,7 +340,7 @@ def confinement(cwd: Path) -> Confinement:
     common = Path(out("git", "rev-parse", "--path-format=absolute", "--git-common-dir"))
     gitdir = Path(out("git", "rev-parse", "--absolute-git-dir"))
     if gitdir == common:
-        raise ValueError(f"{cwd} is not a linked worktree; a seat runs in one")
+        raise ValueError(f"{cwd} is not a linked worktree; a seat runs in one")  # noqa: TRY003  # reason: the one refusal of a seat outside a linked worktree, which a test catches by its built-in type
     refs = common / "refs"
     deny = {common / name for name in GIT_DENIED}
     deny |= {p for p in common.iterdir() if p.name not in GIT_ALLOWED}
@@ -338,7 +348,7 @@ def confinement(cwd: Path) -> Confinement:
     deny |= {p for p in refs.iterdir() if p.name != "heads"}
     branches = out("git", "for-each-ref", "--format=%(refname:lstrip=2)", "refs/heads")
     deny |= {refs / "heads" / b.split("/")[0] for b in branches.splitlines()}
-    deny |= {p for p in (refs / "heads").iterdir()}
+    deny |= set((refs / "heads").iterdir())
     deny.discard(refs / "heads" / "pair")
     deny |= {p for p in (common / "worktrees").iterdir() if p != gitdir}
 
@@ -366,7 +376,11 @@ def confinement(cwd: Path) -> Confinement:
 
     sockets = []
     signs = subprocess.run(
-        ["git", "config", "--bool", "commit.gpgsign"], cwd=cwd, capture_output=True, text=True
+        ["git", "config", "--bool", "commit.gpgsign"],
+        check=False,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
     ).stdout.strip()
     if signs == "true":
         gnupg = Path(os.environ.get("GNUPGHOME", Path.home() / ".gnupg"))
@@ -452,7 +466,7 @@ class ClaudeSeat:
     that died before its first turn ended.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913  # reason: role, worktree, prompt and log directory make a seat, and the rest are what a restart or a test overrides
         self,
         role: str,
         cwd: Path,
@@ -564,14 +578,8 @@ class ClaudeSeat:
         outcome is the last `result`'s.
         """
         started = time.monotonic()
-        while True:
-            try:
-                line = self.lines.get_nowait()
-            except queue.Empty:
-                break
-            if line is None:
-                return self._exited(started)
-            self._take(line)
+        if not self._drain():
+            return self._exited(started)
         gone = self._write(text)
         if gone:
             return TurnResult(False, error=gone, session_id=self.session_id)
@@ -597,11 +605,7 @@ class ClaudeSeat:
             event = self._take(line)
             if event is None or event.get("type") != "result":
                 continue
-            for key, value in (event.get("usage") or {}).items():
-                if isinstance(value, int | float) and not isinstance(value, bool):
-                    usage[key] = usage.get(key, 0) + value
-                else:
-                    usage[key] = value
+            summed(usage, event.get("usage") or {})
             refusals += [denied(entry) for entry in event.get("permission_denials") or []]
             if self.tasks:
                 if not settling:
@@ -624,6 +628,17 @@ class ClaudeSeat:
                 refused=is_refusal(error),
                 denied=refusals,
             )
+
+    def _drain(self) -> bool:
+        """Log and drop the output already waiting: False if the session exited meanwhile."""
+        while True:
+            try:
+                line = self.lines.get_nowait()
+            except queue.Empty:
+                return True
+            if line is None:
+                return False
+            self._take(line)
 
     def _outstanding(self) -> str:
         """The outstanding background tasks, one Markdown list item each."""

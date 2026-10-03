@@ -7,7 +7,8 @@
 Run from the root of the repository whose board it works; the loop's own code
 stays wherever this file is, outside that repository's tree (see README.md):
 
-    uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--flight SLUG] [--model M] [--STAGE-model M] [--round-cap N]
+    uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--flight SLUG]
+        [--model M] [--STAGE-model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py groom [--rerank] [--push] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py status [--json]
     uv run --script <stereorepo>/pair/pair.py accept [SLUG] [--model M] [--STAGE-model M]
@@ -110,14 +111,14 @@ def gate(tree: Path, targets: Sequence[str] | None) -> tuple[bool, str]:
     cannot see lands unchecked (stereorepo's DR-303).
     """
     command = ["just", "gate", *(targets or [])]
-    done = subprocess.run(command, cwd=tree, capture_output=True, text=True)
+    done = subprocess.run(command, check=False, cwd=tree, capture_output=True, text=True)
     return done.returncode == 0, done.stdout + done.stderr
 
 
 def recipes(tree: Path) -> list[str]:
     """The names of the recipes the `justfile` in `tree` defines."""
     return subprocess.run(
-        ["just", "--summary"], cwd=tree, capture_output=True, text=True
+        ["just", "--summary"], check=False, cwd=tree, capture_output=True, text=True
     ).stdout.split()
 
 
@@ -143,7 +144,9 @@ def deliver(tree: Path) -> tuple[bool, str] | None:
     if "deliver" not in recipes(tree):
         return None
     print(f"delivering from {tree.parent.name}/{tree.name} (just deliver) ...", flush=True)
-    done = subprocess.run(["just", "deliver"], cwd=tree, capture_output=True, text=True)
+    done = subprocess.run(
+        ["just", "deliver"], check=False, cwd=tree, capture_output=True, text=True
+    )
     return done.returncode == 0, done.stdout + done.stderr
 
 

@@ -90,7 +90,7 @@ def select(tree: Path, paths: Iterable[str]) -> list[str] | None:
 
 
 def placed(tree: Path) -> frozenset[str]:
-    """The paths that stay with `meta` beside a root Project: `HELD` and every item of `tree`'s bundle.
+    """The paths that stay with `meta` beside a root Project: `HELD` and each item of the bundle.
 
     An item of `kind: dir` is a prefix, ending in `/` whether or not the bundle
     writes one; any other item is one path.

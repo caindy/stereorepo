@@ -53,7 +53,8 @@ projects:
 
   # The pair loop, which carries Issues from the board to `main`. Scaffold-only:
   # a portfolio runs it from a stereorepo checkout, outside its own tree, so the
-  # seats working there never read the loop's code. Its gate is its tests.
+  # seats working there never read the loop's code. Its gate is its tests and
+  # ruff over `pair/` with `.meta/ruff.toml`, at the version `meta` pins.
   - id: work:project/pair
     name: pair
     description: >-

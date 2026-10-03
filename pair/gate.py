@@ -1,12 +1,14 @@
 # /// script
 # requires-python = ">=3.11"
-# dependencies = ["pyyaml>=6"]
+# dependencies = ["pyyaml>=6", "ruff==0.14.0"]
 # ///
-"""The pair loop's gate: its tests, reported in the one shape every gate here prints (A21).
+"""The pair loop's gate: its tests and ruff, reported in the one shape every gate here prints (A21).
 
-Each test module under `pair/` is one step. A step prints `ok <step> — <scope>`
-when every test in it passes, and `x  <step> (<count>)` with one indented line
-per failure when any does. The exit code is non-zero when any step failed.
+Each test module under `pair/` is one step, and `ruff check` over `pair/` with
+the repository's `.meta/ruff.toml` is the last. A step prints
+`ok <step> — <scope>` when it passes, and `x  <step> (<count>)` with one
+indented line per failure or finding when it does not. The exit code is
+non-zero when any step failed.
 
 The tests of a step run across worker processes, one per two CPUs unless
 `PAIR_TEST_WORKERS` gives the count; `PAIR_TEST_WORKERS=1` runs them one after
@@ -27,6 +29,7 @@ import io
 import json
 import os
 import queue
+import re
 import subprocess
 import sys
 import threading
@@ -35,8 +38,12 @@ from collections.abc import Iterator
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+CONFIG = HERE.parent / ".meta" / "ruff.toml"
 
 Problem = tuple[str, str]
+
+FINDING = re.compile(r"^.+:\d+:\d+: ")
+"""A finding in ruff's concise output: `path:line:col: CODE message`, or a syntax error."""
 
 
 def workers() -> int:
@@ -51,7 +58,7 @@ def workers() -> int:
     if raw is None:
         return max(1, (os.cpu_count() or 1) // 2)
     if not raw.isdigit() or int(raw) < 1:
-        raise SystemExit(f"PAIR_TEST_WORKERS must be a positive integer, not {raw!r}")
+        raise SystemExit(f"PAIR_TEST_WORKERS must be a positive integer, not {raw!r}")  # noqa: TRY003  # reason: the message is all a person sees when the gate refuses the variable, so it stays where the variable is read
     return int(raw)
 
 
@@ -135,7 +142,7 @@ def spawn() -> subprocess.Popen[str]:
     )
 
 
-def step(module: str, count: int) -> tuple[int, list[Problem]]:
+def step(module: str, count: int) -> tuple[int, list[Problem]]:  # noqa: C901  # reason: the driving thread is a closure over the queue, the lock and the tally it shares with the other threads
     """Run a module's units across `count` workers and add up what they report.
 
     A module that fails to import runs here instead: the loader stands in a
@@ -183,7 +190,7 @@ def step(module: str, count: int) -> tuple[int, list[Problem]]:
                     total += ran
                     problems.extend((case, last) for case, last in found)
                 ids = []
-        except Exception as error:
+        except Exception as error:  # noqa: BLE001  # reason: whatever a driving thread raises becomes a reported problem, so no unit drops out of the count
             with lock:
                 problems.append((", ".join(ids) or "a worker", f"the gate failed: {error!r}"))
         finally:
@@ -202,8 +209,34 @@ def step(module: str, count: int) -> tuple[int, list[Problem]]:
     return total, sorted(problems)
 
 
+def lint(directory: Path = HERE) -> tuple[bool, list[str]]:
+    """Run `ruff check` over `directory` with `CONFIG`: whether it passed, and the lines to print.
+
+    The lines are `ok ruff — <directory>`, or `x  ruff (<count>)` followed by
+    one indented line per finding. A run in which ruff itself fails, such as
+    an unreadable configuration or a ruff that cannot be imported, is a
+    failure with its error as the one line, not a step that could not run:
+    ruff is a dependency of this script, so a missing one is the gate's fault.
+    `--no-cache` keeps ruff from writing `.ruff_cache/` into the checkout.
+    """
+    done = subprocess.run(
+        [sys.executable, "-m", "ruff", "check", "--no-cache", "--output-format", "concise",
+         "--config", str(CONFIG), str(directory)],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if done.returncode == 0:
+        return True, [f"ok ruff — {directory.name}/"]
+    findings = [line for line in done.stdout.splitlines() if FINDING.match(line)]
+    if done.returncode != 1 or not findings:
+        said = (done.stderr.strip() or done.stdout.strip()).splitlines()
+        findings = [said[-1] if said else f"ruff exited {done.returncode} and said nothing"]
+    return False, [f"x  ruff ({len(findings)})", *(f"     {line}" for line in findings)]
+
+
 def main() -> int:
-    """Run each test module as a step and print its verdict."""
+    """Run each test module as a step, then ruff, and print each verdict."""
     sys.path.insert(0, str(HERE))
     if sys.argv[1:] == ["--worker"]:
         return worker()
@@ -219,6 +252,9 @@ def main() -> int:
                 print(f"     {case}: {last}")
         else:
             print(f"ok {name} — {ran} tests")
+    passed, lines = lint()
+    print("\n".join(lines))
+    failed = failed or not passed
     return 1 if failed else 0
 
 

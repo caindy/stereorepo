@@ -21,11 +21,12 @@ turn count as one.
 The loop takes the next issue in running order as it stands, a ripe Flight
 first, and starts it by moving its file from `issues/backlog/` to
 `issues/underway/` in a commit of its own on `main`, so the board there shows
-what is being worked. Landing moves it on out of `underway/`. Grooming is a separate command: a pass takes up the backlog issues that
-are not groomed (no valid difficulty, and no `Needs elaboration` section) and
-runs the same turns on its own branch, `pair/grooming`, with no issue file, in
-its own worktree, `worktrees/groom`, so it runs alongside an Issue. It
-ends when both seats accept a backlog where each of those issues has a
+what is being worked. Landing moves it on out of `underway/`. Grooming is a
+separate command: a pass takes up the backlog issues that are not groomed
+(no valid difficulty, and no `Needs elaboration` section) and runs the same
+turns on its own branch, `pair/grooming`, with no issue file, in its own
+worktree, `worktrees/groom`, so it runs alongside an Issue. It ends when both
+seats accept a backlog where each of those issues has a
 difficulty and `issues/backlog/ORDER` places it without moving the rest, and
 lands as one commit. An issue no pass has groomed is groomed by its own backlog
 stage. Whichever of the two lands second rebases onto the other, and
@@ -89,7 +90,7 @@ line of `closing_block`, `?  steps that could not run (n) — …`, has no colon
 after its step, and its detail lines are indented, so neither matches.
 """
 DELIVER_TAIL = 2_000
-"""Less than `GATE_TAIL`: a failed delivery's tail goes into a pause reason, which is also notified."""
+"""Less than `GATE_TAIL`: a failed delivery's tail goes into a pause reason, also notified."""
 LAND_TRIES = 5
 """How many times a landing goes round when the other process lands first."""
 LOCK_WAIT = 0.5
@@ -145,7 +146,7 @@ def event_log(repo: Path) -> Path:
     return runtime_dir(repo, "pair") / "events.jsonl"
 
 
-def append_event(
+def append_event(  # noqa: PLR0913  # reason: the keyword-only main and report are seams a test sets, beside the event's own fields
     repo: Path,
     loop: str,
     kind: str,
@@ -241,7 +242,7 @@ class Loop:
     state (`runtime_dir`), so one of each can run at once.
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913  # reason: each argument is a seam the command line or a test sets on its own, all but four keyword-only
         self,
         repo: Path,
         seat_factory: SeatFactory,
@@ -329,7 +330,7 @@ class Loop:
 
     # --- entry points ----------------------------------------------------------
 
-    def run(self, once: bool = False, flight: str | None = None) -> str:
+    def run(self, once: bool = False, flight: str | None = None) -> str:  # noqa: C901  # reason: each way the outer loop picks, starts or stops an Issue is one branch of its one cycle
         """Work issues until the backlog empties or the developer is needed.
 
         It never grooms. A grooming pass may run alongside it in its own
@@ -732,7 +733,7 @@ class Loop:
 
     # --- the turn loop ---------------------------------------------------------
 
-    def work(self, st: State) -> str:
+    def work(self, st: State) -> str:  # noqa: C901, PLR0912  # reason: the resume of each paused retry and the turn loop share the one try whose finally stops the seats
         try:
             if st.retry == "merge":
                 st.retry = st.paused = None
@@ -861,12 +862,13 @@ class Loop:
 
     def owns(self, pid: int) -> bool:
         command = subprocess.run(
-            ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True
+            ["ps", "-p", str(pid), "-o", "command="], check=False, capture_output=True, text=True
         ).stdout
         if self.seat_command not in command:
             return False
         cwd = subprocess.run(
             ["lsof", "-a", "-p", str(pid), "-d", "cwd", "-Fn"],
+            check=False,
             capture_output=True,
             text=True,
         ).stdout
@@ -1376,7 +1378,7 @@ class Loop:
                 git(self.wt, "rm", "-q", "-f", "--", path)
         git(self.wt, "commit", "-q", "-m", "Keep the pass to issues/backlog/")
 
-    def merge(self, st: State, force_gate: bool = False) -> str | None:
+    def merge(self, st: State, force_gate: bool = False) -> str | None:  # noqa: C901, PLR0912  # reason: each landing try retries from the top, so every way out of a try stays in the one loop
         """Squash the branch onto `main` and fast-forward the developer's checkout.
 
         When the other process lands first, the branch is rebased onto the new
@@ -1413,9 +1415,8 @@ class Loop:
                     return None
             force_gate = False
             to = self.retirement(st)
-            if to == "desk-check" and st.stage == FLIGHT_CHECK:
-                if not self.deliver_flight(st):
-                    return "paused"
+            if to == "desk-check" and st.stage == FLIGHT_CHECK and not self.deliver_flight(st):
+                return "paused"
             if to is not None:
                 self.move(st, to)
             sha = self.squash(st)
@@ -1840,6 +1841,64 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
     kin = board.families(repo, main)
     targets = groom_targets(repo)
 
+    def entry(node: board.Node) -> dict[str, Any]:
+        held = board.holds(repo, main, node.slug, done, kin)
+        mark = (
+            "being groomed"
+            if node.slug in targets
+            else f"waits on {', '.join(held)}"
+            if held
+            else "ripe"
+        )
+        out = sorted(
+            (kid, stage) for kid, stage in kin.get(node.slug, {}).items() if stage != "backlog"
+        )
+        return {
+            "slug": node.slug,
+            "mark": mark,
+            "flight": node.slug in kin,
+            "out": [{"slug": kid, "stage": stage} for kid, stage in out],
+            "parts": [entry(part) for part in node.parts],
+        }
+
+    rows: list[dict[str, Any]] = []
+    for kind in ("pair", "groom"):
+        turns = runtime_dir(repo, kind) / "turns.jsonl"
+        if turns.is_file():
+            rows += [json.loads(row) for row in turns.read_text().splitlines()[-4:]]
+    return {
+        "waiting": waiting_on_developer(repo, main, listed, kin, states),
+        "underway": [
+            {
+                "kind": kind,
+                "slug": st.get("slug", "?"),
+                "stage": st.get("stage", "?"),
+                "turn": st.get("turn", 0),
+                "next_role": st.get("next_role", "?"),
+                "approvals": st.get("approvals", []),
+            }
+            for kind, st in states.items()
+        ],
+        "order": [entry(node) for node in board.running_tree(repo, main, kin)],
+        "to_groom": board.to_groom(repo, main),
+        "counts": {stage: listed[stage] for stage in SHOWN},
+        "sessions": [
+            {"kind": kind, "role": role, "id": sid}
+            for kind, st in states.items()
+            for role, sid in st.get("sessions", {}).items()
+        ],
+        "turns": sorted(rows, key=lambda row: row.get("at", ""))[-4:],
+    }
+
+
+def waiting_on_developer(
+    repo: Path,
+    main: str,
+    listed: Mapping[str, list[str]],
+    kin: Mapping[str, Mapping[str, str]],
+    states: Mapping[str, Mapping[str, Any]],
+) -> list[dict[str, Any]]:
+    """The `waiting` field of `status_view`, which documents it, at the commit `main`."""
     waiting: list[dict[str, Any]] = []
     for slug in listed["backlog"]:
         issue = board.at_ref(repo, main, "backlog", slug)
@@ -1872,62 +1931,14 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
             )
         elif st.get("paused"):
             waiting.append({"slug": slug, "why": f"paused: {st['paused']}", "answer": []})
-
-    def entry(node: board.Node) -> dict[str, Any]:
-        held = board.holds(repo, main, node.slug, done, kin)
-        mark = (
-            "being groomed"
-            if node.slug in targets
-            else f"waits on {', '.join(held)}"
-            if held
-            else "ripe"
-        )
-        out = sorted(
-            (kid, stage) for kid, stage in kin.get(node.slug, {}).items() if stage != "backlog"
-        )
-        return {
-            "slug": node.slug,
-            "mark": mark,
-            "flight": node.slug in kin,
-            "out": [{"slug": kid, "stage": stage} for kid, stage in out],
-            "parts": [entry(part) for part in node.parts],
-        }
-
-    rows: list[dict[str, Any]] = []
-    for kind in ("pair", "groom"):
-        turns = runtime_dir(repo, kind) / "turns.jsonl"
-        if turns.is_file():
-            rows += [json.loads(row) for row in turns.read_text().splitlines()[-4:]]
-    return {
-        "waiting": waiting,
-        "underway": [
-            {
-                "kind": kind,
-                "slug": st.get("slug", "?"),
-                "stage": st.get("stage", "?"),
-                "turn": st.get("turn", 0),
-                "next_role": st.get("next_role", "?"),
-                "approvals": st.get("approvals", []),
-            }
-            for kind, st in states.items()
-        ],
-        "order": [entry(node) for node in board.running_tree(repo, main, kin)],
-        "to_groom": board.to_groom(repo, main),
-        "counts": {stage: listed[stage] for stage in SHOWN},
-        "sessions": [
-            {"kind": kind, "role": role, "id": sid}
-            for kind, st in states.items()
-            for role, sid in st.get("sessions", {}).items()
-        ],
-        "turns": sorted(rows, key=lambda row: row.get("at", ""))[-4:],
-    }
+    return waiting
 
 
 WIDTH = 34
 """The column the marks in `status` start at."""
 
 
-def status(repo: Path, main: str = "main") -> str:
+def status(repo: Path, main: str = "main") -> str:  # noqa: C901  # reason: one top-to-bottom rendering of every field of the view, each optional section guarded where it is printed
     """A plain-text rendering of `status_view`, with what waits on the developer first."""
     view = status_view(repo, main)
     lines: list[str] = []
@@ -2002,7 +2013,10 @@ def status(repo: Path, main: str = "main") -> str:
 
 
 def status_json(repo: Path, main: str = "main") -> str:
-    """`status_view` as one line of JSON, for a session that drives the loop; `status_view` documents the fields."""
+    """`status_view` as one line of JSON, for a session that drives the loop.
+
+    `status_view` documents the fields.
+    """
     return json.dumps(status_view(repo, main))
 
 

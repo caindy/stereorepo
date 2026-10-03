@@ -11,7 +11,7 @@ import re
 import subprocess
 import threading
 from collections import OrderedDict
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -25,30 +25,34 @@ ORDER = f"{ISSUES}/backlog/ORDER"
 """The backlog's running order: one slug per line, the developer's above `# groomed below`."""
 MARKER = "# groomed below"
 ELSEWHERE = ":"
-"""What marks a `waits_on` entry as `<repository>:<slug>`, an Issue on another repository's board."""
+"""What marks a `waits_on` entry as `<repository>:<slug>`, an Issue on another board."""
 
 _FRONT = re.compile(r"\A---\n(?P<block>.*?)\n---(?:\n|\Z)", re.DOTALL)
 _HEADING = re.compile(r"^(?:#{1,6}\s*|\*\*)(?P<name>[^*\n]+?)\.?(?:\*\*)?\s*$")
 
 
 class GitError(RuntimeError):
-    """A git command exited non-zero."""
+    """A git command exited non-zero.
+
+    Its message reads `git <args> (in <where>): <detail>`, where `detail` is
+    what git said, or what the caller found missing.
+    """
+
+    def __init__(self, args: Sequence[str], where: Path, detail: str) -> None:
+        super().__init__(f"git {' '.join(args)} (in {where}): {detail}")
 
 
 def git(cwd: Path, *args: str, check: bool = True) -> str:
     """Run git in `cwd` and return stripped stdout."""
-    done = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    done = subprocess.run(["git", *args], check=False, cwd=cwd, capture_output=True, text=True)
     if check and done.returncode != 0:
-        raise GitError(
-            f"git {' '.join(args)} (in {cwd}): "
-            f"{done.stderr.strip() or done.stdout.strip()}"
-        )
+        raise GitError(args, cwd, done.stderr.strip() or done.stdout.strip())
     return done.stdout.strip()
 
 
 def git_run(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
     """Run git in `cwd` and return the finished process, whatever its exit code."""
-    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True)
+    return subprocess.run(["git", *args], check=False, cwd=cwd, capture_output=True, text=True)
 
 
 def head_and_dirty(tree: Path) -> tuple[str, bool]:
@@ -70,7 +74,7 @@ def git_ok(cwd: Path, *args: str) -> bool:
     """Whether a git command exits zero."""
     return (
         subprocess.run(
-            ["git", *args], cwd=cwd, capture_output=True, text=True
+            ["git", *args], check=False, cwd=cwd, capture_output=True, text=True
         ).returncode
         == 0
     )
@@ -304,6 +308,7 @@ def _blobs(repo: Path, oids: Collection[str]) -> dict[str, str]:
     """
     done = subprocess.run(
         ["git", "cat-file", "--batch"],
+        check=False,
         cwd=repo,
         input="".join(f"{oid}\n" for oid in oids).encode(),
         capture_output=True,
@@ -320,10 +325,9 @@ def _blobs(repo: Path, oids: Collection[str]) -> dict[str, str]:
         at += size + 1
     lost = set(oids) - found.keys()
     if done.returncode != 0 or lost:
-        raise GitError(
-            f"git cat-file --batch (in {repo}): "
-            f"{done.stderr.decode(errors='replace').strip() or 'missing ' + ', '.join(sorted(lost))}"
-        )
+        detail = done.stderr.decode(errors="replace").strip()
+        detail = detail or f"missing {', '.join(sorted(lost))}"
+        raise GitError(("cat-file", "--batch"), repo, detail)
     return found
 
 
@@ -340,6 +344,7 @@ def reading(repo: Path, ref: str) -> Reading | None:
             return _readings[sha]
     tree = subprocess.run(
         ["git", "ls-tree", "-r", "-z", sha, "--", f"{ISSUES}/"],
+        check=False,
         cwd=repo,
         capture_output=True,
     )
@@ -454,7 +459,7 @@ def backlog_parents(kin: dict[str, dict[str, str]]) -> dict[str, str]:
 
 @dataclass
 class Node:
-    """One entry of the running order: a backlog slug and, for a Flight, its backlog parts in run order."""
+    """One entry of the running order: a backlog slug and, for a Flight, its parts in run order."""
 
     slug: str
     parts: list[Node] = field(default_factory=list)
@@ -467,7 +472,7 @@ class Node:
 def running_tree(
     repo: Path, ref: str, kin: dict[str, dict[str, str]] | None = None
 ) -> list[Node]:
-    """The backlog at `ref` as the loop reaches it: top-level entries, each Flight holding its parts.
+    """The backlog at `ref` as the loop reaches it: top-level entries, Flights holding their parts.
 
     The top-level slugs, those `ORDER` names first to last and then the rest in
     filename order, each stand for themselves or for a Flight. A Flight holds
@@ -677,7 +682,7 @@ def order_keeps(tree: Path) -> set[str]:
     return (set(backlog) - parts(parent_of, backlog)) | underway
 
 
-def grooming_faults(
+def grooming_faults(  # noqa: C901, PLR0912  # reason: one list of every fault a grooming pass leaves, each check a branch that appends its own line
     tree: Path, repo: Path, ref: str, targets: Collection[str], rerank: bool
 ) -> list[str]:
     """What a grooming pass in `tree` still lacks, against the board at `ref`.
@@ -737,7 +742,7 @@ def grooming_faults(
             )
     for path in git(tree, "diff", "--name-only", ref, "HEAD").splitlines():
         if not path.startswith(f"{ISSUES}/") or path.startswith(f"{ISSUES}/roadmap/"):
-            faults.append(f"{path} changed; the pass changes only issues/, and not issues/roadmap/.")
+            faults.append(f"{path} changed; the pass changes only issues/, not issues/roadmap/.")
     board = reading(repo, ref)
     was = board.texts.get(ORDER) if board else None
     kept, ranked = split_order(was) if was is not None else ([], None)
@@ -767,7 +772,7 @@ def grooming_faults(
         faults.append(f"rank {', '.join(missing)} below `{MARKER}` in {ORDER}.")
     extra = sorted({
         s for s in below
-        if not s.startswith("#") and (s not in wanted and s not in underway or below.count(s) > 1)
+        if not s.startswith("#") and ((s not in wanted and s not in underway) or below.count(s) > 1)
     })
     if extra:
         faults.append(
@@ -780,7 +785,7 @@ def grooming_faults(
         now = [s for s in dict.fromkeys(below) if s in held]
         was_now = [s for s in held if s in now]
         if now != was_now:
-            moved = [s for s, t in zip(now, was_now) if s != t]
+            moved = [s for s, t in zip(now, was_now, strict=False) if s != t]
             faults.append(
                 f"below `{MARKER}` in {ORDER}, {', '.join(moved)} moved; place the "
                 "Issues you groomed without moving the rest, which ran in this order:\n"

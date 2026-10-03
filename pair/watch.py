@@ -53,7 +53,7 @@ def running(pid: int) -> bool:
     except PermissionError:
         pass
     command = subprocess.run(
-        ["ps", "-p", str(pid), "-o", "command="], capture_output=True, text=True
+        ["ps", "-p", str(pid), "-o", "command="], check=False, capture_output=True, text=True
     ).stdout
     return "pair.py" in command
 

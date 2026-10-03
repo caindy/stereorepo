@@ -1,6 +1,6 @@
 """Tests for the pair loop: every turn and stopping rule, over a real git repository.
 
-Run: uv run --with pyyaml python -m unittest discover -s pair -p 'test_*.py'
+Run: uv run --with pyyaml --with ruff==0.14.0 python -m unittest discover -s pair -p 'test_*.py'
 Run across worker processes: uv run --script pair/gate.py
 """
 
@@ -27,6 +27,7 @@ from typing import Any
 from unittest import mock
 
 import board
+import gate
 import touched
 from loop import (
     Loop,
@@ -200,10 +201,10 @@ class FakeSeat:
     def send(self, text: str) -> TurnResult:
         self.bench.sent.append((self.role, text))
         if not self.bench.turns:
-            raise AssertionError(f"unscripted turn for {self.role}:\n{text}")
+            raise AssertionError(f"unscripted turn for {self.role}:\n{text}")  # noqa: TRY003  # reason: a test failure carrying the prompt the script ran out on, which a class of its own would only rename
         role, action = self.bench.turns.popleft()
         if role != self.role:
-            raise AssertionError(f"expected a {role} turn, got {self.role}")
+            raise AssertionError(f"expected a {role} turn, got {self.role}")  # noqa: TRY003  # reason: a test failure naming the seat the script expected, read where the turns are scripted
         if action is CRASH:
             return TurnResult(False, error="boom", session_id=self.session_id)
         if action is REFUSED:
@@ -295,12 +296,16 @@ def board_repository() -> Path:
 class Bench:
     """The developer's checkout with a board, and a loop wired to fake seats and a fake gate."""
 
-    def __init__(self) -> None:
+    def __init__(self) -> None:  # noqa: C901  # reason: the fakes are closures over the bench, so the branches of each one count toward the method that builds them
         self.tmp = tempfile.TemporaryDirectory()
         self.repo = Path(self.tmp.name) / "developer"
         shutil.copytree(board_repository(), self.repo, symlinks=True)
         self.pairs = Path(self.tmp.name) / "pairs"
-        """Where this `Bench`'s loop publishes; a worker process runs one test at a time, so it is the one in force until `close`."""
+        """Where this `Bench`'s loop publishes.
+
+        A worker process runs one test at a time, so it is the one in force
+        until `close`.
+        """
         self.pairs_before = os.environ["PAIRS_DIR"]
         os.environ["PAIRS_DIR"] = str(self.pairs)
         self.turns: collections.deque[tuple[str, object]] = collections.deque()
@@ -421,6 +426,7 @@ class Bench:
         return (
             subprocess.run(
                 ["git", "cat-file", "-e", f"main:{rel}"],
+                check=False,
                 cwd=self.repo,
                 stderr=subprocess.DEVNULL,
             ).returncode
@@ -1630,9 +1636,9 @@ class SeatModelTest(unittest.TestCase):
     def test_only_the_commands_that_work_an_issue_take_stage_models(self) -> None:
         from pair import STAGE_MODELS, arguments
 
-        for command in ("run", "accept", "resume"):
+        for name in ("run", "accept", "resume"):
             for stage in STAGE_MODELS:
-                args = arguments().parse_args([command, f"--{stage}-model", "B"])
+                args = arguments().parse_args([name, f"--{stage}-model", "B"])
                 self.assertEqual(getattr(args, f"{stage.replace('-', '_')}_model"), "B")
         with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
             arguments().parse_args(["groom", "--todo-model", "B"])
@@ -1747,7 +1753,8 @@ class GateSelectionTest(unittest.TestCase):
             "  - path: stakeholders/\n    kind: dir\n    ownership: portfolio\n"
             "  - path: AGENTS.md\n    source: template/AGENTS.md\n    target: AGENTS.md\n"
             "    kind: file\n    ownership: template\n"
-            "  - path: CLAUDE.md\n    target: AGENTS.md\n    kind: symlink\n    ownership: symlink\n"
+            "  - path: CLAUDE.md\n    target: AGENTS.md\n"
+            "    kind: symlink\n    ownership: symlink\n"
         )
         projects = project("meta", ".meta") + project("pair", "pair") + project("seed", "seed")
         if declared:
@@ -3027,7 +3034,7 @@ class ExitCodeTest(unittest.TestCase):
 
         def exits(*args: str) -> int:
             return subprocess.run(
-                [sys.executable, str(script), *args], cwd=b.repo, capture_output=True
+                [sys.executable, str(script), *args], check=False, cwd=b.repo, capture_output=True
             ).returncode
 
         self.assertEqual(exits("accept"), EXIT["none"])
@@ -3263,7 +3270,7 @@ class WatchTest(unittest.TestCase):
         self.addCleanup(thread.join, 10)
 
     def emit(self, kind: str, **fields: Any) -> Callable[[], None]:
-        """An event to log later, whose publish, in a directory with no git repository, fails unheard."""
+        """An event to log later, whose publish, outside any git repository, fails unheard."""
         return lambda: append_event(
             self.repo, "pair", kind, report=lambda _: None, **fields
         )
@@ -3545,7 +3552,7 @@ class PublishTest(unittest.TestCase):
         self.assertEqual(shown, {"repo": str(b.repo.resolve()), **status_view(b.repo)})
         self.assertEqual([st["slug"] for st in shown["underway"]], ["h"])
         self.assertEqual([item["slug"] for item in shown["waiting"]], ["h"])
-        self.assertEqual(os.listdir(b.pairs), ["developer.json"])
+        self.assertEqual([p.name for p in b.pairs.iterdir()], ["developer.json"])
         self.assertFalse([line for line in self.said if "could not publish" in line])
 
     def test_an_event_alone_republishes(self) -> None:
@@ -4248,7 +4255,7 @@ class ConfinementTest(unittest.TestCase):
         self.developer("[core]\n\tabbrev = 12\n")
         below = self.tmp / "below"
         below.mkdir()
-        self.addCleanup(os.chdir, os.getcwd())
+        self.addCleanup(os.chdir, Path.cwd())
         os.chdir(below)
         with mock.patch.dict(os.environ, {"GIT_CONFIG_GLOBAL": "../developer.gitconfig"}):
             confined = confinement(self.wt)
@@ -4282,13 +4289,16 @@ class ConfinementTest(unittest.TestCase):
         stand_in.chmod(0o755)
         ran = subprocess.run(
             [str(SEAT_GPG), "a", "b c"],
+            check=False,
             env={**os.environ, "PAIR_SEAT_GPG": str(stand_in)},
             capture_output=True,
             text=True,
         )
         self.assertEqual(ran.stdout, "--trust-model always a b c\n")
         env = {k: v for k, v in os.environ.items() if k != "PAIR_SEAT_GPG"}
-        unset = subprocess.run([str(SEAT_GPG)], env=env, capture_output=True, text=True)
+        unset = subprocess.run(
+            [str(SEAT_GPG)], check=False, env=env, capture_output=True, text=True
+        )
         self.assertNotEqual(unset.returncode, 0)
 
     def test_the_main_checkout_is_refused(self) -> None:
@@ -4338,7 +4348,7 @@ turns = iter(script["turns"])
 for _line in sys.stdin:
     play(next(turns, []))
 """
-"""A `claude` that plays scripted stream-json: `start` at once, then one list of steps per message."""
+"""A `claude` that plays scripted stream-json: `start` at once, then a list of steps per message."""
 
 
 def task(subtype: str, task_id: str, description: str = "") -> dict[str, object]:
@@ -4416,7 +4426,7 @@ class ClaudeSeatTest(unittest.TestCase):
     def test_a_seat_given_no_program_starts_claude(self) -> None:
         """The seat's own command is caught; the `git` that `confinement` runs is not."""
 
-        class Started(Exception):
+        class StartedError(Exception):
             pass
 
         real = subprocess.Popen
@@ -4426,9 +4436,9 @@ class ClaudeSeatTest(unittest.TestCase):
             if "stream-json" not in argv:
                 return real(argv, **kwargs)
             argvs.append(argv)
-            raise Started
+            raise StartedError
 
-        with mock.patch.object(subprocess, "Popen", popen), self.assertRaises(Started):
+        with mock.patch.object(subprocess, "Popen", popen), self.assertRaises(StartedError):
             ClaudeSeat("primary", self.wt, "p", self.log)
         self.assertEqual(argvs[0][:2], ["claude", "-p"])
 
@@ -4511,6 +4521,40 @@ class ClaudeSeatTest(unittest.TestCase):
         self.assertFalse(turn.ok)
         self.assertIn("t9", turn.error or "")
         self.assertIsNotNone(seat.proc.poll())
+
+
+class GateLintTest(unittest.TestCase):
+    """The gate's ruff step, over a directory of its own rather than `pair/`."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+
+    def test_a_finding_fails_the_step_with_one_line_for_it(self) -> None:
+        (self.tmp / "unused.py").write_text("import os\n")
+        passed, lines = gate.lint(self.tmp)
+        self.assertFalse(passed)
+        self.assertEqual(lines[0], "x  ruff (1)")
+        self.assertEqual(len(lines), 2)
+        self.assertIn("F401", lines[1])
+
+    def test_a_clean_directory_passes_with_one_line(self) -> None:
+        (self.tmp / "clean.py").write_text('"""Nothing to find."""\n')
+        self.assertEqual(gate.lint(self.tmp), (True, [f"ok ruff — {self.tmp.name}/"]))
+
+    def test_the_gate_exits_non_zero_when_only_the_ruff_step_fails(self) -> None:
+        """With no test modules to run, the ruff step's verdict alone sets the exit code."""
+        for passed, code in ((False, 1), (True, 0)):
+            with (
+                mock.patch.object(gate, "HERE", self.tmp),
+                mock.patch.object(gate, "lint", return_value=(passed, ["ruff said"])),
+                mock.patch.object(sys, "argv", ["gate.py"]),
+                mock.patch.object(sys, "path", list(sys.path)),
+                contextlib.redirect_stdout(io.StringIO()) as out,
+            ):
+                self.assertEqual(gate.main(), code)
+            self.assertEqual(out.getvalue(), "ruff said\n")
 
 
 if __name__ == "__main__":
