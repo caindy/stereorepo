@@ -44,18 +44,40 @@ new Issue in the backlog instead of doing it.
 - **Not the supervisor.** A seat does the work; the supervisor only observes it
   and moves the Issue.
 
-## Open questions
+## What the spike answered
 
-These were put to the first run of the loop in another repository, and their
-answers are not yet recorded here:
+These questions were put to the first run of the loop, a spike in the
+booktutor repository that took 12 Issues through 81 turns. The answers below
+are its evidence, from `docs/PAIR_LOOP_SPIKE.md` in caindy/booktutor at
+commit `cdfa78d`, and the runs it names are that document's hypothesis runs.
 
-- Does a headless seat behave as an interactive session does, with the same
-  skills, hooks, instructions and subscription login?
-- How many tokens does each turn read from the prompt cache, and does that
-  number rise across a seat's turns?
-- How well does it work for the developer to take over a seat and hand it
-  back?
-- Which set of tool permissions works for a seat?
+**Does a headless seat behave as an interactive session does, with the same
+skills, hooks, instructions and subscription login?** Yes. Skills,
+`CLAUDE.md`, git hooks and the subscription login all behaved as usual.
+
+**How many tokens does each turn read from the prompt cache, and does that
+number rise across a seat's turns?** Within an Issue, the hit ratio was 0.95
+to 0.98. A fresh session is the expensive part: with the default flags, each
+seat's first turn in run H7 wrote 86,000 to 87,000 tokens to the cache, and
+in the follow-up probes a fresh session settled at about 79,000. Turning off
+setting sources, skills and MCP, and appending `CLAUDE.md` to the system
+prompt, let a fresh session read about 102,000 tokens and write about 2,400.
+Those flags also take away the skills and project settings, which is why the
+first answer holds only for the default flags. Whether reads rise across a
+seat's turns was measured only in the pre-flight check, where they went from
+22,196 to 30,588 tokens over two turns; no longer run was measured.
+
+**How well does it work for the developer to take over a seat and hand it
+back?** It works (run H6). The developer stops the loop between turns,
+resumes the seat's session, and makes an edit; on the next run the loop
+commits the edit as the developer's turn and resumes the same session, whose
+next turn acts on the edit. The seat did not recall the exchange in words.
+
+**Which set of tool permissions works for a seat?** Not an allow-list of
+command prefixes (run H9). It caused 75 denials in 81 turns, none of them of
+anything dangerous: 62 were compound shell commands built from allowed parts.
+The spike recommends a sandbox confined to the worktree, with a short deny
+list for the git verbs that belong to the loop, but it did not test one.
 
 ---
 

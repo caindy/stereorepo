@@ -38,14 +38,25 @@ requirement of a stage is stated as something visible in the tree or in git.
   supervisor holds nothing but a lock, its state file and its process handles.
 - **Not something an agent invokes.** The seats are never told it exists.
 
-## Open questions
+## What the spike answered
 
-These were put to the first run of the loop in another repository, and their
-answers are not yet recorded here:
+These questions were put to the first run of the loop, a spike in the
+booktutor repository that took 12 Issues through 81 turns. The answers below
+are its evidence, from `docs/PAIR_LOOP_SPIKE.md` in caindy/booktutor at
+commit `cdfa78d`, and the runs it names are that document's hypothesis runs.
 
-- How reliably can the end of a seat's turn be detected?
-- Does agreement by quiet turns settle naturally, or does it rubber-stamp, or
-  never settle at all?
+**How reliably can the end of a seat's turn be detected?** Reliably. The
+harness's `result` event ended every turn cleanly, apart from the seats
+killed on purpose in run H5. The longest turn took 222 seconds.
+
+**Does agreement by quiet turns settle naturally, or does it rubber-stamp, or
+never settle at all?** It settles naturally (run H8). The Issue it was tried
+on landed in 10 turns, none of its stages taking more than 4 of their cap of
+8, and every quiet turn came after the seat had checked the other's claims
+against the code; in planning, one seat found a real hole in the other's
+test. H8's seats ran with the default flags, and the spike leaves open
+whether a pair converges as well under the flags run H7 found to cut the
+cache write, which take away the seats' skills and project settings.
 
 ---
 
