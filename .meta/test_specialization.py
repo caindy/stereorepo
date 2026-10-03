@@ -14,6 +14,10 @@ using pre-judged portfolio fixtures (DR-026, DR-204), validating that:
 7. The meta gate passes in a fresh clone that has never rendered, so the portfolio
    commits every render output that gate reads.
 
+It is the gate of the Project `specialization` (stereorepo's DR-321), so it reports as a gate
+does (stereorepo's DR-092): every step's narration, and the portfolio gate's own report, go to
+stderr, and stdout holds one line, `ok specialize` or `x  specialize (1)` and the step that failed.
+
 Usage:
     python3 .meta/test_specialization.py [--target <dir>] [--keep] [--lang <python>] [--verbose]
 """
@@ -21,6 +25,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import contextlib
 import functools
 import json
 import os
@@ -61,16 +66,9 @@ NOT_A_STRING_PAIR = "Token key and value must be strings: {key!r}: {value!r}"
 
 
 def load_tokens(path: pathlib.Path) -> dict[str, str]:
-    """Loads and validates the token substitution map from a JSON fixture.
+    """The placeholder tokens of the JSON fixture at `path`, mapped to synthetic portfolio values.
 
-    Parameters:
-        path (pathlib.Path): Absolute path to the JSON tokens file.
-
-    Returns:
-        dict[str, str]: Mapping of placeholder tokens to synthetic portfolio values.
-
-    Raises:
-        ValueError: If the file is missing, invalid JSON, or contains non-string mappings.
+    Raises `ValueError` where the file is missing, is not JSON, or maps anything but strings.
     """
     if not path.is_file():
         raise ValueError(NO_FIXTURE.format(path=path))
@@ -89,15 +87,7 @@ def load_tokens(path: pathlib.Path) -> dict[str, str]:
 
 
 def normalize_tokens(tokens: dict[str, str]) -> dict[str, str]:
-    """Ensures all token keys are framed with template placeholder double underscores.
-
-    Parameters:
-        tokens (dict[str, str]): Raw tokens dictionary from JSON fixture.
-
-    Returns:
-        dict[str, str]: Normalized mapping with placeholders formatted with surrounding
-        double underscores.
-    """
+    """`tokens` with every key framed in the placeholder's double underscores."""
     return {
         (k if k.startswith("__") and k.endswith("__") else f"__{k}__"): v
         for k, v in tokens.items()
@@ -105,14 +95,7 @@ def normalize_tokens(tokens: dict[str, str]) -> dict[str, str]:
 
 
 def read_inherited_paths(disciplines_file: pathlib.Path) -> list[str]:
-    """Parses inherited file and directory paths from disciplines.yaml.
-
-    Parameters:
-        disciplines_file (pathlib.Path): Path to disciplines.yaml assertion file.
-
-    Returns:
-        list[str]: Backtick path tokens declared in the Specialization discipline.
-    """
+    """The backticked paths the Specialization Discipline's "Copy what is inherited" step names."""
     if not disciplines_file.is_file():
         return []
     data = yaml.safe_load(disciplines_file.read_text(encoding="utf-8")) or {}
@@ -373,7 +356,7 @@ def execute_specialization_test(
     tokens_path: pathlib.Path = DEFAULT_TOKENS_PATH,
     lang: str = "python",
     verbose: bool = False,
-) -> int:
+) -> tuple[int, int]:
     """Executes the 8-step specialization discipline in target_path, then gates a fresh clone.
 
     Parameters:
@@ -383,7 +366,8 @@ def execute_specialization_test(
         verbose (bool): Whether to stream full command outputs.
 
     Returns:
-        int: 0 if all steps and gate checks pass cleanly, non-zero otherwise.
+        tuple[int, int]: The exit code, 0 if all steps and gate checks pass cleanly, and the
+        number of the step that failed, or of the last step where none did.
     """
     tokens = load_tokens(tokens_path)
     disciplines_file = META / "assertions" / "disciplines.yaml"
@@ -393,7 +377,7 @@ def execute_specialization_test(
             "test-specialization: error — failed to load inherited paths from disciplines.yaml",
             file=sys.stderr,
         )
-        return 1
+        return 1, 0
 
     bundle: Bundle | None = None
     bundle_file = META / "bundle.yaml"
@@ -414,11 +398,22 @@ def execute_specialization_test(
         lambda: step_8_run_gate(target_path, verbose),
         lambda: step_9_gate_fresh_clone(target_path, verbose),
     )
-    for step in steps:
+    for number, step in enumerate(steps, start=1):
         code = step()
         if code != 0:
-            return code
-    return 0
+            return code, number
+    return 0, len(steps)
+
+
+def summary(code: int, step: int) -> list[str]:
+    """The gate report for a run that exited `code` at `step`, in A21's shape (stereorepo's DR-092).
+
+    Step 0 is the loading of the inherited paths, before step 1.
+    """
+    if code == 0:
+        return [f"ok specialize — {step} steps, and the specialized portfolio's gate"]
+    where = f"step {step}" if step else "loading the inherited paths"
+    return ["x  specialize (1)", f"     {where} failed (exit {code}); its output is on stderr"]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -454,16 +449,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     run = functools.partial(execute_specialization_test, tokens_path=args.tokens.resolve(),
                             lang=args.lang, verbose=args.verbose)
-    if args.target:
-        target = args.target.resolve()
-        target.mkdir(parents=True, exist_ok=True)
-        return run(target)
-    if args.keep:
-        target = pathlib.Path(tempfile.mkdtemp(prefix="stereorepo-test-specialization-"))
-        print(f"test-specialization: retaining test directory at {target}")
-        return run(target)
-    with tempfile.TemporaryDirectory(prefix="stereorepo-test-specialization-") as temp_dir:
-        return run(pathlib.Path(temp_dir))
+    with contextlib.redirect_stdout(sys.stderr):
+        if args.target:
+            target = args.target.resolve()
+            target.mkdir(parents=True, exist_ok=True)
+            code, step = run(target)
+        elif args.keep:
+            target = pathlib.Path(tempfile.mkdtemp(prefix="stereorepo-test-specialization-"))
+            print(f"test-specialization: retaining test directory at {target}")
+            code, step = run(target)
+        else:
+            with tempfile.TemporaryDirectory(prefix="stereorepo-test-specialization-") as temp_dir:
+                code, step = run(pathlib.Path(temp_dir))
+    print("\n".join(summary(code, step)))
+    return code
 
 
 if __name__ == "__main__":

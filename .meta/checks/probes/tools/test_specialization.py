@@ -184,6 +184,43 @@ def _check_inherited_paths(runner: Any) -> list[str]:
     return problems
 
 
+def _check_report(runner: Any, tmp: pathlib.Path) -> list[str]:
+    """Validates that `main` reports as a gate does: narration on stderr, one A21 report on stdout.
+
+    `execute_specialization_test` is replaced by one that narrates and ends as it is told, so
+    no portfolio is built; the report is read with `.meta/gate`'s own patterns.
+    """
+    gate = load_module(META / "gate", "gate-runner-report", register=False)
+    real = runner.execute_specialization_test
+    problems: list[str] = []
+    for code, step in ((0, 9), (1, 8), (1, 0)):
+        def fake(
+            target: pathlib.Path, end: tuple[int, int] = (code, step), **_: Any
+        ) -> tuple[int, int]:
+            print(f"test-specialization: step 1 — initialize git repository in {target}")
+            print("ok meta/narrated — a gate's line, which must not reach stdout")
+            return end
+        runner.execute_specialization_test = fake
+        out, err = io.StringIO(), io.StringIO()
+        try:
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                exit_code = runner.main(["--target", str(tmp / "report")])
+        finally:
+            runner.execute_specialization_test = real
+        lines = out.getvalue().splitlines()
+        if code == 0:
+            shaped = len(lines) == 1 and bool(gate.OK.match(lines[0]))
+        else:
+            shaped = (len(lines) == 2 and bool(gate.X.match(lines[0]))
+                      and bool(gate.PROBLEM.match(lines[1])))
+        if not shaped or exit_code != code or "narrated" not in err.getvalue():
+            problems.append(
+                f"test-specialization: a run ending ({code}, step {step}) exited {exit_code} and "
+                f"printed {lines!r} on stdout, not one A21 report with its narration on stderr"
+            )
+    return problems
+
+
 def _check_bundle(runner: Any) -> list[str]:
     """Validates installation bundle schema, presence, and disk integrity."""
     from lib.bundle import (
@@ -258,6 +295,8 @@ def test_specialization_probes() -> list[str]:
     9. A copy of the managed items replaces a portfolio's managed baselines and leaves its
        own under `.meta/baselines/` as they were, and no managed item contains that
        directory (stereorepo's DR-314).
+    10. `main` reports as the gate of the Project `specialization` does: its narration on
+        stderr, and on stdout one `ok` line, or one `x` line and its problem (stereorepo's DR-321).
     """
     test_script = META / "test_specialization.py"
     if not test_script.is_file():
@@ -277,6 +316,7 @@ def test_specialization_probes() -> list[str]:
         problems.extend(_check_scaffold_only(runner, tmp))
         problems.extend(_check_baselines_kept(runner, tmp))
         problems.extend(_check_gitignore(tmp))
+        problems.extend(_check_report(runner, tmp))
 
     problems.extend(_check_inherited_paths(runner))
     problems.extend(_check_bundle(runner))

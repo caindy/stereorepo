@@ -8,7 +8,7 @@
 default:
     @just --list --unsorted
 
-# every Project's gate — or any of the Projects: meta, rust-seed, python-seed, pair — and the Products: scaffold, rust-standard, python-standard
+# every Project's gate — or any of the Projects: meta, rust-seed, python-seed, pair, specialization — and the Products: scaffold, rust-standard, python-standard
 gate *targets:
     .meta/gate {{targets}}
 

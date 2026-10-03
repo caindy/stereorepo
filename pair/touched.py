@@ -11,6 +11,12 @@ adopted product's own `README.md` among them. Each touched Project brings in
 every Product built from it, and the selection is every Project those Products
 are built from. A break the path mapping cannot see, through a shared tool or
 a generated file, lands unchecked: that is the risk the decision accepts.
+
+A Project `specialization`, where the structure declares one, holds no
+directory. It is selected beside the rest when a path is one a portfolio
+receives: inside an item `.meta/bundle.yaml` marks `managed`, or the `source`
+of one it marks `template`, not the `path` it is copied to (stereorepo's
+DR-321). A portfolio declares no such Project, so its selection is as it was.
 """
 
 from __future__ import annotations
@@ -31,6 +37,12 @@ META = "work:project/meta"
 
 ROOT = "."
 """The `name` of a Project at the repository root, once a trailing `/` is dropped."""
+
+SPECIALIZATION = "work:project/specialization"
+"""The Project that specializes a portfolio from the tree and gates it (stereorepo's DR-321)."""
+
+RECEIVED = ("managed", "template")
+"""The `ownership` of the bundle items whose contents a portfolio receives from the tree."""
 
 HELD = ("issues/", ".meta/")
 """The prefixes that stay with `meta` beside a root Project, whatever the bundle lists."""
@@ -57,9 +69,14 @@ def select(tree: Path, paths: Iterable[str]) -> list[str] | None:
     projects = [p["id"] for p in data.get("projects") or []]
     dirs = {p["id"]: str(p.get("name", "")).rstrip("/") for p in data.get("projects") or []}
     held = placed(tree) if ROOT in dirs.values() else frozenset()
+    paths = list(paths)
     touched = {home(path, dirs, held=held) for path in paths}
     if not touched:
         return []
+    if SPECIALIZATION in dirs:
+        received = receives(tree)
+        if any(within(path, received) for path in paths):
+            touched.add(SPECIALIZATION)
     if not touched <= set(projects):
         return None
     chosen = set(touched)
@@ -78,14 +95,41 @@ def placed(tree: Path) -> frozenset[str]:
     An item of `kind: dir` is a prefix, ending in `/` whether or not the bundle
     writes one; any other item is one path.
     """
+    return frozenset(HELD) | bundled(tree)
+
+
+def receives(tree: Path) -> frozenset[str]:
+    """The paths a portfolio receives from `tree`: its bundle's items of an ownership in `RECEIVED`.
+
+    An item is its `source` where it has one, else its `path`: a template item
+    such as `path: AGENTS.md`, `source: template/AGENTS.md` is copied from
+    `template/AGENTS.md`, the file a change edits, while `tree`'s own
+    `AGENTS.md` reaches no portfolio. The bundle lists itself as managed.
+    """
+    return bundled(tree, RECEIVED, key="source")
+
+
+def bundled(
+    tree: Path, ownership: Iterable[str] | None = None, *, key: str = "path"
+) -> frozenset[str]:
+    """The items of `tree`'s bundle, or those of an `ownership` given, as `placed()` spells them.
+
+    Each item is read at `key`, falling back to its `path` where it has no `key`.
+    """
     file = tree / BUNDLE
     data = (yaml.safe_load(file.read_text()) if file.is_file() else None) or {}
-    items = {
-        str(item["path"]).rstrip("/") + "/" if item.get("kind") == "dir" else str(item["path"])
+    kept = None if ownership is None else set(ownership)
+    found = (
+        (str(item.get(key) or item["path"]), item.get("kind"))
         for item in data.get("items") or []
-        if item.get("path")
-    }
-    return frozenset(HELD) | items
+        if item.get("path") and (kept is None or item.get("ownership") in kept)
+    )
+    return frozenset(where.rstrip("/") + "/" if kind == "dir" else where for where, kind in found)
+
+
+def within(path: str, held: frozenset[str]) -> bool:
+    """Whether `held` names `path`, as a prefix ending in `/` or as the path itself."""
+    return any(path == h or (h.endswith("/") and path.startswith(h)) for h in held)
 
 
 def home(path: str, dirs: dict[str, str], *, held: frozenset[str] = frozenset()) -> str:
@@ -98,6 +142,6 @@ def home(path: str, dirs: dict[str, str], *, held: frozenset[str] = frozenset())
     holders = [i for i, d in dirs.items() if d not in ("", ROOT) and path.startswith(f"{d}/")]
     if holders:
         return max(holders, key=lambda ident: len(dirs[ident]))
-    if any(path == h or (h.endswith("/") and path.startswith(h)) for h in held):
+    if within(path, held):
         return META
     return next((ident for ident, d in dirs.items() if d == ROOT), META)

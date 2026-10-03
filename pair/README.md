@@ -63,7 +63,11 @@ output and the targets gated. It gates the Projects whose directories the
 branch changes against `main`, a path under none of them counting as `meta`'s
 (or, when a Project is named `.`, as that root Project's, unless the board,
 `.meta/` or `.meta/bundle.yaml` places it), and every Project of each Product
-built from one of them (`touched.py`, stereorepo's DR-303). When that is every
+built from one of them (`touched.py`, stereorepo's DR-303). A change to what a
+portfolio receives, an item `.meta/bundle.yaml` marks `managed` or the source
+of one it marks `template`, also gates the Project `specialization` where the
+structure declares it, which specializes a portfolio and runs that
+portfolio's gate (stereorepo's DR-321). When that is every
 Project it is the whole `just gate`, and a branch with no change passes
 without one. A break that the directories do not show, through a shared tool
 or a generated file, lands unchecked: the decision accepts that risk for the

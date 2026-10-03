@@ -63,6 +63,19 @@ projects:
     language: Python
     gate: uv run --quiet --script pair/gate.py
 
+  # What a portfolio receives, gated where a portfolio would gate it (DR-321).
+  # It holds no directory, so no changed path is its own; the loop selects it
+  # when a change touches an item `.meta/bundle.yaml` sends to a portfolio.
+  # In no Product, so a change to `meta` alone does not bring it in.
+  - id: work:project/specialization
+    name: specialization
+    description: >-
+      A portfolio specialized from this tree in a scratch repository, and
+      that portfolio's own gate run there: the defects that show only in a
+      portfolio, caught before they land.
+    language: Python
+    gate: uvx --python 3.13 --with pyyaml python .meta/test_specialization.py
+
 products:
   - id: work:product/scaffold
     name: The scaffold

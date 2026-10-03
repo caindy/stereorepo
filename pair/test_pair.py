@@ -1731,6 +1731,58 @@ class GateSelectionTest(unittest.TestCase):
                 self.assertEqual(touched.select(self.b.repo, [path]), ["meta"])
         self.assertEqual(touched.select(self.b.repo, ["README.md"]), ["app"])
 
+    def specialization_structure(self, *, declared: bool = True) -> None:
+        """Commit `meta` and `pair` in one Product, `seed` in none, and `specialization` if
+        `declared`, beside a bundle of every ownership.
+
+        `seed` keeps the selection short of every Project, which would be the whole gate.
+        """
+        bundle = self.b.repo / touched.BUNDLE
+        bundle.parent.mkdir(parents=True, exist_ok=True)
+        bundle.write_text(
+            "items:\n"
+            "  - path: .meta/checks/\n    kind: dir\n    ownership: managed\n"
+            "  - path: .meta/bundle.yaml\n    kind: file\n    ownership: managed\n"
+            "  - path: stakeholders/README.md\n    kind: file\n    ownership: managed\n"
+            "  - path: stakeholders/\n    kind: dir\n    ownership: portfolio\n"
+            "  - path: AGENTS.md\n    source: template/AGENTS.md\n    target: AGENTS.md\n"
+            "    kind: file\n    ownership: template\n"
+            "  - path: CLAUDE.md\n    target: AGENTS.md\n    kind: symlink\n    ownership: symlink\n"
+        )
+        projects = project("meta", ".meta") + project("pair", "pair") + project("seed", "seed")
+        if declared:
+            projects += project("specialization", "specialization")
+        self.b.structure(
+            "projects:\n" + projects + "products:\n" + product("scaffold", "meta", "pair")
+        )
+
+    def test_a_change_to_what_a_portfolio_receives_selects_the_specialization(
+        self,
+    ) -> None:
+        self.specialization_structure()
+        cases = {
+            ".meta/checks/x.py": ["meta", "pair", "specialization"],
+            ".meta/bundle.yaml": ["meta", "pair", "specialization"],
+            "template/AGENTS.md": ["meta", "pair", "specialization"],
+            "stakeholders/README.md": ["meta", "pair", "specialization"],
+            "issues/backlog/a.md": ["meta", "pair"],
+            "pair/loop.py": ["meta", "pair"],
+            ".meta/test_specialization.py": ["meta", "pair"],
+            "stakeholders/p.md": ["meta", "pair"],
+            "AGENTS.md": ["meta", "pair"],
+            "CLAUDE.md": ["meta", "pair"],
+            "seed/x.py": ["seed"],
+        }
+        for path, expected in cases.items():
+            with self.subTest(path=path):
+                self.assertEqual(touched.select(self.b.repo, [path]), expected)
+
+    def test_where_no_specialization_is_declared_the_bundle_selects_nothing_more(
+        self,
+    ) -> None:
+        self.specialization_structure(declared=False)
+        self.assertEqual(touched.select(self.b.repo, [".meta/checks/x.py"]), ["meta", "pair"])
+
     def run_widget_issue(self, *, gates: list[bool]) -> None:
         """Carry an Issue that changes `widgets/x.py` to landing, under `STRUCTURE`."""
         b = self.b

@@ -1,0 +1,72 @@
+decisions:
+  - id: work:decision/321
+    name: "DR-321 · A change to what a portfolio receives gates a specialized portfolio before it lands"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+      - work:artifact/meta-test-specialization
+      - work:artifact/meta-checks-probes-tools-test-specialization
+    context: >-
+      DR-303 gates the Projects a change touches, and every path under
+      `.meta/` belongs to `meta`, whose checks run in stereorepo. Three checks
+      in one day failed every portfolio's `meta` gate and passed here, among
+      them `_probe_adopt`, and each landed, because nothing ran a portfolio's
+      gate before landing. `just test-specialization` builds a portfolio and
+      runs its gate, but neither the loop nor `just gate` ran it.
+    alternatives:
+      - name: A step of `meta`'s gate that specializes a portfolio
+        chosen: false
+        reason: >-
+          Every change under `.meta/` would pay for it, the ones a portfolio
+          never receives included, and `meta`'s checks are managed, so the
+          step would reach every portfolio, where there is no scaffold to
+          specialize from.
+      - name: A run the loop makes beside `.meta/gate`, outside `structure.yaml`
+        chosen: false
+        reason: >-
+          `just gate` would not see it, so a gate run by hand would pass what
+          the loop holds, and the loop would carry a second way to read a
+          gate's report.
+      - name: A Project `specialization`, selected when a change touches what a portfolio receives
+        chosen: true
+        reason: >-
+          `.meta/gate` already runs a declared Project's gate and reads its
+          report, and the selection in `pair/touched.py` needs only one more
+          rule.
+    consequences:
+      - >-
+        `structure.yaml` declares `work:project/specialization`, whose gate is
+        `.meta/test_specialization.py`. Its `name` is no directory, so it
+        holds no path and `.meta/` stays with `meta`. It is in no Product,
+        since a change to `meta` alone should not bring it in.
+      - >-
+        `pair/touched.py` adds it to the selection when a changed path lies
+        inside an item `.meta/bundle.yaml` marks `managed`, `.meta/bundle.yaml`
+        itself among them, or is the `source` of one it marks `template`,
+        which is the file the copy reads (`template/AGENTS.md`), not the
+        `path` it places (`AGENTS.md`). A portfolio declares no such
+        Project, so its selection is as DR-303 left it.
+      - >-
+        `.meta/test_specialization.py` reports as a gate does (DR-092): its
+        narration and the specialized portfolio's own report go to stderr,
+        and stdout holds `ok specialize`, or `x  specialize (1)` and the step
+        that failed.
+      - >-
+        `just gate` with no argument runs it, as it runs every declared
+        Project's gate. The loop reaches that run only when a change selects
+        every Project, or the tree asserts no structure.
+      - >-
+        The accepted costs: a specialization takes minutes and runs before
+        every change to a managed item such as `.meta/checks/` or
+        `.meta/lib/`; and a change only to a scaffold-only path inside one,
+        such as `.meta/lib/adapt/`, runs it for nothing, since `pair/` cannot
+        import `SCAFFOLD_ONLY_PATHS` and a third copy of that list would
+        drift. The run passes there, so the cost is time, not a wrong verdict.
+    falsifier: >-
+      Defects that show only in a portfolio still land, or the specialization
+      makes landing slow enough that the loop's throughput suffers more than
+      the defects it catches cost.
+    rationale: |-
+      What a portfolio receives is checked where a portfolio would check it,
+      and only when it changes.
