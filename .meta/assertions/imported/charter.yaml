@@ -222,7 +222,7 @@ articles:
       Review checking that any word doing the work of a term is enclosed in
       closed-world wikilinks or minted with the developer, and
       `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity
-      between vocabulary concepts and wiki pages (stereorepo's DR-190).
+      between vocabulary concepts and wiki pages (stereorepo's DR-335).
     example: >-
       `Issue` is used because it is a Concept in the vocabulary. A
       word that is not gets minted with the developer before it is used again.
@@ -265,7 +265,7 @@ articles:
       Its instances, each of which carries its own check: A11, A14, A17 and A20
       say the same thing of a decision, of reasoning, of a term and of a rule. The
       general claim is held by the second seat, by asking what a participant with
-      no privilege beyond the record could reconstruct (stereorepo's DR-216).
+      no privilege beyond the record could reconstruct (stereorepo's DR-343).
     example: >-
       Which stage an issue is in is the directory its file sits in, so a seat,
       the supervisor and the developer all read it from the same place, and none of

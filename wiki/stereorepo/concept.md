@@ -1,8 +1,8 @@
 # Concept
 
 **Concept** is the atomic unit of domain meaning in a Bounded Context's
-[[ubiquitous-language]] (stereorepo's DR-184, stereorepo's DR-190,
-stereorepo's DR-195).
+[[ubiquitous-language]] (stereorepo's DR-184, stereorepo's DR-335,
+stereorepo's DR-338).
 
 In Domain-Driven Design and agentic repository maintenance, domain knowledge must
 be parsed into clear, bounded units of thought. While external tools and common
@@ -48,4 +48,4 @@ idea into a one-file-per-thought straightjacket.
 
 ---
 
-**See also:** [[ubiquitous-language]], [[knowledge-management]], [[bounded-context]], stereorepo's Article 1, stereorepo's DR-184, stereorepo's DR-185, stereorepo's DR-190, stereorepo's DR-195.
+**See also:** [[ubiquitous-language]], [[knowledge-management]], [[bounded-context]], stereorepo's Article 1, stereorepo's DR-184, stereorepo's DR-185, stereorepo's DR-335, stereorepo's DR-338.

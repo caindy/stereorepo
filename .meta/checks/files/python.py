@@ -481,13 +481,13 @@ FILE_SIZES_BASELINE = Baselines.named("file_sizes")
 
 
 # How long a module under `.meta/` may run before its body belongs in a package
-# of its own: stereorepo's DR-217's number, which that decision's last consequence
+# of its own: stereorepo's DR-344's number, which that decision's last consequence
 # holds the remaining scripts to.
 MODULE_CEILING = 500
 
 
 # How long a file in the entry layer may run. Tighter than `MODULE_CEILING`
-# because stereorepo's DR-217 leaves an entry point its docstring, its re-exports
+# because stereorepo's DR-344 leaves an entry point its docstring, its re-exports
 # and its `__main__` guard and puts the body in `.meta/lib/<script>/`: a file on
 # the invocation surface that runs past this is carrying logic the package
 # beneath it should hold.
@@ -696,7 +696,7 @@ def past_ceilings(lengths: dict[str, int]) -> tuple[dict[str, int], dict[str, li
 
 @check("meta file sizes")
 def meta_file_sizes() -> StepOutcome:
-    """Every file under .meta/ sits at its baseline of lines past its ceiling (stereorepo's DR-217).
+    """Every file under .meta/ sits at its baseline of lines past its ceiling (stereorepo's DR-344).
 
     A module may run to `MODULE_CEILING` lines and a file on the invocation
     surface to `ENTRY_CEILING`, past which the body belongs in

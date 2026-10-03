@@ -1,0 +1,138 @@
+decisions:
+  - id: work:decision/344
+    name: "DR-344 · A script under .meta/ keeps its path as the entry point and its body lives in .meta/lib/<script>/, whose modules import each other as modules"
+    status: ADOPTED
+    supersedes:
+      - work:decision/217
+    applies:
+      - work:article/2
+    enacted_in:
+      - work:artifact/meta-lib
+      - work:artifact/meta-render
+      - work:artifact/meta-lib-render
+      - work:artifact/meta-lib-render-record
+      - work:artifact/meta-lib-render-pages
+      - work:artifact/meta-lib-render-decisions
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-render-targets
+      - work:artifact/meta-lib-render-cli
+      - work:artifact/meta-apm-compile
+      - work:artifact/meta-lib-apm-compile
+      - work:artifact/meta-lib-apm-compile-instructions
+      - work:artifact/meta-lib-apm-compile-agents
+      - work:artifact/meta-lib-apm-compile-skills
+      - work:artifact/meta-lib-apm-compile-bootstrap
+      - work:artifact/meta-lib-apm-compile-primitives
+      - work:artifact/meta-lib-apm-compile-harness
+      - work:artifact/meta-lib-apm-compile-apm
+      - work:artifact/meta-lib-apm-compile-cli
+      - work:artifact/meta-lib-dereference
+      - work:artifact/meta-lib-dereference-reading
+      - work:artifact/meta-lib-dereference-asking
+      - work:artifact/meta-lib-dereference-report
+      - work:artifact/meta-lib-dereference-cli
+      - work:artifact/meta-lib-wikisplain
+      - work:artifact/meta-lib-wikisplain-lead
+      - work:artifact/meta-lib-wikisplain-duplicates
+      - work:artifact/meta-lib-wikisplain-links
+      - work:artifact/meta-lib-wikisplain-pages
+      - work:artifact/meta-lib-wikisplain-cli
+      - work:artifact/meta-lib-search
+      - work:artifact/meta-lib-search-bm25
+      - work:artifact/meta-lib-search-build
+      - work:artifact/meta-lib-search-benchmark
+      - work:artifact/meta-lib-search-cli
+      - work:artifact/meta-ruff-toml
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-assertions-structure
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-readme
+    context: >-
+      Nothing in either ruleset limited how long a Python file may be, and
+      several scripts under `.meta/` had grown past a thousand lines, where
+      every finding of the seed's complexity ceiling (`C90`,
+      `max-complexity = 12`, which DR-177 left out of `.meta/`) would land in
+      one file and the refactor answering them could not be read piecewise.
+      Splitting is constrained from three sides. A script's path is what the
+      justfile, `.meta/assertions/structure.yaml`, Specialization's copy set
+      and the other scripts invoke, so the path has to stay. A Python package
+      cannot share a name with a module beside it, so the package cannot sit
+      beside the script under its name. And a probe stands a collaborator in
+      by assignment on the module that defines it, which reaches only a caller
+      that looks the name up at call time in that namespace. DR-217 settled
+      this with `check_pr.py` as its example, a GitHub workflow's restore set
+      and one pull request per split; those are gone, and `render.py` and
+      `apm_compile.py` are the same case.
+    alternatives:
+      - name: Convert each script into a package of the same name
+        chosen: false
+        reason: >-
+          A package beside a module of the same name wins the import and
+          leaves the file dead; for a top-level script the shadowing runs the
+          other way and the entry point stops being importable. The name is
+          spoken for.
+      - name: Split the scripts and let the probes patch every importer
+        chosen: false
+        reason: >-
+          A probe that has to know which modules imported a name in order to
+          stand it in is coupled to the split, and a module added later that
+          imports the name escapes the probe silently. The seam has to be one
+          place.
+      - name: A thin entry script at the old path, a package under .meta/lib/<script>/, and modules that import sibling modules rather than names
+        chosen: true
+        reason: >-
+          The path stays, so nothing that invokes the script moves.
+          `.meta/lib/` is one directory in the Specialization copy set, so
+          every later package travels without another edit. Inside a package
+          a module imports its sibling and calls through it (`from lib.render
+          import record`, then a call to `record.load`), so the name is looked up at
+          call time on the module that defines it, and a probe stands it in
+          there, once, for every caller. The entry script re-exports the
+          package's public names and its modules, so `import render` finds
+          what it always did. It costs a qualified call at every cross-module
+          site, and an entry script whose only body is imports.
+    consequences:
+      - >-
+        `.meta/render.py`, `.meta/apm_compile.py`, `.meta/dereference.py`,
+        `.meta/search.py`, `.meta/wikisplain.py`, `.meta/adapt.py` and
+        `.meta/bundle.py` are entry scripts whose bodies are packages under
+        `.meta/lib/`.
+      - >-
+        `.meta/lib/` is in the Specialization copy set, so a portfolio
+        inherits every package a script under `.meta/` delegates to.
+      - >-
+        An entry exports the package's modules beside its names, module by
+        module. Where a module's name is also a name the package exports, the
+        name wins and that module is left out, since rebinding it would break
+        every caller of the name to buy a seam a probe can already reach by
+        the package path. `.meta/render.py` is that case for `decisions` and
+        `record`.
+      - >-
+        The type ratchet in `.meta/checks/types.baseline.yaml` holds one
+        number per package module (DR-210).
+      - >-
+        `.meta/checks/files/python.py` holds a module under `.meta/` to five
+        hundred lines and a file on the invocation surface to three hundred
+        and fifty, ratcheted by `.meta/checks/file_sizes.baseline.yaml`; a
+        script past them is split the same way.
+    falsifier: >-
+      A script under `.meta/` whose body lives in a package the Specialization
+      copy set does not carry; a module under `.meta/lib/` that imports a
+      sibling's name rather than the sibling; an entry that leaves out a module
+      whose name nothing in its surface holds, or exports a module over a name
+      the surface already held; or a probe that stands a collaborator in on
+      the entry script and passes while the caller runs the real one.
+    rationale: |-
+      The split is a move, not a redesign. Every function keeps its body; what
+      changes is where it lives and how it names a collaborator in another
+      module. The module-import convention is Google's Python style rule, for
+      Google's reason that the namespace says where a name came from, and here
+      it carries a second load: it is what lets a probe stand a collaborator in
+      at one site.
+
+      `.meta/lib/` rather than a package beside each script, because a package
+      cannot take a module's name and the copy set should grow by one entry
+      rather than one per script. The entry script keeps the docstring, since
+      `--help` prints it, and re-exports the package's whole surface, since
+      the gate and the probes read the script by name and should not have to
+      know it was split.

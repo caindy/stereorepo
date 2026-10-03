@@ -65,7 +65,7 @@ sentence: one was [[evidence]] that can fail, the other Evidence that cannot.
   acquires a second meaning in one of them is the drift the merge would then
   have to undo (stereorepo's DR-228).
 - **Parity.** Minted in `.meta/assertions/imported/vocabulary.yaml` with this
-  page, per stereorepo's Article 17 and stereorepo's DR-190.
+  page, per stereorepo's Article 17 and stereorepo's DR-335.
 - **Bounded adoption.** `Claim` and `Evidence` are taken alone. `Warrant`,
   `Grounds`, `Backing`, `Credence`, `Rebuttal` and `Qualifier` are not minted
   here, because a term with no consumer is what [[nothing-unconsumed]] refuses.
@@ -74,4 +74,4 @@ sentence: one was [[evidence]] that can fail, the other Evidence that cannot.
 
 **See also:** [[evidence]], [[article]], [[citation]], [[dereference]],
 [[nothing-unconsumed]], [[ubiquitous-language]], stereorepo's Article 17,
-stereorepo's DR-190, stereorepo's DR-228.
+stereorepo's DR-335, stereorepo's DR-228.

@@ -1,0 +1,111 @@
+decisions:
+  - id: work:decision/342
+    name: "DR-342 · The probes are a package under `.meta/checks/probes/`, one module per subject under test, with the harness apart"
+    status: ADOPTED
+    supersedes:
+      - work:decision/209
+    applies:
+      - work:article/8
+      - work:article/12
+      - work:article/20
+    enacted_in:
+      - work:artifact/meta-checks-probes
+      - work:artifact/meta-checks-probes-harness
+      - work:artifact/meta-checks-probes-knowledge
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-check
+      - work:artifact/meta-render
+      - work:artifact/skill-technical-writing
+      - work:artifact/meta-lib-render-record
+      - work:artifact/meta-lib-render-skills
+    context: >-
+      DR-150 lifted the probes out of `check.py` so that the gate over
+      assertions takes no imports from a test suite, and named as its
+      falsifier a module that becomes a second grab-bag, one with no one-line
+      description true of everything in it. The single `probes.py` became that
+      file: thousands of lines over several subjects, shared fakes and loaders
+      interleaved with the cases using them, a `run` helper copied four times,
+      every history-log receipt (DR-171) naming the same path whatever
+      subsystem its defect was in, and body comments holding the only account
+      of a fake's contract, with no item to move it to. DR-209 split it, and
+      argued the split from subjects that are gone: the channel and its
+      verbs, the loops' `advance` and `merge-manager`, a fake GitHub, and a
+      pull request that was refused for pruning those comments in place.
+    alternatives:
+      - name: Leave one module and sweep its comments in place
+        chosen: false
+        reason: >-
+          A comment routed nowhere is deleted, not moved, and the file's size
+          is what left the fakes' contracts as comments: a class docstring
+          thousands of lines from the cases that read it is written by nobody.
+      - name: Flat subject modules beside the other checks
+        chosen: false
+        reason: >-
+          Probe modules beside `files/` and `graph/` would read as invariants
+          over the record, which they are not: they load programs and run
+          them. The line DR-150 drew between the gate's subjects and its test
+          suite would be erased by the directory listing.
+      - name: pytest under `.meta/`, one test module per subject
+        chosen: false
+        reason: >-
+          Rejected for the same reasons as before (DR-171): it makes `.meta/`
+          a package with a test runner when it is scripts and gate checks, and
+          a receipt would need `pytest --collect-only` where `ast` reads a
+          `<path>::<symbol>` today. The probes are gate steps and print in the
+          gate's one shape (A21).
+      - name: A package under `.meta/checks/probes/`, one module per subject, the harness apart, and `__init__.py` stating the order
+        chosen: true
+        reason: >-
+          A module per subject under test: what the repository writes down
+          about itself (`knowledge.py`, `wiki.py`, `structure.py`,
+          `citations.py`), its verb surface (`surface.py`), the ruleset
+          (`ruleset.py`), the gate's own steps (`files/`) and the tools
+          beside the gate (`tools/`). Each has a one-line description true of
+          everything in it, which is the test DR-150 set. The harness
+          (`harness/`: loaders, fakes, acts) is what every subject imports and
+          what imports none of them, so the import graph is a tree with the
+          harness at its root, and a fake's contract is its docstring, where
+          its readers find it. `.meta/check.py` says `from checks import
+          probes`, and `probes/__init__.py` imports the subjects in a stated
+          order, which is the order they report in.
+    consequences:
+      - >-
+        `.meta/checks/probes/` is a package; its `__init__.py` imports the
+        subject modules in reporting order, and prechecks still print before
+        every other step.
+      - >-
+        `harness/` holds `load_module`, `outcome` and `FakeWikiPath`, and
+        registers no step.
+      - >-
+        A history log's `Evidence:` names the module that holds the probe, so
+        the receipt says which subsystem a defect was in.
+      - >-
+        `render.py` reads prechecks off `.meta/checks/**/*.py`, and the
+        `/technical-writing` skill routes a regression probe to
+        `.meta/checks/probes/`.
+      - >-
+        Each Artifact under the package is a file of its own in
+        `structure.yaml`, so an `enacted_in` lands on the module that holds
+        what a Decision enacted.
+    falsifier: >-
+      A probe whose subject under test is plainly none of the package's
+      modules, or one that has to be written in two of them; or a harness that
+      comes to hold one subject's own material rather than a loader or a
+      stand-in for something outside the repository, such as a module or a
+      path.
+    rationale: |-
+      DR-150 settled where the gate's steps live by asking what each step is a
+      step of, and for the probes the answer was "the test suite", which was
+      one thing until the suite held several subjects. Then the symptoms were
+      the ones it predicted for a grab-bag: receipts that named a file rather
+      than a subject, a fake whose contract lived in comments beside its
+      callers, and a sweep that could not route what it pruned.
+
+      The same question asked one level down gives the same shape of answer.
+      What a probe is a probe of is the program it loads and runs, so the
+      modules are named for those programs, and a receipt such as
+      `probes/tools/search.py::search_probes` names the subsystem before
+      anyone opens it. The harness is what lets the comments be swept: a
+      fake's contract is Reference, and Reference belongs in the docstring of
+      the item, which is writable once the item has a module of its own.
+      Routing first and pruning second is the order DR-207 prescribes.

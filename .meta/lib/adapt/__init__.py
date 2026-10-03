@@ -1,4 +1,4 @@
-"""Brownfield repository adoption planning library (stereorepo's DR-217).
+"""Brownfield repository adoption planning library (stereorepo's DR-344).
 
 Provides data structures, path classification, and collision-aware planning
 to adapt existing Product repositories into stereorepo management.

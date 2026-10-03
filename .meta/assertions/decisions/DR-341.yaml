@@ -1,0 +1,67 @@
+decisions:
+  - id: work:decision/341
+    name: "DR-341 · Inherited probes and the search benchmark generalise over what a portfolio holds, so a fresh specialization passes its gate"
+    status: ADOPTED
+    supersedes:
+      - work:decision/204
+    applies:
+      - work:article/8
+      - work:article/9
+      - work:article/10
+      - work:article/21
+    enacted_in:
+      - work:artifact/specialize
+      - work:artifact/meta-assertions-disciplines
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-search
+    context: >-
+      Running the Specialization procedure (`SPECIALIZE.md`) into an empty
+      repository found the inherited tooling assuming it was still in
+      stereorepo: Step 2 named inherited scripts without their `.meta/`
+      prefix, a probe hard-coded a stereorepo decision file and a deployment
+      script a portfolio does not inherit, and the search probes and the
+      eighteen DR-103 benchmark queries expected stereorepo's own decisions,
+      which a portfolio does not carry. DR-204 recorded that run and its
+      fixes, occasioned by a Challenge and naming `check_pr.py` and Article 18
+      among them; all three are gone, and the rule the fixes share stands.
+    alternatives:
+      - name: Disable the probes in a specialized portfolio
+        chosen: false
+        reason: >-
+          Leaves a portfolio unable to check its own retrieval or its own
+          enacted artifacts, against Article 9's gate that holds the same
+          checks wherever it can.
+      - name: State inherited paths exactly, and write probes and the benchmark over what is on disk
+        chosen: true
+        reason: >-
+          Step 2 names every inherited path with its `.meta/` prefix, so the
+          copy is exact. A probe resolves the decisions and artifacts it needs
+          from the tree it runs in rather than naming stereorepo's.
+          `.meta/lib/search/benchmark.py` scores only the queries whose target
+          documents exist in the index, and scales its threshold to the count,
+          so the same BM25F evaluation holds in stereorepo (18 queries, hit@5
+          of at least 15) and in a portfolio (80% of the queries that remain).
+    consequences:
+      - >-
+        `SPECIALIZE.md` Step 2 states the exact `.meta/` path of every
+        inherited tool.
+      - >-
+        `run_benchmark()` evaluates only the queries whose targets are in the
+        index.
+      - >-
+        `.meta/test_specialization.py` runs the procedure end to end in a
+        scratch repository and fails if the portfolio's gate does.
+    falsifier: >-
+      A failure while executing `SPECIALIZE.md` into an empty repository, or a
+      gate failure on a freshly specialized portfolio that comes from an
+      inherited check expecting stereorepo's own records.
+    rationale: |-
+      A scaffold is only as good as the repository it creates. Executing the
+      procedure into a clean repository found friction that reading it could
+      not, all of one kind: inherited tooling that silently assumed its first
+      home.
+
+      Writing every inherited check over what the tree it runs in holds is
+      what lets a clone specialize into a self-contained portfolio whose gate,
+      APM primitives and operator tools work from its first commit.

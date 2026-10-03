@@ -100,7 +100,7 @@ def _concept_ids_in_file(path: pathlib.Path) -> list[str]:
                                     rel = path
                                 problems.append(
                                     f"{rel}:{line} concept '{cid}' declared twice in concept_set "
-                                    f"(first at line {seen[cid]}) (stereorepo's DR-190)"
+                                    f"(first at line {seen[cid]}) (stereorepo's DR-335)"
                                 )
                             else:
                                 seen[cid] = line
@@ -114,7 +114,7 @@ def duplicate_concept_ids(
 
     Enforces that concept declarations within any concept_set carry unique identifiers,
     preventing silent dictionary overwrites and divergent definitions in the Ubiquitous
-    Language (stereorepo's DR-190).
+    Language (stereorepo's DR-335).
 
     Args:
         paths: Specific paths to scan, or None to scan all assertion and template YAML files.

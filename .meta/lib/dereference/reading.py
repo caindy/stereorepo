@@ -1,4 +1,4 @@
-"""The deterministic half: the citations `check.py` extracts, the sentence each sits in, the entry it names, and the scope a branch is read in, from the diff and the ground that moved (stereorepo's DR-192).
+"""The deterministic half: the citations `check.py` extracts, the sentence each sits in, the entry it names, and the scope a branch is read in, from the diff and the ground that moved (stereorepo's DR-336).
 """
 import importlib.util
 import pathlib
@@ -195,7 +195,7 @@ def sampled(
     durable: set[pathlib.Path],
     sample: int,
 ) -> list[dict[str, Any]]:
-    """A rotating sample of `sample` pairs over every durable file, the offset turning with the commit count (stereorepo's DR-192).
+    """A rotating sample of `sample` pairs over every durable file, the offset turning with the commit count (stereorepo's DR-336).
 
     A record holding fewer pairs than `sample` answers each of them once, and
     no pair twice: the rotation wraps to fill the window, and a window wider
@@ -230,7 +230,7 @@ def moved_articles(base: str, path: pathlib.Path) -> set[str]:
 
 
 def modified_entries(base: str, changed: list[pathlib.Path]) -> set[str]:
-    """The Decisions and Articles this branch moved: every `DR-` assertion among `changed`, and each Article the charter's text changed (stereorepo's DR-192)."""
+    """The Decisions and Articles this branch moved: every `DR-` assertion among `changed`, and each Article the charter's text changed (stereorepo's DR-336)."""
     entries: set[str] = set()
     for p in changed:
         try:
@@ -293,7 +293,7 @@ def scope(
     what the citation names.
 
     Everything, what this branch wrote or affected, or a rotating sample
-    (stereorepo's DR-192). The branch scope is a set difference over sentences
+    (stereorepo's DR-336). The branch scope is a set difference over sentences
     rather than a read of the diff's line numbers: a folded scalar wraps where
     the line ended and not where the sentence did, so a line-based scope would
     report a claim whose only change was the width of its wrap, and would miss

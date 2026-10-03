@@ -59,8 +59,8 @@ observe. There are no pull requests.
   re-render, and commit it with the change.
   `.meta/decisions.md` is an index generated from them; the entry itself is the
   assertion file.
-- Maintainer-facing exposition lives in `wiki/<context>/` following the Knowledge Management discipline (DR-184, DR-196) and the Diátaxis Compass (DR-194). Route prose before writing: Reference in docstrings, Explanation in `wiki/` and DRs, How-To in `justfile` recipes, and unrouted residue in the Issue file. Every concept in the Ubiquitous Language carries a corresponding wiki entry (A17, DR-190). Use the `/wikisplain` skill to scaffold and check wiki pages (DR-187).
-- Two regimes govern writing (DR-198): in conversation, speak in the
+- Maintainer-facing exposition lives in `wiki/<context>/` following the Knowledge Management discipline (DR-184, DR-196) and the Diátaxis Compass (DR-337). Route prose before writing: Reference in docstrings, Explanation in `wiki/` and DRs, How-To in `justfile` recipes, and unrouted residue in the Issue file. Every concept in the Ubiquitous Language carries a corresponding wiki entry (A17, DR-335). Use the `/wikisplain` skill to scaffold and check wiki pages (DR-187).
+- Two regimes govern writing (DR-339): in conversation, speak in the
   Technical Writer register (spelled out, self-contained, citations
   dereferenced). When authoring durable artifacts, follow the Diátaxis compass,
   and apply the `/technical-writing` skill to docstrings, comments and

@@ -1,0 +1,74 @@
+decisions:
+  - id: work:decision/339
+    name: "DR-339 · Two-regime technical writing: the conversational register versus durable Diátaxis authoring"
+    status: ADOPTED
+    supersedes:
+      - work:decision/198
+    applies:
+      - work:article/1
+      - work:article/12
+    enacted_in:
+      - work:artifact/skill-technical-writing
+      - work:artifact/agents
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-apm-compile-agents
+    context: >-
+      Two registers were being confused, each in the other's place. Concision
+      suited to code, imported into conversation, gave abstruse shorthand that
+      made the developer interrogate an agent across several turns for basic
+      context. The technical writer's register ("spelled out and
+      self-contained, every citation dereferenced, length is not the cost
+      here; ambiguity is"), taken as a licence for durable files, inflated
+      docstrings with defensive argument, speculation and history. DR-198
+      settled this by contrasting a Coder personality with the technical
+      writer, an Actor's character, `coder.yml` and pull-request review
+      threads; none of those remain, and the confusion does not need them.
+    alternatives:
+      - name: One verbose register for every task
+        chosen: false
+        reason: >-
+          Slows implementation and puts narrative into code, where a reader
+          looking up an item pays for it every time.
+      - name: Leave the two regimes implicit
+        chosen: false
+        reason: >-
+          Leaves agents oscillating between cryptic conversation and bloated,
+          argumentative docstrings, against DR-334.
+      - name: Separate the conversational register from durable Diátaxis authoring
+        chosen: true
+        reason: >-
+          What is said and what is written are different products. In
+          conversation, which includes a seat's report at the end of its turn
+          and its pair notes in an Issue file, the register is the technical
+          writer's `communication_style`: spelled out, context named, no
+          shorthand. In durable files the Diátaxis compass governs: Reference
+          docstrings dry and complete, Explanation in Decision Records and the
+          wiki, defect history in history logs. A seat implements naturally
+          and applies the `/technical-writing` skill to the docstrings,
+          comments and documentation it touched before its turn ends.
+    consequences:
+      - >-
+        The `/technical-writing` skill states the two regimes apart.
+      - >-
+        `AGENTS.md` and `template/AGENTS.md` state the convention and direct
+        agents to apply `/technical-writing` to docstrings, comments and
+        documentation.
+      - >-
+        The technical writer's compiled agent carries its register as the
+        conversational one, and the Diátaxis quadrant for anything it writes
+        into a file.
+    falsifier: >-
+      An agent speaking in conversation in undecoded shorthand, or writing
+      durable docstrings in conversational expansiveness or argument rather
+      than dry Diátaxis Reference.
+    rationale: |-
+      A Role's register governs its voice in conversation; the Diátaxis
+      coordinate system governs the structure of what it leaves in the tree.
+      Conflating the two damaged both: conversation became cryptic and
+      docstrings verbose.
+
+      In dialogue, clarity and dereferencing come before brevity, because
+      ambiguity costs turns and alignment with the developer. In code, the
+      Reference quadrant wants dry, complete usage contracts, because bulk
+      hides the interface. Writing first and auditing against the skill before
+      the turn ends keeps both without slowing the implementation.

@@ -152,7 +152,7 @@ def prechecks() -> list[str]:
 
     The steps live in `.meta/checks/`, one module per subject
     (stereorepo's DR-150), and the probes one level further down in
-    `.meta/checks/probes/`, one module per subject under test (stereorepo's DR-209),
+    `.meta/checks/probes/`, one module per subject under test (stereorepo's DR-342),
     so the whole tree is read rather than one file: which module a precheck is
     written in is those splits' business, and a count of them should not move
     when one is carried from one subject to another.

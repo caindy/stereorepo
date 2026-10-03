@@ -1,6 +1,6 @@
 ---
 description: >-
-  Knowledge Management discipline — The governance and routing of all maintainer-facing prose across the repository according to the Diátaxis Compass (stereorepo's DR-184, stereorepo's DR-194, stereorepo's DR-196). Every unit of written knowledge is routed before writing to its authoritative container: Reference in public docstrings and schemas, Explanation in wiki pages and Decision Records, How-To in justfile recipes and specialization guides, and Tutorial in onboarding walkthroughs. What remains after routing is the residue, and only residue belongs in the issue file.
+  Knowledge Management discipline — The governance and routing of all maintainer-facing prose across the repository according to the Diátaxis Compass (stereorepo's DR-184, stereorepo's DR-337, stereorepo's DR-196). Every unit of written knowledge is routed before writing to its authoritative container: Reference in public docstrings and schemas, Explanation in wiki pages and Decision Records, How-To in justfile recipes and specialization guides, and Tutorial in onboarding walkthroughs. What remains after routing is the residue, and only residue belongs in the issue file.
 applyTo: "**/*"
 ---
 
@@ -9,7 +9,7 @@ applyTo: "**/*"
 
 # Knowledge Management
 
-The governance and routing of all maintainer-facing prose across the repository according to the Diátaxis Compass (stereorepo's DR-184, stereorepo's DR-194, stereorepo's DR-196). Every unit of written knowledge is routed before writing to its authoritative container: Reference in public docstrings and schemas, Explanation in wiki pages and Decision Records, How-To in justfile recipes and specialization guides, and Tutorial in onboarding walkthroughs. What remains after routing is the residue, and only residue belongs in the issue file.
+The governance and routing of all maintainer-facing prose across the repository according to the Diátaxis Compass (stereorepo's DR-184, stereorepo's DR-337, stereorepo's DR-196). Every unit of written knowledge is routed before writing to its authoritative container: Reference in public docstrings and schemas, Explanation in wiki pages and Decision Records, How-To in justfile recipes and specialization guides, and Tutorial in onboarding walkthroughs. What remains after routing is the residue, and only residue belongs in the issue file.
 Every Concept in a Bounded Context's Ubiquitous Language has an atomic definition; where it lands in the artifact hierarchy (schema gloss, section, standalone wiki page, or subfolder) is subordinate to the authoring agent's judgement under Diátaxis. Maintainer explanations follow Wikipedia editorial conventions (MOS:LEAD bold lead definitions, neutral register, closed-world wikilinks).
 
 ## Judgement
@@ -21,7 +21,7 @@ Executing the pre-writing routing decision tree before drafting prose: determini
 - **Route via Diátaxis Compass.** Consult the Diátaxis Compass before typing prose. Match the knowledge to its quadrant: Reference (Work + Understanding), Explanation (Learning + Understanding), How-To (Work + Action), or Tutorial (Learning + Action).
 - **Subordinate container placement to reader posture.** A Concept may reside in a schema gloss, an existing document section, a dedicated wiki page (`wiki/<context>/<concept>.md`), or a subsystem subdirectory depending on reader posture rather than storage hierarchy.
 - **Structure documentation by Bounded Context.** House concepts under `wiki/<bounded-context>/`. Keep `wiki/stereorepo/` hermetic to the scaffold, while specialized portfolios house their domain concepts under their own bounded context folders.
-- **Maintain 1:1 concept and wiki parity.** Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within each Bounded Context (Article 17, stereorepo's DR-190).
+- **Maintain 1:1 concept and wiki parity.** Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within each Bounded Context (Article 17, stereorepo's DR-335).
 - **Open with bold MOS:LEAD lead sentence.** Provide a MOS:LEAD first sentence that states what the concept is in bold, concurring with its vocabulary definition.
 - **Connect with closed-world wikilinks.** Link concepts using closed-world wikilinks (`[[concept]]` or scoped `[[context/concept]]`). A link to an unminted concept or dead target is red and fails verification (stereorepo's DR-185).
 - **Apply Google developer style.** Follow direct address in the present tense, active voice, elimination of filler words, and rhythmic variation.

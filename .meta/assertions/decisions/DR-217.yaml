@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/217
     name: "DR-217 · A script under .meta/ keeps its path as the entry point and its body lives in .meta/lib/<script>/, whose modules import each other as modules"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/344
     applies:
       - work:article/2
     enacted_in:

@@ -3,7 +3,7 @@
 Validates that `cited_schema_slots` correctly identifies invalid qualified slot citations,
 explicit slot phrases, and document-scoped former slot names, while verifying git diff
 parsing of deleted schema slots and CouldNotRun fallback behaviour. Probes sit in
-their own module under `.meta/checks/probes/` by subject under test (stereorepo's DR-209,
+their own module under `.meta/checks/probes/` by subject under test (stereorepo's DR-342,
 organizing probes into per-subject modules). Verifies the citation subject's slot checks
 under the gate's per-subject decomposition (stereorepo's DR-150).
 

@@ -83,7 +83,7 @@ cd <project> && uv run gate    # one Project workspace
 ```
 
 `.meta/` has no `pytest` and no `tests/`. Its behavioural tests are the probes
-under `.meta/checks/probes/` (stereorepo's DR-209), which run as steps of
+under `.meta/checks/probes/` (stereorepo's DR-342), which run as steps of
 `just gate meta`.
 
 

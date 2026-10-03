@@ -1,7 +1,7 @@
 """Brownfield repository adoption planning probes.
 
 Validates path classification, collision detection, read-only invariants,
-serialization formats, and CLI execution under stereorepo's DR-217.
+serialization formats, and CLI execution under stereorepo's DR-344.
 """
 
 from __future__ import annotations
@@ -452,7 +452,7 @@ def _check_portfolio_items(scaffold_dir: pathlib.Path, tmp: pathlib.Path) -> lis
 
 @check("brownfield adoption probes", pre=True)
 def test_brownfield_probes(scaffold_dir: pathlib.Path = META.parent) -> StepOutcome:
-    """Probes brownfield adoption planning and CLI dispatcher (stereorepo's DR-217).
+    """Probes brownfield adoption planning and CLI dispatcher (stereorepo's DR-344).
 
     Validates that:
     1. Empty target repository plans every bundle entry but a portfolio item as CREATE.

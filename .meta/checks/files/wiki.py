@@ -1,4 +1,4 @@
-"""The wiki: wikilinks that resolve, a lead paragraph that defines its concept, one page per term of the Ubiquitous Language, and synonyms the vocabulary does not forbid (stereorepo's DR-187, stereorepo's DR-190, stereorepo's DR-231).
+"""The wiki: wikilinks that resolve, a lead paragraph that defines its concept, one page per term of the Ubiquitous Language, and synonyms the vocabulary does not forbid (stereorepo's DR-187, stereorepo's DR-335, stereorepo's DR-231).
 """
 import pathlib
 import re
@@ -304,7 +304,7 @@ def _domain_vocabulary_problems(
             item_id = str(item.get("id") or "")
             slug = item_id.rsplit("/", 1)[-1].lower()
             if not any(s == slug for (c, s) in wiki_map if c != "stereorepo"):
-                problems.append(f"domain_vocabulary.yaml: concept '{item_id}' has no corresponding wiki page (stereorepo's DR-190)")
+                problems.append(f"domain_vocabulary.yaml: concept '{item_id}' has no corresponding wiki page (stereorepo's DR-335)")
     except (OSError, UnicodeDecodeError, yaml.YAMLError, AttributeError, TypeError) as e:
         problems.append(f"domain_vocabulary.yaml: failed to parse for parity check: {e}")
     return problems
@@ -314,7 +314,7 @@ def _domain_vocabulary_problems(
 def ubiquitous_language_wiki_parity(
         index: Index, md_files: Sequence[pathlib.Path] | None = None,
         concepts: Sequence[dict[str, object]] | None = None) -> list[str]:
-    """Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page, and vice versa (A17, stereorepo's DR-184, stereorepo's DR-190).
+    """Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page, and vice versa (A17, stereorepo's DR-184, stereorepo's DR-335).
 
     Enforces 1:1 parity between LinkML vocabulary assertions and Knowledge Management
     wiki pages within each Bounded Context. A domain concept without a wiki page, or
@@ -344,7 +344,7 @@ def ubiquitous_language_wiki_parity(
             minted = (f"ddd:concept/{slug}", f"work:concept/{slug}")
             missing = f"wiki page '{slug}' has no corresponding concept in vocabulary schema"
         if not any(ident in index for ident in minted):
-            problems.append(f"{_rel(path)}: {missing} (stereorepo's DR-190)")
+            problems.append(f"{_rel(path)}: {missing} (stereorepo's DR-335)")
     return problems
 
 
@@ -375,7 +375,7 @@ def _avoided(index: Index, slug: str) -> dict[str, tuple[str, str]]:
 @check("wiki synonyms")
 def wiki_synonyms_are_not_avoided(
         index: Index, md_files: Sequence[pathlib.Path] | None = None) -> list[str]:
-    """No wiki page declares as a synonym a word its own entry's `avoid` list forbids (A17, stereorepo's DR-190, stereorepo's DR-231).
+    """No wiki page declares as a synonym a word its own entry's `avoid` list forbids (A17, stereorepo's DR-335, stereorepo's DR-231).
 
     A page's frontmatter `synonyms` are folded into the title field of the BM25
     index at `.meta/lib/search/build.py`, which is the highest weight that index

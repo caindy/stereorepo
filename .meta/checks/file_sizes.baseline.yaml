@@ -9,7 +9,7 @@
 # ceilings themselves are `MODULE_CEILING` and `ENTRY_CEILING` in
 # `.meta/checks/files/python.py`, five hundred lines for a module and three
 # hundred and fifty for a file on the invocation surface, which is where
-# stereorepo's DR-217 puts the line between a script and the package holding its
+# stereorepo's DR-344 puts the line between a script and the package holding its
 # body.
 #
 # The Ratchet Discipline is what a checker that cannot be clean at once does: a

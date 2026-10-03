@@ -1,0 +1,81 @@
+decisions:
+  - id: work:decision/343
+    name: "DR-343 · The rule its instances share is stated as an Article of its own"
+    status: ADOPTED
+    supersedes:
+      - work:decision/216
+    applies:
+      - work:article/22
+    enacted_in:
+      - work:artifact/meta-charter
+    context: >-
+      Several Articles say one thing of different artifacts. A decision that
+      lives only in a transcript has not been made (A11); reasoning that lives
+      only in a commit message is not recorded (A14); a term that arrived by
+      use has not been agreed (A17); a rule that lives only in the decision
+      record is not in force (A20). Each states that state held where the next
+      participant cannot observe it is state the system does not have: not
+      that it should be recorded, but that it did not happen.
+
+      The generalisation was written once, by DR-216, which argued it from
+      seven such Articles (three are gone), a branch rule found only in
+      `.github/workflows/coder.yml`, a Job that could not proceed and a
+      reviewer citing it. None of those remain. The pair loop now supplies the
+      plainest case: which stage an Issue is in is the directory its file sits
+      in, so a seat, the supervisor and the developer read it from one place,
+      and none holds a copy the others cannot see.
+    alternatives:
+      - name: Leave the rule implicit in the Articles that instantiate it
+        chosen: false
+        reason: >-
+          It is in force for the artifacts those Articles name and for nothing
+          else. A case they do not cover has nothing to cite, and the rule has
+          to be re-derived by noticing that the Articles rhyme. That is also
+          A20 turned on the Charter: a rule reachable only through its
+          instances is not reachable.
+      - name: Write it as a Discipline
+        chosen: false
+        reason: >-
+          A Discipline is followed and has steps; an Article is one line held
+          against an artifact. This has no steps and no order; it is a question
+          asked of a thing that exists, which is the test `disciplines.md`
+          gives for telling the two apart.
+      - name: State it as an Article, cited by its instances rather than replacing them
+        chosen: true
+        reason: >-
+          The instances keep their own checks, which are the enforceable part,
+          and gain a general form for the cases they do not name. It costs an
+          Article nothing mechanical checks: the second seat holds it by
+          asking what a participant with no privilege beyond the record could
+          reconstruct, which is weaker than every Article beside it, and is
+          the honest position.
+    consequences:
+      - >-
+        Article 22 states the rule, and names its instances in `checked_by`,
+        so a reader arriving at the general form finds the enforceable ones.
+      - >-
+        Nothing new is checked mechanically. The second seat may object to an
+        unobservable rule on its own, not only where one of the instances'
+        artifacts is involved.
+    falsifier: >-
+      Article 22 never cited, in a pair note, an Issue or a Decision Record,
+      over a run long enough to meet a case outside its instances, which would
+      mean the generalisation stated something nobody needed.
+    rationale: |-
+      Two commitments here turn out to be one. Memory is externalised so that
+      what a session would otherwise remember is held where the next
+      participant reads it, and the pair loop is supervised from what it can
+      observe, so no participant holds a process the others cannot see. Both
+      give up a privilege and buy the same thing: an agent that cannot carry
+      state privately must reconstruct the state of things from what is
+      observable, and where it cannot, the missing observation point fails
+      loudly, as a turn that cannot proceed, rather than quietly, as one that
+      improvised.
+
+      Observation points are hard to verify, because a system with enough of
+      them and one with too few look alike to a privileged reader. Removing
+      the privilege tells them apart by failing, which is the only evidence
+      A4 accepts. The Article names no artifact and no check, because the
+      general case cannot be enumerated in advance; a one-line claim to cite
+      still lets the second seat object at the first occurrence rather than
+      after noticing the rhyme.

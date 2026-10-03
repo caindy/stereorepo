@@ -3,7 +3,7 @@
 **Knowledge Management** is the discipline governing the classification, routing,
 and authoring of all maintainer-facing prose across the repository according to
 the Diátaxis Compass (stereorepo's Article 17, stereorepo's DR-184,
-stereorepo's DR-185, stereorepo's DR-194, stereorepo's DR-196).
+stereorepo's DR-185, stereorepo's DR-337, stereorepo's DR-196).
 
 It provides autonomous agents and maintainers with a deterministic decision
 procedure before drafting a single word of prose, answering both *where to write*
@@ -57,7 +57,7 @@ routing tree:
 
 ## Concept Decoupling and Container Subordination
 
-The atomic semantic unit of domain knowledge is the [[concept]] (stereorepo's DR-195).
+The atomic semantic unit of domain knowledge is the [[concept]] (stereorepo's DR-338).
 The physical storage container is strictly subordinate to the authoring agent's
 structural judgement under Diátaxis:
 - **Schema Gloss:** A brief definition in `vocabulary.yaml` when machine checks
@@ -88,7 +88,7 @@ Every page opens with an encyclopedic lead sentence defining the subject in
 bold copular phrasing (`**Subject** is a ...`). This lead sentence concurs with
 the concept's machine definition in the vocabulary schema. Every concept in the
 [[ubiquitous-language]] maintains 1:1 parity with a wiki page (stereorepo's Article 17,
-stereorepo's DR-190).
+stereorepo's DR-335).
 
 ### 3. Closed-World Wikilinks
 Internal concept references use wikilinks (`[[concept]]` or scoped
@@ -104,4 +104,4 @@ vocabulary term. A link to an unminted concept or missing page fails gate verifi
 
 ---
 
-**See also:** [[concept]], [[ubiquitous-language]], stereorepo's Article 1, stereorepo's Article 17, stereorepo's DR-184, stereorepo's DR-185, stereorepo's DR-187, stereorepo's DR-190, stereorepo's DR-194, stereorepo's DR-195, stereorepo's DR-196.
+**See also:** [[concept]], [[ubiquitous-language]], stereorepo's Article 1, stereorepo's Article 17, stereorepo's DR-184, stereorepo's DR-185, stereorepo's DR-187, stereorepo's DR-335, stereorepo's DR-337, stereorepo's DR-338, stereorepo's DR-196.

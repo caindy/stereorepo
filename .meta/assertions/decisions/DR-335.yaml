@@ -1,0 +1,78 @@
+decisions:
+  - id: work:decision/335
+    name: "DR-335 · The Ubiquitous Language regime: a 1:1 wiki parity check, and the second seat's judgement on unlinked domain nouns"
+    status: ADOPTED
+    supersedes:
+      - work:decision/190
+    applies:
+      - work:article/17
+      - work:article/2
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-charter
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-checks-probes-knowledge
+      - work:artifact/agents
+      - work:artifact/template-agents
+      - work:artifact/meta-checks-files-wiki
+      - work:artifact/meta-lib-render-skills
+    context: >-
+      Article 17 states that a term that arrived by use has not been agreed.
+      Whether a word is acting as a domain term takes semantic judgement, so
+      counting word repetition across diffs reports noise rather than terms.
+      With Knowledge Management (DR-184), closed-world wikilinks (DR-185) and
+      `/wikisplain` (DR-187) in place, the regime has two halves: a check that
+      holds the vocabulary and the wiki to each other, and a reader who asks
+      of a noun whether it is doing the work of a term. DR-190 gave that
+      reading to a reviewer role, before merge, in a pull request; pull
+      requests and that role are gone, and the reading never depended on them.
+    alternatives:
+      - name: Mechanical word-frequency heuristics over a diff
+        chosen: false
+        reason: >-
+          Counting repetition cannot tell a domain term from ordinary English,
+          so every finding needs triage and the findings stop being read.
+      - name: Instruction alone, with no parity check
+        chosen: false
+        reason: >-
+          An instruction degrades under context pressure. Without a check that
+          refuses an unminted concept or an orphaned page, a loop coins terms
+          silently.
+      - name: "Two halves: a deterministic parity check, and the second seat's judgement"
+        chosen: true
+        reason: >-
+          `ubiquitous language wiki parity` holds what a script can decide: a
+          concept and its page share an identifier, and every wikilink resolves
+          against a closed set. The second seat, in its turn on an Issue and
+          before the Issue lands, holds what a script cannot: whether an
+          unlinked noun in the change is acting as a term, in which case it is
+          linked or minted with the developer.
+    consequences:
+      - >-
+        `.meta/checks/files/wiki.py` holds `ubiquitous language wiki parity`,
+        a 1:1 correspondence between vocabulary concepts and wiki concept
+        pages, and the probes in `.meta/checks/probes/wiki.py` show it passing
+        and failing.
+      - >-
+        Article 17's `checked_by` names both halves, and the Ubiquitous
+        Language and Knowledge Management Disciplines each carry a parity step.
+      - >-
+        `AGENTS.md` and `template/AGENTS.md` state the convention: every
+        concept in the Ubiquitous Language carries a wiki entry.
+    falsifier: >-
+      A concept minted in the vocabulary with no wiki page, a domain wiki page
+      with no vocabulary concept, or an unminted domain noun acting as a term
+      in a change that lands.
+    rationale: |-
+      A check and a reader each hold what the other cannot. A Python check can
+      verify that a LinkML concept and a Markdown page share an identifier,
+      that the lead definition concurs, and that links resolve against a closed
+      set of minted entities. It cannot decide whether an English noun in a
+      change is behaving as a domain term.
+
+      The pair loop already has a reader placed to decide it: the seat that did
+      not write the change reads it before the Issue lands. Giving that seat
+      the question, with the parity check and closed-world wikilinks behind
+      it, holds Evans' Ubiquitous Language with one developer and two agents
+      and no separate triage.

@@ -9,7 +9,7 @@ description: >-
   In collaborative product and feature design, an agent compiled from the Persona
   assumes its context, goal hierarchy, behaviors, and frustrations, evaluating
   design proposals strictly against the archetype's rejection boundaries
-  (stereorepo's DR-200).
+  (stereorepo's DR-340).
 
   **The detail is the discipline.** A sketch answers questions differently from a
   rigorously modelled figure, which is why Cooper insists on research over
@@ -174,7 +174,7 @@ classes:
         Interrogation needs no new machinery: the Persona compiles to an agent
         that answers as it. In collaborative feature design, that agent
         evaluates proposals against the Persona's 3-tier goal hierarchy and
-        rejection boundaries (stereorepo's DR-200).
+        rejection boundaries (stereorepo's DR-340).
       - >-
         A JobToBeDone names the Persona whose need it is (stereorepo's DR-327). Interrogating
         a Persona to surface one is the intended path from user research into

@@ -60,7 +60,7 @@ concept_set:
     pref_label: Concept
     definition: >-
       The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language
-      (stereorepo's DR-184, stereorepo's DR-190, stereorepo's DR-195).
+      (stereorepo's DR-184, stereorepo's DR-335, stereorepo's DR-338).
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-recorded
     alt_labels:
@@ -91,7 +91,7 @@ concept_set:
     broader: work:concept/g-for
     scope_note: >-
       Cooper's sense. Compiled to an agent that answers as the Persona during
-      collaborative feature design interrogation (stereorepo's DR-200).
+      collaborative feature design interrogation (stereorepo's DR-340).
   - id: work:concept/business-goal
     pref_label: Business goal
     definition: An organisational objective — conversion, support cost, retained revenue.
@@ -615,7 +615,7 @@ concept_set:
     definition: >-
       The practice of holding what a session would otherwise remember in artifacts
       the next participant reads, rather than in the agent that learned it
-      (stereorepo's DR-216, stereorepo's Article 22).
+      (stereorepo's DR-343, stereorepo's Article 22).
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-recorded
     alt_labels:

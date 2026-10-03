@@ -24,7 +24,7 @@ synonyms:
 
 @check("search probes", pre=True)
 def search_probes() -> list[str]:
-    """`search.py` indexes the assertions and the wiki, ranks by Okapi BM25F over three fields, and meets the retrieval benchmark (stereorepo's DR-103, stereorepo's DR-194, stereorepo's DR-195).
+    """`search.py` indexes the assertions and the wiki, ranks by Okapi BM25F over three fields, and meets the retrieval benchmark (stereorepo's DR-103, stereorepo's DR-337, stereorepo's DR-338).
 
     The index built over `.meta/assertions/` and `wiki/` holds at least a
     hundred documents. Asked who moves an issue between stages, the top five

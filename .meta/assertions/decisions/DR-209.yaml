@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/209
     name: "DR-209 · The probes are a package under `.meta/checks/probes/`, one module per subject under test, with the harness in a module of its own"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/342
     applies:
       - work:article/8
       - work:article/12

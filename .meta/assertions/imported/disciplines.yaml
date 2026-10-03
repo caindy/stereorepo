@@ -130,7 +130,7 @@ disciplines:
         name: Maintain concept and wiki parity
         statement: >-
           Maintain 1:1 parity with the Knowledge Management wiki: every minted concept carries a corresponding
-          wiki page explaining its domain context (stereorepo's DR-190).
+          wiki page explaining its domain context (stereorepo's DR-335).
     produces:
       - A language the repository and everyone working in it actually share.
   - id: work:discipline/dogfooding
@@ -514,7 +514,7 @@ disciplines:
     name: Knowledge Management
     description: >-
       The governance and routing of all maintainer-facing prose across the repository
-      according to the Diátaxis Compass (stereorepo's DR-184, stereorepo's DR-194, stereorepo's DR-196).
+      according to the Diátaxis Compass (stereorepo's DR-184, stereorepo's DR-337, stereorepo's DR-196).
       Every unit of written knowledge is routed before writing to its authoritative
       container: Reference in public docstrings and schemas, Explanation in wiki
       pages and Decision Records, How-To in justfile recipes and specialization guides,
@@ -557,7 +557,7 @@ disciplines:
         name: Maintain 1:1 concept and wiki parity
         statement: >-
           Maintain 1:1 parity between Ubiquitous Language concepts and wiki pages within each Bounded
-          Context (Article 17, stereorepo's DR-190).
+          Context (Article 17, stereorepo's DR-335).
       - id: work:discipline-step/knowledge-management/open-with-bold-mos-lead-lead-sentence
         name: Open with bold MOS:LEAD lead sentence
         statement: >-

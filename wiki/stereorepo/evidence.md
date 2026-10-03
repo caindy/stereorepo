@@ -80,7 +80,7 @@ provenance.
 
 - **The upstream sentence is quoted, not rewritten** (stereorepo's DR-228).
 - **Parity.** Minted in `.meta/assertions/imported/vocabulary.yaml` with this
-  page, per stereorepo's Article 17 and stereorepo's DR-190.
+  page, per stereorepo's Article 17 and stereorepo's DR-335.
 - **Every history entry names Evidence that resolves.** Checked by
   `meta history evidence`; an entry naming none, or naming a symbol that is
   gone, fails the gate (stereorepo's DR-171).
@@ -89,4 +89,4 @@ provenance.
 
 **See also:** [[claim]], [[nothing-unconsumed]], [[observed-failure]],
 [[literate-programming]], [[citation]], stereorepo's Article 17, stereorepo's DR-171,
-stereorepo's DR-190, stereorepo's DR-228.
+stereorepo's DR-335, stereorepo's DR-228.

@@ -25,8 +25,8 @@ disciplines:
         name: Copy what is inherited
         statement: >-
           Copy what is inherited — `.meta/work/`, `.meta/ddd/`, `.meta/work_ontology.yaml`, `.meta/ddd_ontology.yaml`,
-          `.meta/render.py`, `.meta/check.py`, `.meta/lib/` (DR-217), `.meta/apm_compile.py`,
-          `.meta/dereference.py`, `.meta/gate`, `.meta/search.py` (DR-194), `.meta/wikisplain.py`
+          `.meta/render.py`, `.meta/check.py`, `.meta/lib/` (DR-344), `.meta/apm_compile.py`,
+          `.meta/dereference.py`, `.meta/gate`, `.meta/search.py` (DR-337), `.meta/wikisplain.py`
           (DR-187), `.meta/terms.py` (DR-234), `.meta/bootstrap.py` (DR-206),
           `.meta/bundle.py`, `.meta/bundle.yaml`, `.meta/ruff.toml`, `.meta/mypy.ini`,
           `.meta/hooks/`, `.meta/checks/`, `.meta/assertions/imported/`, `.meta/.apm/`, `.meta/principles.md`,

@@ -1,4 +1,4 @@
-"""`.meta/gate`'s runner, loaded under the interpreter that runs it (stereorepo's DR-092, stereorepo's DR-209).
+"""`.meta/gate`'s runner, loaded under the interpreter that runs it (stereorepo's DR-092, stereorepo's DR-342).
 """
 
 import io

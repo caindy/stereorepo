@@ -1,4 +1,4 @@
-"""The root verb surface's argument contract, driven against the departures it exists to refuse (stereorepo's DR-259, stereorepo's DR-209).
+"""The root verb surface's argument contract, driven against the departures it exists to refuse (stereorepo's DR-259, stereorepo's DR-342).
 """
 
 import pathlib

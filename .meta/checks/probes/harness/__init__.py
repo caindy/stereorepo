@@ -1,4 +1,4 @@
-"""What the probes stand in for, and the acts every probe repeats (stereorepo's DR-209).
+"""What the probes stand in for, and the acts every probe repeats (stereorepo's DR-342).
 
 A wiki page answered from a string, a script loaded without running its
 `main()`, and what a call exited with, read as text rather than allowed to end

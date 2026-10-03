@@ -3,7 +3,7 @@
 
 Constructs and queries an in-memory Okapi BM25 ranking index over YAML assertions
 under `.meta/assertions/` and markdown concept pages under `wiki/` (stereorepo's DR-103,
-stereorepo's DR-192, stereorepo's DR-194, stereorepo's DR-195). Re-exports search index
+stereorepo's DR-336, stereorepo's DR-337, stereorepo's DR-338). Re-exports search index
 classes, tokenizers, and CLI dispatchers from `lib.search`.
 """
 

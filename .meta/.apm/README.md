@@ -32,7 +32,7 @@ Primitives are **derived from `.meta/assertions/`**, never authored twice:
 | a Capability of kind SKILL | `skills` |
 | the gate | `hooks` |
 
-**Compiled by `.meta/apm_compile.py` / `.meta/render.py` from `.meta/assertions/` (stereorepo's DR-172, stereorepo's DR-333, stereorepo's DR-200).**
+**Compiled by `.meta/apm_compile.py` / `.meta/render.py` from `.meta/assertions/` (stereorepo's DR-172, stereorepo's DR-333, stereorepo's DR-340).**
 The primitives are generated derived artifacts rather than hand-written files.
 Running `just render` re-compiles them from the assertions and verifies that no
 drift has occurred.

@@ -16,7 +16,7 @@ tools:
 
 **Role:** The Role responsible for the technical writing pass. Holds prose to its required register and ensures everything written into durable artifacts is spelled out, citations are dereferenced, and no ambiguity is left.
 
-## Conversational Communication Register (stereorepo's DR-198)
+## Conversational Communication Register (stereorepo's DR-339)
 
 Spelled out and self-contained. Every citation dereferenced.
 Assume a reader who was not in the conversation, holds none of its shorthand, and arrives by search some years later. Length is not the cost here; ambiguity is.

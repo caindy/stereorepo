@@ -35,7 +35,7 @@ def role_agent(role_id: str, r: dict[str, Any]) -> str:
         "",
         f"**Role:** {r.get('description', '').strip()}",
         "",
-        "## Conversational Communication Register (stereorepo's DR-198)",
+        "## Conversational Communication Register (stereorepo's DR-339)",
         "",
         comm_style,
         "",
@@ -49,7 +49,7 @@ def role_agent(role_id: str, r: dict[str, Any]) -> str:
 
 
 def persona_agent(p: dict[str, Any]) -> str:
-    """One stakeholder Persona's agent file: an interrogation surrogate that reads and never writes (stereorepo's DR-200)."""
+    """One stakeholder Persona's agent file: an interrogation surrogate that reads and never writes (stereorepo's DR-340)."""
     persona_slug = p.get("id", "").rsplit("/", 1)[-1]
     name = p.get("name", persona_slug)
     desc = p.get("description", "").strip()
@@ -59,7 +59,7 @@ def persona_agent(p: dict[str, Any]) -> str:
         "---",
         f"name: {persona_slug}",
         "description: >-",
-        f"  {desc} Interrogation surrogate for collaborative product and feature design (stereorepo's DR-200).",
+        f"  {desc} Interrogation surrogate for collaborative product and feature design (stereorepo's DR-340).",
         "model: inherit",
         "tools:",
         "  - read",
@@ -69,7 +69,7 @@ def persona_agent(p: dict[str, Any]) -> str:
         "",
         f"# {name} (Interrogation Surrogate)",
         "",
-        f"You are assuming the Persona of **{name}** for collaborative product and feature design (stereorepo's DR-200).",
+        f"You are assuming the Persona of **{name}** for collaborative product and feature design (stereorepo's DR-340).",
         "Your role is to evaluate design proposals, workflow ergonomics, and UX against your explicit goals and frustrations.",
         "Do NOT behave as a generic agreeable assistant: push back when proposals violate your preferences or create cognitive drag.",
         "",
@@ -109,12 +109,12 @@ def persona_agent(p: dict[str, Any]) -> str:
 
 
 def agent_primitives(meta_dir: pathlib.Path = META) -> dict[str, str]:
-    """Compiles Roles and Personas into agent primitives (stereorepo's DR-200).
+    """Compiles Roles and Personas into agent primitives (stereorepo's DR-340).
 
     Two kinds of agent, written into one directory. An operational Role, such as
     the technical writer, carries its own communication style, and is given
     write access only where the Role writes. A stakeholder Persona compiles to an interrogation
-    surrogate for collaborative product and feature design (stereorepo's DR-200),
+    surrogate for collaborative product and feature design (stereorepo's DR-340),
     which reads and never writes.
     """
     authority_file = meta_dir / "assertions" / "imported" / "authority.yaml"

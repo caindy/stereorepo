@@ -105,7 +105,7 @@ __all__ = [
 The modules are exported beside the names, so a probe stands a collaborator in at the module that
 defines it — except `decisions` and `record`, whose names the surface already holds as functions
 and which a probe reaches as `lib.render.decisions` and `lib.render.record`
-(stereorepo's DR-217)."""
+(stereorepo's DR-344)."""
 
 if __name__ == "__main__":
     cli.main()

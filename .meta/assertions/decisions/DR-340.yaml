@@ -1,0 +1,68 @@
+decisions:
+  - id: work:decision/340
+    name: "DR-340 · A Persona compiles to an agent that answers as the Persona, for goal-directed collaborative design"
+    status: ADOPTED
+    supersedes:
+      - work:decision/200
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-work-personas
+      - work:artifact/meta-apm-readme
+      - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/meta-lib-apm-compile-agents
+    context: >-
+      With one developer, product and feature design needs friction before
+      code is written, and there is no product manager or customer in the room
+      to supply it. stereorepo models who the work is for with Alan Cooper's
+      Goal-Directed Personas (DR-019, DR-041), but a Persona that is only
+      prose is consulted by nobody. DR-200 made Persona interrogation
+      operational by having an Actor, assigned a surrogate Role on a design
+      Remit, wear the Persona as a temporary Personality. The Actor, Remit and
+      Personality classes are gone; what the rule needs is only the Persona and
+      the agent it compiles to.
+    alternatives:
+      - name: Treat a Persona as a system participant with authority of its own
+        chosen: false
+        reason: >-
+          Puts machine mechanics into the user model, against Cooper's canon,
+          and lets a fictional archetype act in the repository as though it
+          were the developer or a seat.
+      - name: Keep Personas as passive documentation cited in specifications
+        chosen: false
+        reason: >-
+          Leaves the archetype dead prose. The developer cannot stress-test a
+          proposal, an interface or a command's ergonomics against it during
+          design.
+      - name: Compile each Persona to a read-only agent that answers as the Persona
+        chosen: true
+        reason: >-
+          `.meta/apm_compile.py` writes each declared Persona to
+          `.apm/agents/<persona>.agent.md`: a prompt built from the Persona's
+          context, its three-tier goal hierarchy (End, Experience, Life) and
+          its frustrations as rejection boundaries, with read access and no
+          write. A session that loads it evaluates proposals strictly through
+          that lens and resists convenient compromise, and nothing it says
+          changes the tree.
+    consequences:
+      - >-
+        `.meta/work/personas.yaml` states that interrogation needs no new
+        machinery: the Persona compiles to an agent that answers as it.
+      - >-
+        `imported/vocabulary.yaml` gives the Persona concept that scope.
+      - >-
+        `.meta/lib/apm_compile/agents.py` compiles each Persona into an
+        interrogation surrogate with the `read` tool only.
+    falsifier: >-
+      A Persona's compiled agent that behaves as an agreeable, generic coding
+      assistant rather than holding to the Persona's goals, proficiencies and
+      frustrations during design.
+    rationale: |-
+      A solo developer has nobody beside them to dispute a premature
+      architectural choice or a cumbersome interface.
+
+      Interrogating a Persona turns a passive archetype into a collaborative
+      partner that holds the developer to the user's actual goals and
+      frustrations before implementation begins. Compiling it as a read-only
+      agent keeps that partner a voice in design and never a participant in
+      the work.

@@ -8,7 +8,7 @@ minted: 2026-09-17
 
 # Externalized Memory
 
-**Externalized Memory** is the practice of holding what a session would otherwise remember in artifacts the next participant reads, rather than in the agent that learned it (stereorepo's DR-216, stereorepo's Article 22).
+**Externalized Memory** is the practice of holding what a session would otherwise remember in artifacts the next participant reads, rather than in the agent that learned it (stereorepo's DR-343, stereorepo's Article 22).
 
 ## Not the absence of memory
 
@@ -42,4 +42,4 @@ The pair loop is the same commitment on the coordination side. Its supervisor ho
 
 ---
 
-**See also:** [[knowledge-management]], [[ubiquitous-language]], stereorepo's DR-216, stereorepo's Article 8, stereorepo's Article 22.
+**See also:** [[knowledge-management]], [[ubiquitous-language]], stereorepo's DR-343, stereorepo's Article 8, stereorepo's Article 22.

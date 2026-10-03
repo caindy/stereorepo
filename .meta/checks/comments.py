@@ -4,7 +4,7 @@ Steps that read comment tokens rather than the assertion graph — a line of cod
 left behind as a comment, a suppression too broad to say what it suppresses, and
 narration inside a function body that belongs in a docstring, a Decision Record,
 a `<module>.history.md` log or a `just` recipe instead (stereorepo's DR-171,
-stereorepo's DR-194, stereorepo's DR-196).
+stereorepo's DR-337, stereorepo's DR-196).
 
 The keep-exceptions are the closed list a body comment is measured against:
 legal notices, tool directives, and an external boundary constraint carrying a
@@ -781,7 +781,7 @@ def comment_site(relative: str, block: Block) -> str:
 
 @check("inline commentary")
 def inline_commentary() -> StepOutcome:
-    """Function bodies under `.meta/` hold no commentary outside the keep-exceptions, ratcheted (stereorepo's DR-194, stereorepo's DR-196).
+    """Function bodies under `.meta/` hold no commentary outside the keep-exceptions, ratcheted (stereorepo's DR-337, stereorepo's DR-196).
 
     Narration inside a body is knowledge in the one container that has no reader
     but the next editor of that line. Its destinations are the item docstring,

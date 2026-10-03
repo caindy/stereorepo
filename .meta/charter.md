@@ -125,7 +125,7 @@ _Retired when:_ A commit message the record indexes where the artifacts are read
 
 ### A17. A term that arrived by use has not been agreed.
 
-**Enforces** Ubiquitous Language. **Checked by** Review checking that any word doing the work of a term is enclosed in closed-world wikilinks or minted with the developer, and `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity between vocabulary concepts and wiki pages (stereorepo's DR-190).
+**Enforces** Ubiquitous Language. **Checked by** Review checking that any word doing the work of a term is enclosed in closed-world wikilinks or minted with the developer, and `check.py`'s `ubiquitous language wiki parity` step ensuring 1:1 parity between vocabulary concepts and wiki pages (stereorepo's DR-335).
 
 _In practice:_ `Issue` is used because it is a Concept in the vocabulary. A word that is not gets minted with the developer before it is used again.
 
@@ -151,7 +151,7 @@ _Retired when:_ A Project whose toolchain reports in a form this shape cannot ca
 
 ### A22. State the next participant cannot observe is state the system does not have.
 
-**Checked by** Its instances, each of which carries its own check: A11, A14, A17 and A20 say the same thing of a decision, of reasoning, of a term and of a rule. The general claim is held by the second seat, by asking what a participant with no privilege beyond the record could reconstruct (stereorepo's DR-216).
+**Checked by** Its instances, each of which carries its own check: A11, A14, A17 and A20 say the same thing of a decision, of reasoning, of a term and of a rule. The general claim is held by the second seat, by asking what a participant with no privilege beyond the record could reconstruct (stereorepo's DR-343).
 
 _In practice:_ Which stage an issue is in is the directory its file sits in, so a seat, the supervisor and the developer all read it from the same place, and none of them holds a copy the others cannot see.
 
@@ -167,4 +167,4 @@ _Retired when:_ A landed Claim about behaviour or history that no party checked 
 
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml), [DR-328](assertions/decisions/DR-328.yaml), [DR-332](assertions/decisions/DR-332.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml), [DR-328](assertions/decisions/DR-328.yaml), [DR-332](assertions/decisions/DR-332.yaml), [DR-335](assertions/decisions/DR-335.yaml), [DR-343](assertions/decisions/DR-343.yaml)

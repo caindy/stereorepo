@@ -36,10 +36,10 @@ Everything below — `pytest --cov`, `mutmut run`, a coverage threshold, a
 that is by construction rather than neglect.
 
 Its behavioural tests are the **probes** under `.meta/checks/probes/`
-(stereorepo's DR-209): one module per subject under test — the hooks, the channel,
-the loops' verbs, what the repository writes down about itself, and the tools
+(stereorepo's DR-342): one module per subject under test — what the repository
+writes down about itself, its verb surface, the gate's own steps, and the tools
 beside the gate. Each loads the real programs it covers and runs them against the
-calls they exist to refuse and the states reviewers found them wrong in, and each
+calls they exist to refuse and the states they were found wrong in, and each
 registers its steps with the gate, so they run whenever the gate runs. There is
 no separate runner to invoke and no coverage number to read.
 

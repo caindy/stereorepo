@@ -1,0 +1,63 @@
+decisions:
+  - id: work:decision/338
+    name: "DR-338 · Concept is the atomic unit of domain meaning, and search indexes a concept's labels and definition"
+    status: ADOPTED
+    supersedes:
+      - work:decision/195
+    applies:
+      - work:article/17
+    enacted_in:
+      - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/wiki-stereorepo-concept
+      - work:artifact/meta-search
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-checks-probes-tools-search
+      - work:artifact/meta-lib-search-cli
+      - work:artifact/meta-lib-search-bm25
+      - work:artifact/meta-lib-search-build
+      - work:artifact/meta-lib-search
+    context: >-
+      Domain knowledge had no asserted unit for the semantic idea itself, so
+      prose named it by its container ('wiki page', 'wiki entry') or, worse,
+      as a 'wiki article', which collides with the Charter's Articles. And a
+      colloquial query missed the record that answered it, because
+      `.meta/search.py` did not index a LinkML concept's SKOS `pref_label`,
+      `alt_labels` and definition into the BM25F title and summary fields.
+      DR-195 settled both, together with a third concept that rested on
+      Article 15 and the pull-request workflow; that concept, its page and
+      the Article are gone, and the two halves above stand without it.
+    alternatives:
+      - name: Keep informal usage, with no Concept assertion and no label indexing
+        chosen: false
+        reason: >-
+          Leaves an agent or a query in ordinary software English unable to
+          reach the authoritative entry, and leaves the container names
+          standing in for the idea.
+      - name: Canonize Concept, and index concepts' labels and definitions in search
+        chosen: true
+        reason: >-
+          `work:concept/concept` names the atomic unit of domain meaning, with
+          the container names as `alt_labels` and 'wiki article' avoided, and
+          leaves where a Concept lands to the Diátaxis Compass. `.meta/search.py`
+          indexes each concept's `pref_label` and `alt_labels` into the title
+          field and its definition into the summary, so a query in ordinary
+          words reaches the concept it means.
+    consequences:
+      - >-
+        `work:concept/concept` is in `imported/vocabulary.yaml`, with
+        alt_labels and an avoid list, and `wiki/stereorepo/concept.md` is its
+        page.
+      - >-
+        `.meta/lib/search/build.py` indexes a concept's `pref_label`,
+        `alt_labels` and definition in the title and summary fields.
+    falsifier: >-
+      A benchmark query phrased in an alt_label of its target concept that
+      falls outside the top five results, or prose that calls a Concept a
+      'wiki article'.
+    rationale: |-
+      In Domain-Driven Design the Ubiquitous Language holds strictly inside the
+      Bounded Context, and still has to meet a reader arriving with the
+      industry's words. SKOS alt_labels let a lexical engine bridge that
+      phrasing without letting it into code contracts, and naming the Concept
+      apart from its container keeps the Charter's Articles from being
+      diluted by a homonym.

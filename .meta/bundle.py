@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uvx --python 3.13 --with pyyaml python
-"""Installation bundle inventory facade and CLI dispatcher (stereorepo's DR-217).
+"""Installation bundle inventory facade and CLI dispatcher (stereorepo's DR-344).
 
 Exposes installation bundle definitions, manifest loading, validation, and listing
 subcommands for Specialization and repository verification.

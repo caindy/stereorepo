@@ -1,4 +1,4 @@
-"""What the repository writes down about itself, held to its readers' form (stereorepo's DR-209).
+"""What the repository writes down about itself, held to its readers' form (stereorepo's DR-342).
 
 The knowledge Knowledge Management governs is one subject in three containers,
 and each of these probes is over one of them: a history log parsed for its
@@ -317,7 +317,7 @@ def citation_form_probes() -> list[str]:
 
 @check("concept duplicate id probes", pre=True)
 def concept_duplicate_id_probes() -> list[str]:
-    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (stereorepo's DR-190)."""
+    """`files.duplicate_concept_ids` detects duplicate concept IDs in a concept_set with exact line numbers (stereorepo's DR-335)."""
     import pathlib
     import tempfile
 

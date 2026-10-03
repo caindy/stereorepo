@@ -1,11 +1,11 @@
-"""The benchmark: the queries the index must answer with a known object near the top, and the count of those it does (stereorepo's DR-194).
+"""The benchmark: the queries the index must answer with a known object near the top, and the count of those it does (stereorepo's DR-337).
 """
 
 from lib.search import bm25
 
 
 def run_benchmark(index: bm25.SearchIndex) -> int:
-    """Run the 18 evaluation benchmark queries (stereorepo's DR-194).
+    """Run the 18 evaluation benchmark queries (stereorepo's DR-337).
 
     Returns 0 where hit@5 reaches 15 of the 18 queries. A portfolio holds a
     different record and so a different subset of the targets, and a query whose
@@ -97,7 +97,7 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
     hits_10 = 0
     reciprocal_ranks = []
 
-    print(f"Running BM25 evaluation over {len(active_queries)} benchmark queries (stereorepo's DR-194):\n")
+    print(f"Running BM25 evaluation over {len(active_queries)} benchmark queries (stereorepo's DR-337):\n")
     for q, targets in active_queries:
         results = index.search(q, top_k=10)
         target_set = set(targets)

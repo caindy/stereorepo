@@ -1,4 +1,4 @@
-"""`dereference.py`'s scopes and its report (stereorepo's DR-332, stereorepo's DR-192)."""
+"""`dereference.py`'s scopes and its report (stereorepo's DR-332, stereorepo's DR-336)."""
 
 from typing import Any, cast
 
@@ -8,7 +8,7 @@ from checks.probes.harness import load_module, outcome
 
 @check("dereference probes", pre=True)
 def dereference_probes() -> list[str]:
-    """`dereference.py` scopes and reports its citation readings (stereorepo's DR-332, DR-192).
+    """`dereference.py` scopes and reports its citation readings (stereorepo's DR-332, DR-336).
 
     The sample scope, asked for four pairs of the durable set, answers four,
     each carrying its path, citation, sentence and body; asked twice for

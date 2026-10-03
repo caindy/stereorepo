@@ -1,0 +1,79 @@
+decisions:
+  - id: work:decision/336
+    name: "DR-336 · Dereference scopes a branch to the ground it moved, and whole-corpus citation upkeep belongs to the technical writer with retrieval"
+    status: ADOPTED
+    supersedes:
+      - work:decision/192
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-dereference
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-checks-probes-tools-dereference
+      - work:artifact/meta-lib-dereference-reading
+    context: >-
+      `just dereference` reads the sentences a branch wrote over its merge
+      base, and `--all` (well over a thousand questions) is run by nobody. A
+      citation wrong when typed stays unread, and when an entry is superseded
+      or amended the ground moves under every sentence citing it without
+      bringing any of them into a reading. DR-192 settled this, but argued
+      against loading the work onto a coder loop and its pull requests and
+      gave the rest to a "remit"; the seats, the Issue and the Role are what
+      the repository has now.
+    alternatives:
+      - name: Store citation read timestamps in a repository state file
+        chosen: false
+        reason: >-
+          State about the record that nothing else consumes churns commits,
+          conflicts between branches, and rots silently (DR-052, DR-088).
+      - name: Use git blame author date as read state, oldest first
+        chosen: false
+        reason: >-
+          Blame records when a line was written, not when it was read, and
+          reading must not touch it. Sampling by oldest blame picks the same
+          sentences every run and never advances through the corpus.
+      - name: Read a rotating sample of old citations on every Issue
+        chosen: false
+        reason: >-
+          An Issue's diff is what the Issue asks for and no more. Folding
+          unrelated citation repairs into it widens every change, spends the
+          seats' turns on work the Issue did not name, and makes the second
+          seat review prose the first seat did not mean to touch.
+      - name: Ground-moved branch scoping, and the technical writer with offline retrieval for the rest
+        chosen: true
+        reason: >-
+          Two separate concerns. When a branch modifies a Decision or Article
+          assertion, every durable sentence citing that entry comes into the
+          branch's dereference scope, at the moment the entry moves. Whole-corpus
+          citation upkeep is the work of `work:role/technical-writer`, whose
+          register is "every citation dereferenced", using `/search` (DR-337)
+          to find likely drift and `--sample` to spot-check without state,
+          rather than a brute-force reading of every citation.
+    consequences:
+      - >-
+        `.meta/lib/dereference/reading.py` brings into a branch's scope every
+        durable sentence citing a Decision or Article the branch changed.
+      - >-
+        `just dereference --sample [N]` (default 20) reads a rotating sample,
+        the offset turning with the commit count, with no state file.
+      - >-
+        The probes in `.meta/checks/probes/tools/dereference.py` cover
+        ground-moved scoping and the rotating sample.
+      - >-
+        Corpus-wide citation upkeep is the technical writer's, backed by
+        offline retrieval rather than a stored reading state.
+    falsifier: >-
+      A branch that modifies a Decision or Article and whose dereference scope
+      omits a durable sentence citing it, or whole-corpus citation upkeep that
+      needs an unindexed reading of every citation.
+    rationale: |-
+      This separates change-local ground movement from whole-corpus debt. When
+      an entry moves, whoever moved it is best placed to update the prose that
+      cites it, and ground-moved scoping brings that prose into scope at once
+      with no state.
+
+      Whole-corpus upkeep is a different job with a different reader, so it
+      goes to the Role whose register asks for it, with retrieval to aim it.
+      That keeps each Issue's diff to what the Issue asks, and keeps state
+      files out of the repository.

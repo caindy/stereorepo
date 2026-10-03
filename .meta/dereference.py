@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uvx --python 3.13 --with linkml --with pyyaml python
-"""The reading of a citation, run before the hand-off (stereorepo's DR-332, DR-192).
+"""The reading of a citation, run before the hand-off (stereorepo's DR-332, DR-336).
 
     just dereference                 what this branch wrote or affected, against origin/main
     just dereference --sample        a rotating sample of 20 citations from the durable set
@@ -36,7 +36,7 @@ entry.
 The scope is the diff and the ground that moved. About fifteen hundred citations
 stand in the durable set, and reading them all is a bill nobody wants twice a
 day; what anyone wants read is what this branch wrote, plus any existing
-citation whose target entry moved under it (stereorepo's DR-192). `--sample` offers
+citation whose target entry moved under it (stereorepo's DR-336). `--sample` offers
 a deterministic rotating window across the durable set without adding an
 external state file, and `--all` is there for the run that wants the record.
 

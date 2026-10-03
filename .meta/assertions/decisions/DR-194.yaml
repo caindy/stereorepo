@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/194
     name: "DR-194 · Layered technical writing standard and in-memory BM25F record retrieval skill"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/337
     applies:
       - work:article/8
       - work:article/12

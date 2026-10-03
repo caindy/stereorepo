@@ -1,0 +1,78 @@
+decisions:
+  - id: work:decision/337
+    name: "DR-337 · Layered technical writing standard and in-memory BM25F record retrieval skill"
+    status: ADOPTED
+    supersedes:
+      - work:decision/194
+    applies:
+      - work:article/8
+      - work:article/12
+    enacted_in:
+      - work:artifact/skill-technical-writing
+      - work:artifact/meta-search
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-apm-compile-agents
+      - work:artifact/meta-checks-probes-tools-search
+      - work:artifact/meta-lib-search-cli
+      - work:artifact/meta-lib-search-bm25
+      - work:artifact/meta-lib-search-build
+      - work:artifact/meta-lib-search
+      - work:artifact/meta-lib-search-benchmark
+    context: >-
+      `work:role/technical-writer` names a register (spelled out, every
+      citation dereferenced) but no structural rules for durable prose, and
+      DR-336 gives that Role whole-corpus citation upkeep backed by offline
+      retrieval (DR-103), which was recommended and never built: agents and
+      the developer found records with exact-substring grep. DR-194 settled
+      both, arguing from pull-request review threads, a Personality and coder
+      agents; none of those remain, and the gap they argued from does.
+    alternatives:
+      - name: Leave style and citation accuracy to each reading, with no skill and no retrieval
+        chosen: false
+        reason: >-
+          Gives a seat no concrete rules (Diátaxis) and no retrieval tool, so
+          the second seat re-argues style, docstring tone and citation
+          accuracy Issue after Issue, and the findings differ by reading.
+      - name: External binary indexer (ck or zg) with disk-persisted index files
+        chosen: false
+        reason: >-
+          Evaluated in a Spike (DR-103). Imposes 535 MB of node_modules (zg)
+          or a cargo install per machine (ck), external embedding caches, and
+          disk indices that drift when assertions change.
+      - name: A layered technical writing skill, and a zero-dependency in-memory BM25F search
+        chosen: true
+        reason: >-
+          The `/technical-writing` skill joins the Diátaxis architecture
+          (Reference, Explanation, How-To, Tutorial) and Google developer
+          style to Literate Programming (DR-171, DR-334) and Knowledge
+          Management (DR-184, DR-187). `.meta/search.py` scores structured
+          assertions and wiki pages with Okapi BM25F over title, summary and
+          body in the Python standard library, with no index on disk to drift.
+    consequences:
+      - >-
+        The `/technical-writing` skill is rendered from assertions, carrying
+        the four-quadrant Diátaxis compass, Google developer style rules and
+        the Literate Programming invariants.
+      - >-
+        `.meta/search.py` implements BM25F multi-field retrieval over the
+        assertions and the wiki, exposed as the `/search` skill.
+      - >-
+        The DR-103 benchmark is `.meta/search.py --benchmark`, which passes at
+        hit@5 of at least 15 of the 18 queries (17 of 18, MRR 0.55, when this
+        record was written).
+      - >-
+        Enacts the recommended DR-103.
+    falsifier: >-
+      The search scoring below the DR-103 threshold (15 of 18 on the benchmark
+      queries), or an item docstring that mixes Diátaxis Reference and
+      Explanation by arguing a design choice instead of stating its contract.
+    rationale: |-
+      The technical writer needs both a structural standard and a retrieval
+      instrument. Diátaxis gives Literate Programming its clean boundary: item
+      docstrings are dry, lookup-oriented Reference; Decision Records and
+      module overviews are Explanation; recipes are How-To.
+
+      For retrieval, Sourcegraph's BM25F insight, weighting fields before term
+      frequency saturates, lets a short standard-library script meet the
+      DR-103 benchmark with no dependencies, no disk index and no measurable
+      latency.

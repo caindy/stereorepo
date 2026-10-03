@@ -1,4 +1,4 @@
-"""Probes for Structure ontology invariants over assertion datasets (stereorepo's DR-209).
+"""Probes for Structure ontology invariants over assertion datasets (stereorepo's DR-342).
 
 Validates that structure graph checks correctly enforce domain invariants across
 registered Bootstraps and project bindings (Article 7). Probes sit in their own

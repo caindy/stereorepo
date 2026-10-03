@@ -26,7 +26,7 @@ And whether a word is a term or is ordinary English, which is not decidable mech
 - **Check candidate against existing meaning.** Check a candidate against what the repository already means by it, including in the schemas. A collision found afterwards is a rename.
 - **Mark confusables in both directions.** Mark a confusable in both directions, at the moment the collision is noticed.
 - **Bias every output toward the vocabulary.** Align code, prose and conversation alike with the shared vocabulary.
-- **Maintain concept and wiki parity.** Maintain 1:1 parity with the Knowledge Management wiki: every minted concept carries a corresponding wiki page explaining its domain context (stereorepo's DR-190).
+- **Maintain concept and wiki parity.** Maintain 1:1 parity with the Knowledge Management wiki: every minted concept carries a corresponding wiki page explaining its domain context (stereorepo's DR-335).
 
 ## Produces
 

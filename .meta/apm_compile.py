@@ -3,7 +3,7 @@
 
 Compiles declarative assertions and bootstrap capabilities into Agent Package
 Manager (APM) primitives and reconciles root agent harness configurations
-(stereorepo's DR-325, stereorepo's DR-172, stereorepo's DR-333, stereorepo's DR-200,
+(stereorepo's DR-325, stereorepo's DR-172, stereorepo's DR-333, stereorepo's DR-340,
 stereorepo's DR-208).
 
 History in apm_compile.history.md (stereorepo's DR-171).
@@ -118,7 +118,7 @@ reads `check_root_symlinks` and `reconcile_root`, and the gate reads `python_boo
 and `rendered_primitives`, through this module's name.
 
 The modules are exported beside the names, none of them colliding with one, so a probe stands a
-collaborator in at the module that defines it (stereorepo's DR-217)."""
+collaborator in at the module that defines it (stereorepo's DR-344)."""
 
 if __name__ == "__main__":
     cli.main(__doc__)

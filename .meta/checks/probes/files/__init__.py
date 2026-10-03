@@ -1,9 +1,9 @@
-"""The gate's own steps, run against the answers they exist to give (stereorepo's DR-209).
+"""The gate's own steps, run against the answers they exist to give (stereorepo's DR-342).
 
 The invariants under `checks/files/` are run by the gate, so a wrong answer
 from one shows as a failure. What this package holds are the answers those
 steps read rather than run — `files/python.py`'s ceilings on how long a file
-under `.meta/` may run (stereorepo's DR-217). A wrong answer from one shows as a wrong
+under `.meta/` may run (stereorepo's DR-344). A wrong answer from one shows as a wrong
 verdict instead. Each is asked one case at a time, and a failure names
 the case. The steps register here rather than beside the checks they exercise,
 because the gate over assertions should not take its imports from a test suite

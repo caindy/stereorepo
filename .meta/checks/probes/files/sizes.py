@@ -1,4 +1,4 @@
-"""The ceilings, against a path in each layer and a length on each side (stereorepo's DR-217).
+"""The ceilings, against a path in each layer and a length on each side (stereorepo's DR-344).
 
 `files.python.ceiling` and `files.python.past_ceilings` are read by the `meta
 file sizes` step rather than run beside it, so a wrong answer shows as a wrong

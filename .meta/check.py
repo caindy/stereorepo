@@ -3,7 +3,7 @@
 
 Validates semantic invariants across LinkML schema instances, graph relations,
 prose citations, and code standards (stereorepo's DR-029, stereorepo's DR-150,
-stereorepo's DR-209). Sequentially executes registered prechecks, schema model
+stereorepo's DR-342). Sequentially executes registered prechecks, schema model
 loaders, and step suites from `.meta/checks/`.
 
 History in check.history.md (stereorepo's DR-171).

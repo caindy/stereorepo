@@ -1,8 +1,8 @@
-"""The wiki checks, run against stand-in pages rather than the tree (stereorepo's DR-209).
+"""The wiki checks, run against stand-in pages rather than the tree (stereorepo's DR-342).
 
 A wiki page is held to closed-world wikilinks, a MOS:LEAD lead, vocabulary
 parity and synonyms its concept does not forbid (stereorepo's DR-185,
-stereorepo's DR-190, stereorepo's DR-231). Each case gives one check an index,
+stereorepo's DR-335, stereorepo's DR-231). Each case gives one check an index,
 a tree of `FakeWikiPath` pages and, for parity, a domain concept set, so that
 a case reads nothing of the repository it runs in: the same probe passes in
 stereorepo, whose domain vocabulary mints no concept, and in a portfolio that
@@ -136,26 +136,26 @@ CASES = (
         None,
     ),
     WikiCase(
-        "a domain page with no minted concept (stereorepo's DR-190)",
+        "a domain page with no minted concept (stereorepo's DR-335)",
         files.ubiquitous_language_wiki_parity,
         (("wiki/billing/unminted-term.md", "# Unminted Term\n\n**Unminted Term** is a term.\n"),),
         "has no corresponding concept in vocabulary schema",
     ),
     WikiCase(
-        "stereorepo pages of a minted discipline and concept (stereorepo's DR-190)",
+        "stereorepo pages of a minted discipline and concept (stereorepo's DR-335)",
         files.ubiquitous_language_wiki_parity,
         (KNOWLEDGE_MANAGEMENT, ("wiki/stereorepo/ubiquitous-language.md", UBIQUITOUS_LANGUAGE)),
         None,
     ),
     WikiCase(
-        "a domain concept with its page (stereorepo's DR-190)",
+        "a domain concept with its page (stereorepo's DR-335)",
         files.ubiquitous_language_wiki_parity,
         (("wiki/billing/ledger.md", "# Ledger\n\n**Ledger** is a concept.\n"),),
         None,
         LEDGER,
     ),
     WikiCase(
-        "a domain concept with no page (stereorepo's DR-190)",
+        "a domain concept with no page (stereorepo's DR-335)",
         files.ubiquitous_language_wiki_parity,
         (),
         "concept 'ddd:concept/ledger' has no corresponding wiki page",
@@ -187,7 +187,7 @@ PORTFOLIO_CONCEPTS: list[dict[str, object]] = [{"id": "ddd:concept/fitch-term"}]
 
 @check("wiki probes", pre=True)
 def wiki_probes() -> list[str]:
-    """Observed failure and concordance for every wiki check (A2, stereorepo's DR-190).
+    """Observed failure and concordance for every wiki check (A2, stereorepo's DR-335).
 
     Each case gives one of `files.wikilinks`, `files.wiki_lead_paragraphs`,
     `files.ubiquitous_language_wiki_parity` or
@@ -201,7 +201,7 @@ def wiki_probes() -> list[str]:
     ahead of the heading (stereorepo's DR-187); a domain page with no minted
     concept, and a domain concept with no page, fail parity where a domain
     concept with its page and stereorepo pages of a minted discipline and
-    concept pass (stereorepo's DR-190); and a page declaring an avoided word as
+    concept pass (stereorepo's DR-335); and a page declaring an avoided word as
     a synonym fails where one declaring an unminted word passes, since parity
     is owed to the `avoid` list and not to `alt_labels` (stereorepo's DR-231).
 

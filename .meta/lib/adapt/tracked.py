@@ -1,4 +1,4 @@
-"""The paths a brownfield target's git index tracks (stereorepo's DR-217).
+"""The paths a brownfield target's git index tracks (stereorepo's DR-344).
 
 Adoption planning reads these, where it can, in place of walking the target's
 working tree, so untracked and ignored files stay out of the plan.

@@ -33,7 +33,7 @@ Adopted here as a Discipline of the same name — DDD names the thing, and stere
 
 **Published Language.** What stereorepo offers a portfolio, and what DDD offers stereorepo.
 
-**Persona.** Cooper's sense. Compiled to an agent that answers as the Persona during collaborative feature design interrogation (stereorepo's DR-200).
+**Persona.** Cooper's sense. Compiled to an agent that answers as the Persona during collaborative feature design interrogation (stereorepo's DR-340).
 
 **Business goal.** Named in *About Face* and deliberately kept out of the Persona so it cannot pollute the user model. It justifies the work instead.
 
@@ -86,7 +86,7 @@ _The kinds of thing written down, and which of them is authoritative._
 
 | Term | Means | Do not say |
 |---|---|---|
-| **Concept** | The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language (stereorepo's DR-184, stereorepo's DR-190, stereorepo's DR-195). | wiki article, term, entity |
+| **Concept** | The atomic unit of domain meaning in a Bounded Context's Ubiquitous Language (stereorepo's DR-184, stereorepo's DR-335, stereorepo's DR-338). | wiki article, term, entity |
 | **Issue** | One unit of work, as one Markdown file on the board, whose filename slug is its identifier. | ticket, story, challenge, epic, task |
 | **Flight** | An Issue with children, holding one unit of value and how the developer will know it has been delivered; its children are its parts, and while they are worked the Flight is in flight. | Sprint, Milestone, epic |
 | **Board** | A repository's set of Issue files, kept in `issues/` at its root, in which the directory holding an Issue file is that Issue's stage. | kanban, tracker |
@@ -97,7 +97,7 @@ _The kinds of thing written down, and which of them is authoritative._
 | **Charter** | The Articles together — a working agreement, binding on whoever works here. | — |
 | **Citation** | A formal reference in a durable artifact to an upstream authority — an Article, Decision Record, or Issue — asserting that the target supports or governs the statement. | reference, link, mention |
 | **Dereference** | To resolve and evaluate a citation against what the referenced authority asserts. | resolve, verify link |
-| **Externalized Memory** | The practice of holding what a session would otherwise remember in artifacts the next participant reads, rather than in the agent that learned it (stereorepo's DR-216, stereorepo's Article 22). | — |
+| **Externalized Memory** | The practice of holding what a session would otherwise remember in artifacts the next participant reads, rather than in the agent that learned it (stereorepo's DR-343, stereorepo's Article 22). | — |
 
 #### The Disciplines
 

@@ -1,4 +1,4 @@
-"""The probes: the gate's regression tests, one module per subject under test (stereorepo's DR-209).
+"""The probes: the gate's regression tests, one module per subject under test (stereorepo's DR-342).
 
 Not invariants over the record. These load the scripts under `.meta/` and
 run them against the inputs they exist to refuse and the states they were
