@@ -4,7 +4,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from lib.render import META, bootstraps, decisions, pages, record, skills, writers
+from lib.render import META, bootstraps, decisions, pages, skills, writers
 
 TargetFn = Callable[[], str | dict[str, Any] | None]
 
@@ -115,10 +115,6 @@ def rendered(snap: dict[str, Any] | None = None) -> dict[str, str]:
     A target renders one file or a set of them. Both callers — `cli.main`, which writes,
     and `check.py`'s staleness check — want the flat mapping, so the fan-out is
     resolved once here rather than in each of them.
-
-    Counts are filled last, over every page alike: a sentence citing one is
-    prose in the assertions, and which generator carries it to a page is not
-    that sentence's business.
     """
     if snap is None:
         snap = snapshot()
@@ -131,7 +127,7 @@ def rendered(snap: dict[str, Any] | None = None) -> dict[str, str]:
                         for k, v in result.items()})
         else:
             out[name] = result
-    return {name: record.counted(text) for name, text in out.items()}
+    return out
 
 
 def unrendered(snap: dict[str, Any] | None = None) -> list[str]:
