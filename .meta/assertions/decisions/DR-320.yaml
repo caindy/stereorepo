@@ -1,0 +1,58 @@
+decisions:
+  - id: work:decision/320
+    name: "DR-320 · The developer cuts an APM release with `just release`, not a workflow on a tag"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-release
+      - work:artifact/meta-checks-probes-tools-release
+      - work:artifact/justfile
+      - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-apm-readme
+    context: >-
+      The APM package that DR-206 distributes was released by a GitHub Actions
+      workflow on a `v*` tag, which ran the gate, `just apm validate` and
+      `just test-specialization` and then created a GitHub Release. The pair
+      loop's bootstrap removed every workflow, since the loop gates each Issue
+      locally before it lands, so nothing cut a release any more.
+    alternatives:
+      - name: Restore the workflow
+        chosen: false
+        reason: >-
+          It would bring back a CI surface the bootstrap removed for one rare
+          act, and the gate it ran would run on a machine other than the one
+          the pair loop already trusts.
+      - name: Let the pair loop cut releases
+        chosen: false
+        reason: >-
+          Publishing is outward-facing and cannot be taken back, so it is the
+          developer's act; a seat runs only the refusals and `--dry-run`.
+      - name: A recipe the developer runs on their own checkout
+        chosen: true
+        reason: >-
+          It checks the same things the workflow did, refuses before it tags
+          when the tree, the branch, the remote, the tag or the version is
+          wrong, and `--dry-run` shows what it would publish without
+          publishing it.
+    consequences:
+      - >-
+        `just release <version>` runs `.meta/release.py`. It refuses on a dirty
+        tree, a branch other than `main`, a `main` that differs from
+        `origin/main` after a fetch, a `v<version>` tag here or on `origin`, a
+        version other than `.meta/apm.yml`'s, and on a real run a `gh` that is
+        not logged in. Then it runs the gate, `just apm validate` and `just
+        test-specialization`, and only then tags, pushes the tag and runs `gh
+        release create --verify-tag --generate-notes`.
+      - >-
+        Where `gh release create` fails after the tag is pushed, the tool says
+        so and prints the command to finish by hand, since a retry would be
+        refused for the tag that now exists.
+      - >-
+        `.meta/release.py` is not inherited by a portfolio, and the recipe is
+        rendered only where its artifact is asserted, so a portfolio has
+        neither.
+    falsifier: >-
+      Releases are cut often enough, or by someone other than the developer,
+      that running a recipe by hand is the bottleneck a workflow would remove.
+    rationale: |-
+      A release is the developer's act, checked on the developer's machine by
+      the same gate that lands every Issue.

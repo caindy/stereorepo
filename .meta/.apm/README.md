@@ -85,6 +85,6 @@ To enable downstream portfolios and external consumers to install and synchroniz
 
 - **Subdirectory Packaging & Root Cleanliness:** The APM CLI natively consumes virtual subdirectory packages (`apm install caindy/stereorepo/.meta` or `{git: caindy/stereorepo, path: .meta}`). The repository root remains completely clean, preserving the staging boundary rule that `.meta/` is the staging ground (stereorepo's DR-001) and that APM packages nest under `.meta/` (stereorepo's DR-172) without requiring root symlinks.
 - **Multi-Harness Authorization:** The package manifest authorizes `claude`, `gemini`, `copilot`, `codex`, and `kiro`. When installed with multi-target flags (e.g. `--target claude,codex,kiro`), APM projects primitives natively into `.claude/`, `.codex/`, and `.kiro/` without bespoke per-vendor compilers.
-- **Release:** a versioned GitHub Release, cut from a tag once the gate and `just apm validate` pass. The procedure is not yet a recipe.
+- **Release:** a versioned GitHub Release, cut by the developer with `just release <version>` once the gate, `just apm validate` and `just test-specialization` pass; `--dry-run` runs the same checks and prints what it would publish (stereorepo's DR-320).
 - **Downstream Synchronization:** A portfolio declares `caindy/stereorepo/.meta@^0.1.0` in its `apm.yml`. Running `apm outdated` inspects upstream tags, and `apm update` applies updates, prunes deleted disciplines, and updates `apm.lock.yaml`.
 

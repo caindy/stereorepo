@@ -64,6 +64,10 @@ pair-watch *args:
 test-specialization *args:
     uvx --python 3.13 --with pyyaml python .meta/test_specialization.py {{args}}
 
+# tag a release of the APM package and publish it (--dry-run) (stereorepo's DR-320)
+release *args:
+    uvx --python 3.13 --with pyyaml python .meta/release.py {{args}}
+
 # plan brownfield adoption for an existing Product repository
 adapt *args:
     .meta/adapt.py {{args}}

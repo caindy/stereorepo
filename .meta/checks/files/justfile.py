@@ -63,6 +63,7 @@ CONTRACT: Contract = {
     "bootstrap": (("args", FLAGS),),
     "sync": (("args", FLAGS),),
     "test-specialization": (("args", FLAGS),),
+    "release": (("args", FLAGS),),
     "adapt": (("args", FLAGS),),
     "pair": (("args", FLAGS),),
     "groom": (("args", FLAGS),),

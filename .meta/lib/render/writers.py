@@ -107,6 +107,14 @@ def justfile() -> str:
             "    uvx --python 3.13 --with pyyaml python .meta/test_specialization.py {{args}}",
         ]
 
+    if "work:artifact/meta-release" in artifacts:
+        lines += [
+            "",
+            "# tag a release of the APM package and publish it (--dry-run) (stereorepo's DR-320)",
+            "release *args:",
+            "    uvx --python 3.13 --with pyyaml python .meta/release.py {{args}}",
+        ]
+
     if "work:artifact/meta-adapt" in artifacts:
         lines += [
             "",

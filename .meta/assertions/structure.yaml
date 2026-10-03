@@ -508,6 +508,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-sync
     name: .meta/checks/probes/tools/sync.py
     path: .meta/checks/probes/tools/sync.py
+  - id: work:artifact/meta-checks-probes-tools-release
+    name: .meta/checks/probes/tools/release.py
+    path: .meta/checks/probes/tools/release.py
   - id: work:artifact/meta-checks-probes-tools-lockstep
     name: .meta/checks/probes/tools/lockstep.py
     path: .meta/checks/probes/tools/lockstep.py
@@ -619,6 +622,9 @@ artifacts:
   - id: work:artifact/meta-test-specialization
     name: .meta/test_specialization.py
     path: .meta/test_specialization.py
+  - id: work:artifact/meta-release
+    name: .meta/release.py
+    path: .meta/release.py
   - id: work:artifact/meta-fixtures-specialization-readme
     name: .meta/fixtures/specialization/README.md
     path: .meta/fixtures/specialization/README.md
