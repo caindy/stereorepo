@@ -25,6 +25,7 @@ import shutil
 import subprocess
 import threading
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -384,8 +385,12 @@ def command(
     confined: Confinement,
     model: str | None = None,
     resume: str | None = None,
+    program: Sequence[str] = ("claude",),
 ) -> list[str]:
     """The command line that starts a Claude Code seat in stream-json mode.
+
+    `program` is what runs: `claude`, found through `PATH`, unless a test
+    gives a stand-in.
 
     Bash runs in Claude Code's sandbox rather than under an allow-list of
     command prefixes, which cannot express a compound command built from
@@ -411,7 +416,7 @@ def command(
         },
     }
     argv = [
-        "claude",
+        *program,
         "-p",
         "--input-format",
         "stream-json",
@@ -456,13 +461,14 @@ class ClaudeSeat:
         resume: str | None = None,
         timeout: float = 45 * 60,
         model: str | None = None,
+        program: Sequence[str] = ("claude",),
     ) -> None:
         self.role = role
         self.session_id = resume
         self.timeout = timeout
         self.log_dir = log_dir
         confined = confinement(cwd)
-        argv = command(system_prompt, confined, model=model, resume=resume)
+        argv = command(system_prompt, confined, model=model, resume=resume, program=program)
         env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
         env.update(confined.env)
         log_dir.mkdir(parents=True, exist_ok=True)

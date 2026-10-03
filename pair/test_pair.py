@@ -4048,6 +4048,12 @@ class SeatCommandTest(unittest.TestCase):
         self.assertEqual(argv[argv.index("--append-system-prompt") + 1], "seat prompt")
         self.assertEqual(argv[-4:], ["--model", "sonnet", "--resume", "abc"])
 
+    def test_a_seat_runs_claude_unless_given_a_program(self) -> None:
+        self.assertEqual(command("p", self.CONFINED)[:2], ["claude", "-p"])
+        self.assertEqual(
+            command("p", self.CONFINED, program=["py", "s"])[:3], ["py", "s", "-p"]
+        )
+
     def test_bash_runs_in_a_sandbox_and_the_loops_git_commands_are_refused(self) -> None:
         argv = command("p", self.CONFINED)
         sandbox = json.loads(argv[argv.index("--settings") + 1])["sandbox"]
@@ -4307,7 +4313,12 @@ def denial(tool: str, **tool_input: object) -> dict[str, object]:
 
 
 class ClaudeSeatTest(unittest.TestCase):
-    """`ClaudeSeat.send` returns only when the session is idle, against a stand-in `claude`."""
+    """`ClaudeSeat.send` returns only when the session is idle, against a stand-in `claude`.
+
+    The stand-in is a script run by this interpreter, not a `#!` file on
+    `PATH`. On macOS under load, exec'ing a newly written executable took
+    several times as long, enough to stall a 1 s turn.
+    """
 
     def setUp(self) -> None:
         self.tmp = Path(tempfile.mkdtemp()).resolve()
@@ -4321,29 +4332,53 @@ class ClaudeSeatTest(unittest.TestCase):
         sh(repo, "commit", "-q", "--allow-empty", "-m", "a")
         self.wt = self.tmp / "wt"
         sh(repo, "worktree", "add", "-q", "-b", "pair/x", str(self.wt))
-        bin_dir = self.tmp / "bin"
-        bin_dir.mkdir()
-        claude = bin_dir / "claude"
-        claude.write_text(f"#!{sys.executable}\n{STAND_IN}")
-        claude.chmod(0o755)
+        self.stand_in = self.tmp / "stand_in.py"
+        self.stand_in.write_text(STAND_IN)
         self.script = self.tmp / "script.json"
         self.log = self.tmp / "log"
-        path = f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}"
-        patched = mock.patch.dict(
-            os.environ, {"PATH": path, "STAND_IN_SCRIPT": str(self.script)}
-        )
+        patched = mock.patch.dict(os.environ, {"STAND_IN_SCRIPT": str(self.script)})
         patched.start()
         self.addCleanup(patched.stop)
 
     def seat(self, start: list[object], *turns: list[object], timeout: float = 30) -> ClaudeSeat:
         self.script.write_text(json.dumps({"start": start, "turns": list(turns)}))
-        seat = ClaudeSeat("primary", self.wt, "p", self.log, timeout=timeout)
+        seat = ClaudeSeat(
+            "primary", self.wt, "p", self.log, timeout=timeout,
+            program=[sys.executable, str(self.stand_in)],
+        )
         self.addCleanup(seat.stop)
         return seat
+
+    def started(self, seat: ClaudeSeat, lines: int = 1) -> None:
+        """Wait until the stand-in has written `lines` lines, so its start-up is not timed."""
+        deadline = time.monotonic() + 10
+        while seat.lines.qsize() < lines and time.monotonic() < deadline:
+            time.sleep(0.01)
+        if seat.lines.qsize() < lines:
+            self.fail(f"the stand-in wrote {seat.lines.qsize()} of {lines} lines in 10 s")
 
     def logged(self) -> list[dict[str, Any]]:
         lines = (self.log / "primary.jsonl").read_text().splitlines()
         return [json.loads(line) for line in lines]
+
+    def test_a_seat_given_no_program_starts_claude(self) -> None:
+        """The seat's own command is caught; the `git` that `confinement` runs is not."""
+
+        class Started(Exception):
+            pass
+
+        real = subprocess.Popen
+        argvs: list[list[str]] = []
+
+        def popen(argv: list[str], **kwargs: Any) -> subprocess.Popen[Any]:
+            if "stream-json" not in argv:
+                return real(argv, **kwargs)
+            argvs.append(argv)
+            raise Started
+
+        with mock.patch.object(subprocess, "Popen", popen), self.assertRaises(Started):
+            ClaudeSeat("primary", self.wt, "p", self.log)
+        self.assertEqual(argvs[0][:2], ["claude", "-p"])
 
     def test_the_seat_reads_its_git_config_from_a_file_outside_the_worktree(self) -> None:
         seen = self.tmp / "seen"
@@ -4399,9 +4434,7 @@ class ClaudeSeatTest(unittest.TestCase):
 
     def test_a_result_waiting_before_the_message_is_not_the_turns(self) -> None:
         seat = self.seat([result("stale")], [result("answer")])
-        deadline = time.monotonic() + 10
-        while seat.lines.empty() and time.monotonic() < deadline:
-            time.sleep(0.01)
+        self.started(seat)
         turn = seat.send("go")
         self.assertEqual(turn.text, "answer")
         kinds = [e["type"] for e in self.logged()]
@@ -4412,14 +4445,16 @@ class ClaudeSeatTest(unittest.TestCase):
             [task("task_started", "t2"), result("stale")],
             [result("early"), task("task_notification", "t2"), result("answer")],
         )
-        deadline = time.monotonic() + 10
-        while seat.lines.qsize() < 2 and time.monotonic() < deadline:
-            time.sleep(0.01)
+        self.started(seat, lines=2)
         turn = seat.send("go")
         self.assertEqual(turn.text, "answer")
 
     def test_a_task_that_never_finishes_times_the_turn_out(self) -> None:
-        seat = self.seat([], [task("task_started", "t9", "Serve"), result("done")], timeout=1)
+        init = {"emit": {"type": "system", "subtype": "init", "session_id": "s1"}}
+        seat = self.seat(
+            [init], [task("task_started", "t9", "Serve"), result("done")], timeout=1
+        )
+        self.started(seat)
         turn = seat.send("go")
         self.assertFalse(turn.ok)
         self.assertIn("t9", turn.error or "")
