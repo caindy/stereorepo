@@ -16,7 +16,7 @@ satisfied in Python and which step of the gate holds it there.
 | Ratchet | [`ratchet.md`](ratchet.md) | `lints`, `ruff`, `types` |
 | Observed Failure | [`observed-failure.md`](observed-failure.md) | `mutants` |
 | Nothing Unconsumed | [`nothing-unconsumed.md`](nothing-unconsumed.md) | `orphans`, `evidence` |
-| Seeded Artifacts | [`seeded-artifacts.md`](seeded-artifacts.md) | [`render`](render) |
+| Seeded Artifacts | [`seeded-artifacts.md`](seeded-artifacts.md) | nothing here — the portfolio's gate, and it says why |
 | Written Decisions | [`written-decisions.md`](written-decisions.md) | nothing here — the portfolio's gate, and it says why |
 
 The other Disciplines bind the Portfolio rather than a Project — Progressive

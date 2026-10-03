@@ -215,6 +215,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-353](assertions/decisions/DR-353.yaml) | `just audit` compares a Project's gate with a bootstrap by step name and report shape, and prints each gap as an Issue | Adopted |
 | [DR-354](assertions/decisions/DR-354.yaml) | A seat may not signal processes by name or number, because the sandbox does not confine signals | Adopted |
 | [DR-355](assertions/decisions/DR-355.yaml) | Prose cites code by its path and the name of the thing in it, never by line number | Adopted |
+| [DR-356](assertions/decisions/DR-356.yaml) | A Bootstrap exempts a Discipline whose subject its Projects do not hold | Adopted |
 
 ## Holes
 
@@ -372,7 +373,7 @@ and the query a reader in a file actually has.
 | [`README.md`](../README.md) | [DR-033](assertions/decisions/DR-033.yaml), [DR-268](assertions/decisions/DR-268.yaml), [DR-351](assertions/decisions/DR-351.yaml) |
 | [`SPECIALIZE.md`](../SPECIALIZE.md) | [DR-013](assertions/decisions/DR-013.yaml), [DR-046](assertions/decisions/DR-046.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-204](assertions/decisions/DR-204.yaml), [DR-268](assertions/decisions/DR-268.yaml), [DR-333](assertions/decisions/DR-333.yaml), [DR-341](assertions/decisions/DR-341.yaml) |
 | [`bootstraps/python/PROVENANCE.md`](../bootstraps/python/PROVENANCE.md) | [DR-208](assertions/decisions/DR-208.yaml), [DR-212](assertions/decisions/DR-212.yaml) |
-| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml), [DR-101](assertions/decisions/DR-101.yaml), [DR-193](assertions/decisions/DR-193.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-312](assertions/decisions/DR-312.yaml) |
+| [`bootstraps/python/README.md`](../bootstraps/python/README.md) | [DR-094](assertions/decisions/DR-094.yaml), [DR-099](assertions/decisions/DR-099.yaml), [DR-101](assertions/decisions/DR-101.yaml), [DR-193](assertions/decisions/DR-193.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-312](assertions/decisions/DR-312.yaml), [DR-356](assertions/decisions/DR-356.yaml) |
 | [`bootstraps/python/apm.yml`](../bootstraps/python/apm.yml) | [DR-208](assertions/decisions/DR-208.yaml) |
 | [`bootstraps/python/assertions/capabilities.yaml`](../bootstraps/python/assertions/capabilities.yaml) | [DR-208](assertions/decisions/DR-208.yaml) |
 | [`bootstraps/python/literate-programming.md`](../bootstraps/python/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-334](assertions/decisions/DR-334.yaml) |
@@ -381,7 +382,7 @@ and the query a reader in a file actually has.
 | [`bootstraps/python/seed/pyproject.toml`](../bootstraps/python/seed/pyproject.toml) | [DR-095](assertions/decisions/DR-095.yaml), [DR-096](assertions/decisions/DR-096.yaml), [DR-097](assertions/decisions/DR-097.yaml), [DR-098](assertions/decisions/DR-098.yaml) |
 | [`bootstraps/python/skills/py-git-hooks/lint-gate.py`](../bootstraps/python/skills/py-git-hooks/lint-gate.py) | [DR-212](assertions/decisions/DR-212.yaml), [DR-250](assertions/decisions/DR-250.yaml) |
 | [`bootstraps/python/skills/py-quality-setup/SKILL.md`](../bootstraps/python/skills/py-quality-setup/SKILL.md) | [DR-212](assertions/decisions/DR-212.yaml) |
-| [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml), [DR-101](assertions/decisions/DR-101.yaml), [DR-312](assertions/decisions/DR-312.yaml) |
+| [`bootstraps/rust/README.md`](../bootstraps/rust/README.md) | [DR-090](assertions/decisions/DR-090.yaml), [DR-101](assertions/decisions/DR-101.yaml), [DR-312](assertions/decisions/DR-312.yaml), [DR-356](assertions/decisions/DR-356.yaml) |
 | [`bootstraps/rust/literate-programming.md`](../bootstraps/rust/literate-programming.md) | [DR-101](assertions/decisions/DR-101.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-334](assertions/decisions/DR-334.yaml) |
 | [`bootstraps/rust/render`](../bootstraps/rust/render) | [DR-091](assertions/decisions/DR-091.yaml) |
 | [`bootstraps/rust/seed/xtask/src/lib.rs`](../bootstraps/rust/seed/xtask/src/lib.rs) | [DR-090](assertions/decisions/DR-090.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-262](assertions/decisions/DR-262.yaml), [DR-350](assertions/decisions/DR-350.yaml) |

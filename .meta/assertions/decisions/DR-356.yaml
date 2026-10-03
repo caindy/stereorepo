@@ -1,0 +1,57 @@
+decisions:
+  - id: work:decision/356
+    name: "DR-356 · A Bootstrap exempts a Discipline whose subject its Projects do not hold"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/bootstraps-python-readme
+      - work:artifact/bootstraps-rust-readme
+    context: >-
+      Both Bootstraps said Seeded Artifacts was held by a gate step called
+      `render`, and neither seed's gate has one, so `just audit python-seed
+      python` and `just audit rust-seed rust` each reported the step as a gap
+      (DR-353). Seeded Artifacts governs a seed, a template that is gated by
+      rendering it and gating the result. A Project built from either seed
+      holds no seed of its own, so its gate has nothing to render. The seeds
+      themselves are gated where they sit, by the gates of
+      `work:project/python-seed` and `work:project/rust-seed`; the
+      `.github/workflows/gate.yml` jobs that once rendered each seed and gated
+      the copy went with the pull-request flow. The question was how a
+      Bootstrap records a project-binding Discipline whose subject the
+      Projects it describes do not hold.
+    alternatives:
+      - name: Add a `render` step to each seed's gate
+        chosen: false
+        reason: >-
+          In a Project built from the seed the step would have no template to
+          render, so it would pass by checking nothing, the suite nothing runs
+          that the Discipline itself warns of.
+      - name: Mark the Discipline `portfolio_scoped`
+        chosen: false
+        reason: >-
+          `bootstrap_discipline_coverage` in `.meta/checks/graph/structure.py`
+          refuses `portfolio_scoped` for a project-binding Discipline, and
+          Seeded Artifacts still binds the seed Projects in stereorepo.
+      - name: Exempt it, and say where the subject is held instead
+        chosen: true
+        reason: >-
+          An exemption asks the Project's gate for no step, which is true of
+          a Project with no seed, and its reason keeps the Discipline
+          accounted for by naming the gate that does hold it.
+    consequences:
+      - >-
+        Seeded Artifacts is `exempt` in `work:bootstrap/python` and
+        `work:bootstrap/rust` in `.meta/assertions/bootstraps.yaml`, as
+        Written Decisions already was, and each `exemption_reason` names the
+        seed Project's in-place gate.
+      - >-
+        Nothing now renders a seed and gates the copy; the issue
+        `seed-rendered-gate-lost` carries that, and the stale `gate.yml`
+        prose in each `seeded-artifacts.md` and `render`.
+    falsifier: >-
+      A Project built from a seed comes to hold a template of its own, so the
+      exempted Discipline has a subject in it after all.
+    rationale: |-
+      A Bootstrap describes what a Project built from it inherits, so it
+      should ask of that Project only what the Project can hold. Where the
+      subject of a Discipline lives elsewhere in the portfolio, the exemption
+      says where, rather than a step pretending to check it.

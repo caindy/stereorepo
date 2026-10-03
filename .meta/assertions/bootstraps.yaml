@@ -35,10 +35,12 @@ bootstraps:
           - orphans
           - evidence
       - discipline: work:discipline/seeded-artifacts
-        status: implemented
+        status: exempt
         exposition: seeded-artifacts.md
-        held_by:
-          - render
+        exemption_reason: >-
+          A Project built from the seed holds no seed of its own, so its gate
+          has nothing to render. The seed itself is gated where it sits by the
+          gate of work:project/python-seed (stereorepo's DR-356).
       - discipline: work:discipline/written-decisions
         status: exempt
         exposition: written-decisions.md
@@ -82,10 +84,12 @@ bootstraps:
           - orphans
           - evidence
       - discipline: work:discipline/seeded-artifacts
-        status: implemented
+        status: exempt
         exposition: seeded-artifacts.md
-        held_by:
-          - render
+        exemption_reason: >-
+          A Project built from the seed holds no seed of its own, so its gate
+          has nothing to render. The seed itself is gated where it sits by the
+          gate of work:project/rust-seed (stereorepo's DR-356).
       - discipline: work:discipline/written-decisions
         status: exempt
         exposition: written-decisions.md

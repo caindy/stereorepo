@@ -1,7 +1,11 @@
 # Seeded Artifacts, in Rust
 
-A seed is data, and it must not violate the rules it seeds. Two ways this seed
-is held to that.
+A seed is data, and it must not violate the rules it seeds.
+
+Nothing in a Project built from the seed implements this, because that
+Project holds no seed of its own and its gate has nothing to render. The seed
+is held to it here, in the portfolio, by the gate of `work:project/rust-seed`,
+run on the seed where it sits (DR-356).
 
 ## Rendered, then gated
 
