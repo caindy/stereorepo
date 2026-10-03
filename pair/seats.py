@@ -232,14 +232,17 @@ def versioned_gpg_conf() -> list[str]:
 
 @dataclass
 class Confinement:
-    """Where a seat's shell commands may write, beyond the working directory.
+    """Where a seat's shell commands may write beyond its worktree, and what it may not read.
 
     `allow` and `deny` become the sandbox's `filesystem.allowWrite` and
     `filesystem.denyWrite`; a denied path wins over an allowed one that holds
     it. `sockets` become `network.allowUnixSockets`, and `env` is added to the
     seat's environment. `gitconfig` is the text of the file the seat's
     `GIT_CONFIG_GLOBAL` names; the seat's owner writes it where the seat
-    cannot.
+    cannot. `unreadable` lists the key files, which become the sandbox's
+    `filesystem.denyRead` and a `Read` rule in `permissions.deny` each, and
+    `withheld` the variable names they hold, which are dropped from the
+    seat's environment.
     """
 
     allow: list[Path]
@@ -247,6 +250,8 @@ class Confinement:
     env: dict[str, str]
     sockets: list[Path] = field(default_factory=list)
     gitconfig: str = ""
+    unreadable: list[Path] = field(default_factory=list)
+    withheld: set[str] = field(default_factory=set)
 
 
 SEAT_GPG = Path(__file__).resolve().parent / "seat-gpg"
@@ -297,8 +302,49 @@ def global_includes() -> list[Path]:
     return [xdg / "git" / "config", Path.home() / ".gitconfig"]
 
 
+def env_names(path: Path) -> set[str]:
+    """The variable names the key file `path` sets; its values are never kept.
+
+    A name is the text before the first `=` on a line, less a leading
+    `export ` and surrounding whitespace. A blank line, a line starting with
+    `#`, and a line without `=` name nothing. Bytes that are not UTF-8 are
+    replaced, so a binary file such as an encrypted `.env.gpg` does not stop
+    the seat from starting, and a file the loop cannot read names nothing:
+    it is still denied, and the loop holds none of its values either.
+    """
+    try:
+        text = path.read_text(errors="replace")
+    except OSError:
+        return set()
+    names = set()
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        name = line.split("=", 1)[0].strip()
+        name = name.removeprefix("export ").strip()
+        if name:
+            names.add(name)
+    return names
+
+
+def key_files(roots: list[Path]) -> list[Path]:
+    """Every `.env` and `.env.*` file at the root of each of `roots`, sorted.
+
+    A symlink is listed both as itself and as the file it resolves to, since
+    whether Claude Code's `Read` rules match a link by its target is not
+    established.
+    """
+    found: set[Path] = set()
+    for root in roots:
+        for path in [root / ".env", *root.glob(".env.*")]:
+            if path.is_file():
+                found |= {path, path.resolve()}
+    return sorted(found)
+
+
 def confinement(cwd: Path) -> Confinement:
-    """The write confinement for a seat whose working directory is the worktree `cwd`.
+    """The confinement for a seat whose working directory is the worktree `cwd`.
 
     Claude Code's sandbox grants a worktree's git common directory on its own,
     less `hooks/` and `config`, so that `git commit` works (observed with
@@ -338,6 +384,14 @@ def confinement(cwd: Path) -> Confinement:
     saw one. A repository's own `gpg.program` or `log.showSignature`
     outranks the global file. Signing a commit runs `SEAT_GPG` too, and does
     not consult trust.
+
+    The sandbox confines writes, not reads, and a portfolio's worktree sits
+    inside its tree, so a seat could read the portfolio's keys and send them
+    out over the network, in its transcript, or in a commit. So
+    `unreadable` names every key file (see `key_files`) at the root of the
+    main checkout and of every worktree, as `git worktree list` reports
+    them, and `withheld` every name those files set. They are found when the
+    seat starts: a key file written later is denied from the next start.
     """
 
     def out(*argv: str) -> str:
@@ -399,7 +453,14 @@ def confinement(cwd: Path) -> Confinement:
             deny |= {p for p in gnupg.iterdir() if not p.name.startswith(("S.", ".#lk"))}
             deny -= {p for p in deny if p.name.endswith(".lock")}
         sockets += [gnupg / "S.gpg-agent", gnupg / "S.keyboxd"]
-    return Confinement(allow, sorted(deny), env, sockets, "\n".join(gitconfig) + "\n")
+
+    listed = out("git", "worktree", "list", "--porcelain").splitlines()
+    roots = [Path(line[len("worktree ") :]) for line in listed if line.startswith("worktree ")]
+    keys = key_files([root.resolve() for root in roots if root.is_dir()])
+    withheld = set().union(*(env_names(key) for key in keys))
+    return Confinement(
+        allow, sorted(deny), env, sockets, "\n".join(gitconfig) + "\n", keys, withheld
+    )
 
 
 SANDBOX_DENIED = [
@@ -442,8 +503,13 @@ def command(
     applies to each part of a compound command. Edit and Write are not in
     `ALLOWED`, so `acceptEdits` holds them to the working directory: in `-p`
     mode, the prompt a write elsewhere needs is a denial.
+
+    The key files in `confined.unreadable` are denied to Bash by the
+    sandbox's `filesystem.denyRead`, and to the read tools, which the sandbox
+    does not govern, by a `Read(//<path>)` rule each in `permissions.deny`.
+    With no key files, neither setting is passed.
     """
-    sandbox = {
+    sandbox: dict[str, Any] = {
         "enabled": True,
         "autoAllowBashIfSandboxed": True,
         "allowUnsandboxedCommands": False,
@@ -457,6 +523,10 @@ def command(
             "allowUnixSockets": [str(p) for p in confined.sockets],
         },
     }
+    settings: dict[str, Any] = {"sandbox": sandbox}
+    if confined.unreadable:
+        sandbox["filesystem"]["denyRead"] = [str(p) for p in confined.unreadable]
+        settings["permissions"] = {"deny": [f"Read(/{p})" for p in confined.unreadable]}
     argv = [
         *program,
         "-p",
@@ -469,7 +539,7 @@ def command(
         "acceptEdits",
         *CONTEXT,
         "--settings",
-        json.dumps({"sandbox": sandbox}),
+        json.dumps(settings),
         "--append-system-prompt",
         system_prompt,
         "--allowedTools",
@@ -511,7 +581,8 @@ class ClaudeSeat:
         self.log_dir = log_dir
         confined = confinement(cwd)
         argv = command(system_prompt, confined, model=model, resume=resume, program=program)
-        env = {k: v for k, v in os.environ.items() if k != "ANTHROPIC_API_KEY"}
+        withheld = {"ANTHROPIC_API_KEY", *confined.withheld}
+        env = {k: v for k, v in os.environ.items() if k not in withheld}
         env.update(confined.env)
         log_dir.mkdir(parents=True, exist_ok=True)
         gitconfig = log_dir / f"{role}.gitconfig"

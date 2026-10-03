@@ -50,6 +50,7 @@ from seats import (
     TurnResult,
     command,
     confinement,
+    env_names,
     is_refusal,
     unwritable,
     versioned_gpg_conf,
@@ -4286,6 +4287,28 @@ class SeatCommandTest(unittest.TestCase):
         for rule in ("Bash(kill *)", "Bash(pkill*)", "Bash(killall*)"):
             self.assertIn(rule, DISALLOWED)
 
+    def test_with_no_key_files_nothing_is_denied_reading(self) -> None:
+        argv = command("p", self.CONFINED)
+        settings = json.loads(argv[argv.index("--settings") + 1])
+        self.assertEqual(list(settings), ["sandbox"])
+        self.assertNotIn("denyRead", settings["sandbox"]["filesystem"])
+
+    def test_env_names_takes_the_names_and_never_the_values(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(subprocess.run, ["rm", "-rf", str(tmp)], check=True)
+        text = tmp / ".env"
+        text.write_text("# c\n\nexport SOME_KEY=x\nB = y=z\nnoeq\n")
+        self.assertEqual(env_names(text), {"SOME_KEY", "B"})
+        binary = tmp / ".env.gpg"
+        binary.write_bytes(b"\xff\xfe\x00=\x80\n")
+        env_names(binary)
+        locked = tmp / ".env.locked"
+        locked.write_text("LOCKED=x\n")
+        locked.chmod(0)
+        self.addCleanup(locked.chmod, 0o600)
+        if not os.access(locked, os.R_OK):
+            self.assertEqual(env_names(locked), set())
+
 
 def snapshot(root: Path) -> dict[Path, tuple[int, int, int]]:
     """Every path under `root`, with what a write to it changes."""
@@ -4375,6 +4398,38 @@ class ConfinementTest(unittest.TestCase):
             self.assertIn(path, held)
         self.assertTrue(self.denied(self.wt / ".claude" / "skills" / "s" / "SKILL.md", held))
         self.assertFalse(self.denied(self.wt / "README.md", held))
+
+    def test_key_files_in_every_checkout_are_denied_reading(self) -> None:
+        other = self.tmp / "other"
+        keys = [self.repo / ".env", self.repo / ".env.local", self.wt / ".env", other / ".env"]
+        for key in keys:
+            key.write_text("export SOME_KEY=x\n")
+        target = self.tmp / "secrets"
+        target.write_text("LINKED=y\n")
+        (other / ".env.link").symlink_to(target)
+        (self.wt / ".env.d").mkdir()
+        (self.repo / "env").write_text("NOT_A_KEY=z\n")
+        confined = confinement(self.wt)
+        self.assertEqual(
+            confined.unreadable, sorted([*keys, other / ".env.link", target])
+        )
+        self.assertEqual(confined.withheld, {"SOME_KEY", "LINKED"})
+        argv = command("p", confined)
+        settings = json.loads(argv[argv.index("--settings") + 1])
+        self.assertEqual(
+            settings["sandbox"]["filesystem"]["denyRead"],
+            [str(p) for p in confined.unreadable],
+        )
+        self.assertEqual(
+            settings["permissions"]["deny"],
+            [f"Read(/{p})" for p in confined.unreadable],
+        )
+        self.assertTrue(all(r.startswith("Read(//") for r in settings["permissions"]["deny"]))
+
+    def test_with_no_key_files_nothing_is_withheld(self) -> None:
+        confined = confinement(self.wt)
+        self.assertEqual(confined.unreadable, [])
+        self.assertEqual(confined.withheld, set())
 
     def test_uv_tools_and_cargo_binaries_stay_out_of_reach(self) -> None:
         confined = confinement(self.wt)
@@ -4604,6 +4659,31 @@ class ClaudeSeatTest(unittest.TestCase):
         with mock.patch.object(subprocess, "Popen", popen), self.assertRaises(StartedError):
             ClaudeSeat("primary", self.wt, "p", self.log)
         self.assertEqual(argvs[0][:2], ["claude", "-p"])
+
+    def test_a_seat_starts_without_the_variables_its_key_files_name(self) -> None:
+        (self.wt / ".env").write_text("# c\nexport SOME_KEY=x\n")
+        real = subprocess.Popen
+        envs: list[dict[str, str]] = []
+
+        class StartedError(Exception):
+            pass
+
+        def popen(argv: list[str], **kwargs: Any) -> subprocess.Popen[Any]:
+            if "stream-json" not in argv:
+                return real(argv, **kwargs)
+            envs.append(kwargs["env"])
+            raise StartedError
+
+        keys = {"SOME_KEY": "x", "OTHER": "y", "ANTHROPIC_API_KEY": "k"}
+        with (
+            mock.patch.dict(os.environ, keys),
+            mock.patch.object(subprocess, "Popen", popen),
+            self.assertRaises(StartedError),
+        ):
+            ClaudeSeat("primary", self.wt, "p", self.log)
+        self.assertNotIn("SOME_KEY", envs[0])
+        self.assertNotIn("ANTHROPIC_API_KEY", envs[0])
+        self.assertEqual(envs[0]["OTHER"], "y")
 
     def test_the_seat_reads_its_git_config_from_a_file_outside_the_worktree(self) -> None:
         seen = self.tmp / "seen"
