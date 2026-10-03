@@ -125,7 +125,9 @@ disciplines:
           repository has no `sync` recipe until this
           first copy brings one, and the checkout's own recipe cannot be pointed at it, because
           `--root` is an option of `bundle.py` and the recipe places its arguments after `sync`.
-          Every later sync is `just sync <checkout>`, run in the repository.
+          Every later sync is `just sync <checkout>`, run in the repository, which hands the
+          sync to the checkout's own `bundle.py`, so a fix to the sync applies on the first sync
+          after it lands (DR-322).
       - id: work:discipline-step/adoption/integrate-the-template-items
         name: Integrate the template items
         statement: >-

@@ -147,11 +147,49 @@ def _snapshot(repo: pathlib.Path) -> Snapshot:
 
 
 def _run(cli: types.ModuleType, source: pathlib.Path, portfolio: pathlib.Path) -> tuple[int, str]:
-    """Runs `bundle.py --root PORTFOLIO sync SOURCE` and returns its exit code and stdout."""
+    """Runs the sync logic in place, past the hand-off to the checkout's `bundle.py`, and
+    returns its exit code and stdout."""
     out = io.StringIO()
     with contextlib.redirect_stdout(out), contextlib.redirect_stderr(io.StringIO()):
-        code = int(cli.main(["--root", str(portfolio), "sync", str(source)]))
+        code = int(cli._sync_in_place(source.resolve(), portfolio.resolve()))
     return code, out.getvalue()
+
+
+STUB_TOOL = """import pathlib, sys
+root = pathlib.Path(sys.argv[sys.argv.index("--root") + 1])
+(root / "handed-off.txt").write_text("the checkout's sync ran\\n", encoding="utf-8")
+"""
+"""A checkout's `bundle.py` whose sync differs from the portfolio's: it only writes a marker."""
+
+
+def _check_handoff(cli: types.ModuleType, tmp: pathlib.Path, source: pathlib.Path) -> list[str]:
+    """A sync started as `just sync` starts it runs the checkout's `bundle.py`, refuses a
+    checkout with none, and syncs in place where the checkout's is the running file
+    (stereorepo's DR-322)."""
+    problems = []
+    stub = _repo(tmp / "stub-checkout", {".meta/bundle.py": STUB_TOOL})
+    portfolio = _portfolio(tmp / "handed-off")
+    before = _snapshot(portfolio)
+    code = int(cli.main(["--root", str(portfolio), "sync", str(stub)]))
+    after = _snapshot(portfolio)
+    if code != 0 or not (portfolio / "handed-off.txt").is_file():
+        problems.append(f"sync: exited {code} without running the checkout's bundle.py")
+    if {k: v for k, v in after[2].items() if k != "handed-off.txt"} != before[2]:
+        problems.append("sync: the portfolio's own sync logic ran instead of the checkout's")
+    portfolio = _portfolio(tmp / "no-tool")
+    before = _snapshot(portfolio)
+    err = io.StringIO()
+    with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(err):
+        code = int(cli.main(["--root", str(portfolio), "sync", str(source)]))
+    if code == 0:
+        problems.append("sync: accepted a checkout with no .meta/bundle.py")
+    if ".meta/bundle.py" not in err.getvalue():
+        problems.append("sync: the refusal does not name the missing .meta/bundle.py")
+    if _snapshot(portfolio) != before:
+        problems.append("sync: changed the portfolio while refusing a checkout with no bundle.py")
+    if cli._checkout_tool(META.parent) is not None:
+        problems.append("sync: a checkout's bundle.py would hand its own sync off again")
+    return problems
 
 
 def _check_sync(cli: types.ModuleType, tmp: pathlib.Path, source: pathlib.Path) -> list[str]:
@@ -363,6 +401,13 @@ def bundle_sync_probes() -> list[str]:
     uncommitted change or an untracked file at a path it would write, a
     `.gitignore` with an unclosed block or that is a symlink or a directory,
     and a target that holds `template/`.
+
+    Started as `just sync` starts it, the sync runs the checkout's own
+    `bundle.py` with `--root` set to the portfolio, so a checkout whose
+    `bundle.py` only writes a marker leaves the marker and nothing else. It
+    refuses, changing nothing, a checkout with no `.meta/bundle.py`, and this
+    repository's `bundle.py` does not hand its own sync off again
+    (stereorepo's DR-322).
     """
     cli = load_module(META / "bundle.py", name="bundle_cli")
     with tempfile.TemporaryDirectory(prefix="stereorepo-sync-probe-") as directory:
@@ -371,6 +416,7 @@ def bundle_sync_probes() -> list[str]:
             source = _repo(tmp / "checkout", SOURCE)
             return (_check_sync(cli, tmp, source) + _check_merges(cli, tmp, source)
                     + _check_refusals(cli, tmp, source) + _check_block_helpers(tmp)
-                    + _check_portfolio_items(cli, tmp, source))
+                    + _check_portfolio_items(cli, tmp, source)
+                    + _check_handoff(cli, tmp, source))
         except (OSError, subprocess.CalledProcessError) as exc:
             return [f"sync: could not build a scratch repository: {exc}"]

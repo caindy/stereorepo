@@ -120,10 +120,36 @@ def _cmd_manifest(args: argparse.Namespace) -> int:
     return 0
 
 
+def _checkout_tool(source: pathlib.Path) -> pathlib.Path | None:
+    """Returns the checkout's `bundle.py` to hand a sync to, or None where it is this file.
+
+    The None is what stops the hand-off from repeating: the checkout's `bundle.py`,
+    started by a hand-off, finds itself here and syncs in place, as does a checkout
+    synced from itself (stereorepo's DR-322).
+    """
+    tool = (source / ".meta" / "bundle.py").resolve()
+    return None if tool == pathlib.Path(__file__).resolve() else tool
+
+
 def _cmd_sync(args: argparse.Namespace) -> int:
-    """Syncs the portfolio at `--root` from the stereorepo checkout named (stereorepo's DR-315)."""
+    """Syncs the portfolio at `--root` from the stereorepo checkout named, with the
+    checkout's own `bundle.py` (stereorepo's DR-315, DR-322)."""
     source = pathlib.Path(args.source).resolve()
     portfolio = pathlib.Path(args.root).resolve() if args.root else _META_DIR.parent
+    if not (source / ".meta" / "bundle.py").is_file():
+        print(f"sync: refused, nothing changed: {source} has no .meta/bundle.py to run its sync",
+              file=sys.stderr)
+        return 1
+    tool = _checkout_tool(source)
+    if tool is None:
+        return _sync_in_place(source, portfolio)
+    cmd = [sys.executable, str(tool), "--root", str(portfolio), "sync", str(source)]
+    return subprocess.run(cmd, check=False).returncode
+
+
+def _sync_in_place(source: pathlib.Path, portfolio: pathlib.Path) -> int:
+    """Syncs `portfolio` from `source` with the sync logic this file imports, and prints
+    each change."""
     try:
         changes = sync.plan(source, portfolio)
     except (sync.SyncRefusedError, ValueError, OSError) as exc:

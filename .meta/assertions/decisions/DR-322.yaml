@@ -1,0 +1,54 @@
+decisions:
+  - id: work:decision/322
+    name: "DR-322 · A portfolio's sync runs the checkout's own `bundle.py`"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-bundle
+      - work:artifact/meta-checks-probes-tools-sync
+    context: >-
+      `just sync <checkout>` (DR-315) ran the portfolio's own `.meta/bundle.py`,
+      which planned and applied the sync with the portfolio's copy of
+      `.meta/lib/bundle/` and replaced that copy from the checkout as it went.
+      A change to the sync therefore took effect one sync late: in fitch-mvp
+      the first sync after DR-318 landed still removed the portfolio's
+      compiled skills, and only the second kept them.
+    alternatives:
+      - name: Have the `sync` recipe call the checkout's `bundle.py`
+        chosen: false
+        reason: >-
+          The recipe takes `*args`, so it would have to pick the checkout out
+          of them to build a path, and recipes take only flags, subcommands
+          and atomic identifiers (DR-259, DR-272).
+      - name: Hand off with a flag or environment variable marking the started sync
+        chosen: false
+        reason: >-
+          A checkout older than the hand-off would reject the flag, and the
+          path comparison already tells the started `bundle.py` it is the
+          checkout's.
+      - name: Have the portfolio's `bundle.py` run the checkout's with `--root`
+        chosen: true
+        reason: >-
+          The recipe keeps its form, and the checkout's `bundle.py` finds
+          its own file at `<checkout>/.meta/bundle.py`, so it syncs in place
+          instead of handing off again.
+    consequences:
+      - >-
+        `bundle.py sync` refuses, changing nothing, a checkout with no
+        `.meta/bundle.py`. Where the checkout's `bundle.py` is another file,
+        it runs it under the same interpreter with `--root` set to the
+        portfolio and returns its exit code; where it is the running file,
+        it syncs in place.
+      - >-
+        A fix to the sync applies on the first sync after it lands. The first
+        sync of a portfolio after this decision lands still runs the old
+        `bundle.py`, so it is one sync late itself.
+      - >-
+        The sync probes test the sync logic through `_sync_in_place`, past
+        the hand-off, and test the hand-off with a checkout whose `bundle.py`
+        is a stub.
+    falsifier: >-
+      In a portfolio, the first `just sync` from a checkout whose sync logic
+      changed applies the portfolio's old logic, and a second sync applies
+      the new.
+    rationale: |-
+      The checkout holds the sync wanted, so the checkout's code should run it.
