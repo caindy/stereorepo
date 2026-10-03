@@ -38,13 +38,18 @@ PROBLEM = re.compile(r"^     (?P<problem>.+)$")
 """Matches indented problem diagnostics beneath a failing step report."""
 
 
-def structure() -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
+def structure(
+    path: pathlib.Path = STRUCTURE,
+) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
     """Loads declared projects and products from structure.yaml.
+
+    Args:
+        path: The structure file to read; this repository's own unless another is named.
 
     Returns:
         tuple: A pair of (projects_dict, products_dict) keyed by object identifier.
     """
-    data = yaml.safe_load(STRUCTURE.read_text()) or {}
+    data = yaml.safe_load(path.read_text()) or {}
     projects = {p["id"]: p for p in data.get("projects") or []}
     products = {p["id"]: p for p in data.get("products") or []}
     return projects, products

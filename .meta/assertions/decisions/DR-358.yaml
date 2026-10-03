@@ -1,0 +1,59 @@
+decisions:
+  - id: work:decision/358
+    name: "DR-358 · `just audit --repository` audits a Project another repository asserts, running its gate from that repository's root"
+    status: ADOPTED
+    applies:
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-audit
+      - work:artifact/meta-checks-probes-tools-audit
+      - work:artifact/justfile
+    context: >-
+      DR-353 made the audit scaffold-only and had it audit the Projects
+      stereorepo asserts, running each gate from stereorepo's root. DR-312's
+      audit is for a brownfield product, which lives in its own repository,
+      so the audit could not reach the product it exists for. The question
+      was how the audit names another repository, and what it reads from it.
+    alternatives:
+      - name: A second recipe for auditing another repository
+        chosen: false
+        reason: >-
+          It would repeat the audit's two identifiers under a second verb,
+          and the only difference is where the Projects are read and the
+          gate runs, which a flag says.
+      - name: Read the Bootstraps from the target as well
+        chosen: false
+        reason: >-
+          The Bootstrap records stay in stereorepo (DR-353), and a product
+          under audit holds none; the target supplies only what it asserts
+          about itself.
+      - name: An optional `--repository <path>` flag on `audit`
+        chosen: true
+        reason: >-
+          The recipe keeps its two identifiers and gains a flags tail, which
+          DR-349 allows, and with no flag the audit behaves as DR-353 has it.
+    consequences:
+      - >-
+        `just audit <project> <bootstrap> --repository <path>` reads the
+        Project and its gate from `<path>/.meta/assertions/structure.yaml`,
+        runs the gate with `<path>` as its working directory, and compares
+        what it reports with stereorepo's Bootstrap. This widens DR-353's
+        consequence that the audit audits the Projects stereorepo asserts.
+      - >-
+        A target with no `structure.yaml`, including a path that does not
+        exist, or one that does not assert the named Project, ends the audit
+        with a message naming the target, and runs no gate.
+      - >-
+        `just` runs a recipe from stereorepo's root, so a relative
+        `--repository` resolves from there, as `just adapt`'s target does.
+      - >-
+        The target's gate command is run as its `structure.yaml` declares
+        it, so auditing a repository runs that repository's code on this
+        machine.
+    falsifier: >-
+      An audit with `--repository` runs a gate from stereorepo's root, or
+      reads its Project from stereorepo's `structure.yaml`.
+    rationale: |-
+      The audit exists for a product that already lives elsewhere; naming
+      that repository is the one thing it lacked, and a flag adds it without
+      changing what the audit compares.

@@ -10,9 +10,16 @@ an Issue for `issues/backlog/`, and the audit exits non-zero when there is
 one. It compares step names and report shape only; whether a step passes, or
 does what the Bootstrap's step does, is the gate's business and the
 developer's.
+
+With `--repository <path>`, the Project and its gate are read from that
+repository's `.meta/assertions/structure.yaml` and the gate runs from that
+repository's root, so a brownfield product in its own repository can be
+audited from a stereorepo checkout (stereorepo's DR-358). The Bootstraps are
+always stereorepo's.
 """
 from __future__ import annotations
 
+import argparse
 import dataclasses
 import pathlib
 import subprocess
@@ -190,8 +197,9 @@ def issue(gap: Gap) -> str:
             "Found by `just audit` (stereorepo's DR-312, stereorepo's DR-353).\n")
 
 
-def audit(project: dict[str, Any], bootstrap: dict[str, Any], out: IO[str] = sys.stdout) -> int:
-    """Runs a Project's gate from the repository root and prints each gap as an Issue.
+def audit(project: dict[str, Any], bootstrap: dict[str, Any], out: IO[str] = sys.stdout,
+          root: pathlib.Path = gate.ROOT) -> int:
+    """Runs a Project's gate from a repository's root and prints each gap as an Issue.
 
     The gate's standard error passes through, and its exit code is not read: a
     failing step is still a reported one.
@@ -200,43 +208,70 @@ def audit(project: dict[str, Any], bootstrap: dict[str, Any], out: IO[str] = sys
         project: A Project record carrying the `gate` command.
         bootstrap: The Bootstrap record to compare it with.
         out: Where the Issues are printed.
+        root: The root of the repository asserting the Project, where its gate runs.
 
     Returns:
         int: 1 if there is a gap, otherwise 0.
     """
-    run = subprocess.run(project["gate"], shell=True, cwd=gate.ROOT, text=True,
+    run = subprocess.run(project["gate"], shell=True, cwd=root, text=True,
                          stdout=subprocess.PIPE, check=False)
     found = gaps(project, bootstrap, run.stdout.splitlines())
     out.write("\n".join(issue(gap) for gap in found))
     return 1 if found else 0
 
 
-def main(argv: list[str], projects: dict[str, dict[str, Any]] | None = None) -> int:
-    """CLI entrypoint: `audit.py <project> <bootstrap>`.
+def _arguments(argv: list[str]) -> argparse.Namespace:
+    """Reads `argv`, the script name first, into the Project, the Bootstrap and the target."""
+    parser = argparse.ArgumentParser(
+        prog="audit.py", description="Audit a Project's gate against a Bootstrap.")
+    parser.add_argument("project", help="the Project's name, the last segment of its id")
+    parser.add_argument("bootstrap", help="the Bootstrap's name, the last segment of its id")
+    parser.add_argument(
+        "--repository", type=pathlib.Path,
+        help="the repository asserting the Project; its gate runs from there. A relative "
+             "path is read from stereorepo's root, where `just` runs the recipe")
+    return parser.parse_args(argv[1:])
+
+
+def main(argv: list[str], projects: dict[str, dict[str, Any]] | None = None,
+         out: IO[str] | None = None) -> int:
+    """CLI entrypoint: `audit.py <project> <bootstrap> [--repository <path>]`.
 
     Args:
-        argv: The script name, then a Project's and a Bootstrap's name.
+        argv: The script name, then a Project's and a Bootstrap's name, then
+            optionally `--repository` and the repository asserting the Project.
         projects: The asserted Projects keyed by id, as `.meta/gate` reads them;
-            read from `structure.yaml` when omitted.
+            read from the target's `structure.yaml` when omitted, which is
+            stereorepo's own without `--repository`.
+        out: Where the Issues are printed; standard output when omitted.
 
     Returns:
-        int: 0 with no gap, 1 with one; an unknown name or a Project with no
-            gate exits through `sys.exit` with a message.
+        int: 0 with no gap, 1 with one; an unknown name, a target with no
+            `structure.yaml`, or a Project with no gate exits through
+            `sys.exit` with a message.
     """
-    if len(argv) != 3:
-        sys.exit("usage: audit.py <project> <bootstrap>")
-    asserted = gate.structure()[0] if projects is None else projects
-    by_name = {gate.short(p["id"]): p for p in asserted.values()}
+    args = _arguments(argv)
+    root = gate.ROOT if args.repository is None else args.repository.resolve()
+    where = "" if args.repository is None else f" in {root}"
+    if projects is None:
+        path = root / gate.STRUCTURE.relative_to(gate.ROOT)
+        if not path.is_file():
+            sys.exit(f"audit: {root} has no {path.relative_to(root)}, so it asserts no Project "
+                     "to audit; `just adapt plan` plans its adoption")
+        projects = gate.structure(path)[0]
+    by_name = {gate.short(p["id"]): p for p in projects.values()}
     data = yaml.safe_load(BOOTSTRAPS.read_text()) or {}
     bootstraps = {gate.short(b["id"]): b for b in data.get("bootstraps") or []}
-    project, bootstrap = by_name.get(argv[1]), bootstraps.get(argv[2])
+    project, bootstrap = by_name.get(args.project), bootstraps.get(args.bootstrap)
     if project is None:
-        sys.exit(f"audit: no Project {argv[1]} is asserted; there are {', '.join(by_name)}")
+        sys.exit(f"audit: no Project {args.project} is asserted{where}; "
+                 f"there are {', '.join(by_name) or 'none'}")
     if bootstrap is None:
-        sys.exit(f"audit: no Bootstrap {argv[2]} is asserted; there are {', '.join(bootstraps)}")
+        sys.exit(f"audit: no Bootstrap {args.bootstrap} is asserted; "
+                 f"there are {', '.join(bootstraps)}")
     if not project.get("gate"):
-        sys.exit(f"audit: {argv[1]} asserts no gate, so there is nothing to audit")
-    return audit(project, bootstrap)
+        sys.exit(f"audit: {args.project} asserts no gate{where}, so there is nothing to audit")
+    return audit(project, bootstrap, sys.stdout if out is None else out, root)
 
 
 if __name__ == "__main__":

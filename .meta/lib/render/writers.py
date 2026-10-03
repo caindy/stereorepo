@@ -64,9 +64,9 @@ CONDITIONAL_RECIPES: tuple[ConditionalRecipe, ...] = (
     )),
     ConditionalRecipe("work:artifact/meta-audit", "audit", (
         "# audit a Project's gate against a language Bootstrap, printing each gap as an Issue"
-        " (stereorepo's DR-353)",
-        "audit project bootstrap:",
-        "    .meta/audit.py {{project}} {{bootstrap}}",
+        " (--repository PATH) (stereorepo's DR-353, DR-358)",
+        "audit project bootstrap *args:",
+        "    .meta/audit.py {{project}} {{bootstrap}} {{args}}",
     )),
     ConditionalRecipe("work:artifact/meta-adapt", "adapt", (
         "# plan brownfield adoption for an existing Product repository",

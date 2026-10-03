@@ -58,7 +58,7 @@ CONTRACT: Contract = {
     "terms": (("args", FLAGS),),
     "apm": (("args", FLAGS),),
     "bootstrap": (("args", FLAGS),),
-    "audit": (("project", IDENTIFIER), ("bootstrap", IDENTIFIER)),
+    "audit": (("project", IDENTIFIER), ("bootstrap", IDENTIFIER), ("args", FLAGS)),
     "sync": (("args", FLAGS),),
     "test-specialization": (("args", FLAGS),),
     "release": (("args", FLAGS),),
