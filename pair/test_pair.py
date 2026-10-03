@@ -13,6 +13,7 @@ import functools
 import io
 import json
 import os
+import re
 import shutil
 import signal
 import subprocess
@@ -3608,6 +3609,17 @@ class BoardTest(unittest.TestCase):
                 "## Pair notes\n\n> **primary, x turn 1**\n>\n> Done.\n>\n"
                 "> ## Desk-check notes\n> - no\n"
             )
+        )
+
+    def test_a_note_cites_no_line_for_the_citation_step_to_check(self) -> None:
+        # Built by concatenation so this file holds no citation of its own.
+        cite = "`pair/loop.py" + ":99999`"
+        text = "# T\n\nThe brief names `keep_note`.\n"
+        out = board.with_note(text, "primary, x turn 1", f"See {cite} in `keep_note`.")
+        self.assertTrue(out.startswith(text))
+        self.assertIn("> See `pair/loop.py` line 99999 in `keep_note`.\n", out)
+        self.assertIsNone(
+            re.search(r"`[^`\s:]*[./][^`\s:]*:\d+`", out),
         )
 
     def test_notes_share_a_trailing_section_and_never_join_a_later_one(self) -> None:

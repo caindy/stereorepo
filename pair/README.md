@@ -52,7 +52,10 @@ commits it on its own (`Loop.keep_note`). The other seat reads the note in
 its next diff. A seat learns nothing else of what the other said, and the
 notes land in `issues/done/` with the Issue. Every line is quoted with `> `,
 so a note never adds a heading the loop reads, such as `Needs elaboration` or
-`The plan`. The note is not the seat's change: a turn whose only change is its
+`The plan`. A code span citing a path and a line comes out as the path
+followed by `line` and the number (`board.with_note`): the seat's gate never
+saw its note, so a stale citation in it would otherwise fail the
+`path and line claims` step on the next seat's turn. The note is not the seat's change: a turn whose only change is its
 note is quiet. A grooming pass, a turn that lost its Issue file, and an empty
 message keep no note. An implementing seat runs
 only the gate of each Project its change touches: `just gate meta` always, and
