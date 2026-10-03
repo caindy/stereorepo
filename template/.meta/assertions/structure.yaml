@@ -30,7 +30,6 @@ excluded_paths:
   - .meta/*.py
   - .meta/lib/
   - .meta/checks/
-  - .meta/say/
 
 # The artifacts a Decision names under `enacted_in`. A file earns an entry by
 # being answerable for something.

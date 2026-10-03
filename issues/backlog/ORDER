@@ -1,5 +1,4 @@
 # groomed below
-template-excludes-retired-say-path
 specialize-python-prerequisite
 scaffold-recipes-from-the-render
 technical-writing-skill-successor-citations
