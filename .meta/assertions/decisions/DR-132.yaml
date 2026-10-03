@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/132
     name: "DR-132 · An Issue cited in an inherited file names its owner, and resolving the number is not the offline gate's"
-    status: ADOPTED
+    status: WITHDRAWN
+    withdrawn_because: "It decided the form of a GitHub Issue number (`#nn`) cited in inherited files, and gave resolving that number to the checker that reached GitHub. An Issue is now a file named by its slug, and neither `inherited citations` nor `cited issues` exists."
     applies:
       - work:article/12
     enacted_in:

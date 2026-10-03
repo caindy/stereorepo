@@ -24,7 +24,7 @@ Every written artifact in stereorepo maps to exactly one quadrant:
 1. **Reference (Work + Understanding):** Public function and class docstrings,
    LinkML schemas (`.meta/*_ontology.yaml`), and CLI glosses. Register: dry,
    complete, lookup-oriented. Describes contracts, parameters, and invariants
-   without opinions, tutorials, or historical debates (stereorepo's DR-171, stereorepo's DR-175).
+   without opinions, tutorials, or historical debates (stereorepo's DR-171, stereorepo's DR-334).
 2. **Explanation (Learning + Understanding):** `wiki/<context>/<concept>.md`,
    Decision Records (`DR-nnn.yaml`), and module overviews. Register: expository,
    context-rich, and rationale-driven. Answers *why* choices were made and explores

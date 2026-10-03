@@ -2,7 +2,7 @@
 # edit the assertions and re-render.
 #
 # The verbs, typed. Every recipe invokes a tool under .meta/ and implements
-# nothing; `just --list` is the index (stereorepo's DR-106). Not installed? `uvx --from rust-just just`.
+# nothing; `just --list` is the index (stereorepo's DR-329). Not installed? `uvx --from rust-just just`.
 
 # every recipe, and what it does
 default:

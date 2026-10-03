@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/106
     name: "DR-106 · The root justfile is the verb surface: rendered, invoking only, and never in a seed"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/329
     applies:
       - work:article/8
     enacted_in:

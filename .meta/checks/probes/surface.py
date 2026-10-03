@@ -73,7 +73,7 @@ TOLERATED: tuple[tuple[str, str], ...] = (
 
 @check("verb surface probes", pre=True)
 def verb_surface_probes() -> list[str]:
-    """`justfile_recipe_shape` passes a conforming surface and names each departure the argument-passing contract refuses (stereorepo's DR-106, stereorepo's DR-259).
+    """`justfile_recipe_shape` passes a conforming surface and names each departure the argument-passing contract refuses (stereorepo's DR-329, stereorepo's DR-259).
 
     Driven through the step's `path` and `contract` seams against a one-recipe
     contract, a surface whose recipe is documented, signed as the contract

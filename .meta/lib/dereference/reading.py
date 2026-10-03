@@ -112,7 +112,7 @@ def spans(chk: Any, path: pathlib.Path) -> list[str]:
     of the item above it with no stop-and-capital in between, so each entry is
     asked to support the reason belonging to its predecessor, and a coder who
     fixed what came back would be rewriting true prose to satisfy a splitter —
-    which is the failure stereorepo's DR-134 names as its falsifier, arriving by
+    which is the failure stereorepo's DR-332 names as its falsifier, arriving by
     construction.
     """
     if path.suffix in (".yaml", ".yml"):

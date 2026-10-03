@@ -1,0 +1,64 @@
+decisions:
+  - id: work:decision/334
+    name: "DR-334 · Reader-facing literate programming rubric: a docstring states what to do, and argues with nobody"
+    status: ADOPTED
+    supersedes:
+      - work:decision/175
+    enacted_in:
+      - work:artifact/bootstraps-python-literate-programming
+      - work:artifact/bootstraps-rust-literate-programming
+      - work:artifact/meta-checks-citations
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-apm-compile-agents
+      - work:artifact/meta-checks-citations-claims
+      - work:artifact/meta-checks-citations-prose
+    context: >-
+      Step 5 of Literate Programming sorts the prose in a source file by what
+      it tells the reader: what to do (item docstring), why it is the way it is
+      (module docstring and Decision Records), and what happened, this once
+      (`<module>.history.md`). Docstrings under `.meta/` had come to argue
+      design choices: anticipating objections, narrating discarded
+      alternatives, defending a decision where a usage contract belonged.
+      DR-175 framed that as litigating against a reviewer, and weighed
+      leaving it to reviewer taste during pull request reviews; pull requests
+      are gone, and the failure never depended on who the objector was.
+    alternatives:
+      - name: Target prose-to-code ratio enforced by a gate check
+        chosen: false
+        reason: >-
+          A ratio is arbitrary and easily gamed by padding code or trimming
+          documentation, without making a docstring any clearer to use.
+      - name: Leave register to taste, case by case
+        chosen: false
+        reason: >-
+          Without a rubric in the Bootstrap, what one reading accepts the next
+          refuses, and defensive argument re-accumulates across changes.
+      - name: A reader-facing rubric in Bootstrap guidance
+        chosen: true
+        reason: >-
+          The reader's test ("could someone use this item from its docstring
+          alone, without reading the argument for it?") is actionable. An item
+          docstring states what to do, its arguments, return values and
+          invariants; the module docstring and Decision Records carry the why;
+          history logs carry what happened.
+    consequences:
+      - >-
+        `bootstraps/python/literate-programming.md` and
+        `bootstraps/rust/literate-programming.md` state the Reader's Rubric:
+        a docstring addresses a user of the code, not someone who might object
+        to it.
+      - >-
+        The `/technical-writing` skill holds docstrings and comments to the
+        rubric.
+    falsifier: >-
+      A docstring under `.meta/` or in a Bootstrap whose main content argues
+      against a rejected alternative or defends a design choice rather than
+      stating what the item does and how to call it.
+    rationale: |-
+      Literate Programming is exposition addressed to a reader. A docstring
+      that argues with an imagined objector puts the weight of the argument on
+      every reader who arrives only to use the item.
+
+      The sorting principle already separates what to do, why, and what
+      happened. Held to it, argument and rejected alternatives belong in
+      Decision Records or history logs, never in item docstrings.

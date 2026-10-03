@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/175
     name: "DR-175 · Reader-facing literate programming rubric: docstrings state what to do without litigating against a reviewer"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/334
     enacted_in:
       - work:artifact/bootstraps-python-literate-programming
       - work:artifact/bootstraps-rust-literate-programming

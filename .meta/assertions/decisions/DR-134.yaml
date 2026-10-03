@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/134
     name: "DR-134 · A gate is a predicate a re-run cannot overturn, so a citation's reading runs before the hand-off and blocks no merge"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/332
     applies:
       - work:article/12
     enacted_in:

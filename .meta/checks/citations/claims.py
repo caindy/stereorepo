@@ -122,7 +122,7 @@ def stated_relations(index: dict[str, Any]) -> list[str]:
     """Validate that semantic relationships between entries stated in prose match assertion slots.
 
     Checks indicative statements using relational verbs (`supersedes`, `applies`, `departs_from`)
-    against explicit relation slots in Decision Record definitions (stereorepo's DR-175).
+    against explicit relation slots in Decision Record definitions (stereorepo's DR-334).
 
     Parameters:
         index (dict): LinkML model index mapping URI identifiers to entity tuples.

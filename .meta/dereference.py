@@ -1,5 +1,5 @@
 #!/usr/bin/env -S uvx --python 3.13 --with linkml --with pyyaml python
-"""The reading of a citation, run before the hand-off (stereorepo's DR-134, DR-192).
+"""The reading of a citation, run before the hand-off (stereorepo's DR-332, DR-192).
 
     just dereference                 what this branch wrote or affected, against origin/main
     just dereference --sample        a rotating sample of 20 citations from the durable set
@@ -7,7 +7,7 @@
                                      and about fifteen hundred questions
     .meta/dereference.py --pairs     the deterministic half alone, asking nothing
 
-A12 asks that a citation carry the claim it names. stereorepo's DR-130 checked the
+A12 asks that a citation carry the claim it names. stereorepo's DR-331 checked the
 four shapes of that claim a string search reaches and said the rest was a
 reading and nobody's check; this is the rest, and it is somebody's — whoever
 wrote the citation's, with the second seat still behind it. Each pair is a
@@ -18,7 +18,7 @@ and which of its words say so.
 **Not a gate.** It prints A21's three marks because that is the shape a reader
 here reads, and it is in no Project's `gate` string. A gate's red is a fact a
 re-run cannot overturn; this one's is a model's reading, which the same input
-can answer differently, and stereorepo's DR-134 says why that may not be where a
+can answer differently, and stereorepo's DR-332 says why that may not be where a
 landing is decided. Its `x` is a finding the author answers — by fixing the
 sentence, or by leaving it and saying why — and nothing requires the step. The
 `x` report closes by saying that much, because a reader who does not know it
@@ -26,12 +26,12 @@ re-runs until the finding clears.
 
 What it reads, and what it leaves alone. The durable set, the shape of a
 citation and the entry a citation names are `check.py`'s, imported rather than
-written again: two extractors would drift about what a citation is, which is the
-seam stereorepo's DR-132 closed between the two checkers. What is this file's own
-is the unit — a sentence, because that is what a reader reads and what a claim
-is made in, where `check.py` needs a whole file flattened to one string. A
-citation of an Issue is left out, because every paraphrase failure this was
-built for named an entry.
+written again: two extractors would drift about what a citation is
+(stereorepo's DR-332). What is this file's own is the unit — a sentence,
+because that is what a reader reads and what a claim is made in, where
+`check.py` needs a whole file flattened to one string. A citation of an Issue
+is left out, because every paraphrase failure this was built for named an
+entry.
 
 The scope is the diff and the ground that moved. About fifteen hundred citations
 stand in the durable set, and reading them all is a bill nobody wants twice a

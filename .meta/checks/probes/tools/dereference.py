@@ -1,4 +1,4 @@
-"""`dereference.py`'s scopes and its report (stereorepo's DR-134, stereorepo's DR-192)."""
+"""`dereference.py`'s scopes and its report (stereorepo's DR-332, stereorepo's DR-192)."""
 
 from typing import Any, cast
 
@@ -8,7 +8,7 @@ from checks.probes.harness import load_module, outcome
 
 @check("dereference probes", pre=True)
 def dereference_probes() -> list[str]:
-    """`dereference.py` scopes and reports its citation readings (stereorepo's DR-134, DR-192).
+    """`dereference.py` scopes and reports its citation readings (stereorepo's DR-332, DR-192).
 
     The sample scope, asked for four pairs of the durable set, answers four,
     each carrying its path, citation, sentence and body; asked twice for
@@ -20,7 +20,7 @@ def dereference_probes() -> list[str]:
     report's printing is captured, and what it exited with, if it did, is
     reported beside the case. An `x` closes by saying its marks are a model's
     reading to be answered and not asked again, which is what keeps a
-    provisional red from teaching the re-run (stereorepo's DR-134).
+    provisional red from teaching the re-run (stereorepo's DR-332).
     """
     deref = load_module(META / "dereference.py", "dereference", register=False)
     citations_mod = deref.citations()

@@ -1,0 +1,77 @@
+decisions:
+  - id: work:decision/331
+    name: "DR-331 · A citation's claim is checked in the shapes a string search reaches, and nowhere else"
+    status: ADOPTED
+    supersedes:
+      - work:decision/130
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-check
+      - work:artifact/meta-checks-citations-prose
+    context: >-
+      DR-130 argued for these checks from review threads on pull requests,
+      and gave a fifth, `cited issues`, to a checker that reached GitHub to
+      resolve an Issue number. Pull requests and that checker are gone, and an
+      Issue is a file named by its slug. The four checks over the record
+      stand.
+    alternatives:
+      - name: Check the number only, and leave the claim to whoever reads
+        chosen: false
+        reason: >-
+          `cited decisions` resolves the number and stops, so a citation that
+          names a real entry and says something false about it passes the gate
+          and is caught, if at all, by a reader opening the target. A model's
+          reading is an expensive way to run a string search.
+      - name: Check every claim a citation makes
+        chosen: false
+        reason: >-
+          A paraphrase, a count and a derivation are none of them a search:
+          deciding whether a sentence supports a paraphrase is reading the
+          entry, which is the work the check was meant to save. A checker that
+          attempts it is either a second reader or a source of confident wrong
+          answers.
+      - name: Four shapes, each resolved against the thing cited
+        chosen: true
+        reason: >-
+          Each of the four is a lookup with one answer: the number is in the
+          index or it is not, the quoted words are in the entry or they are
+          not, the slot is set or it is not, the line reads the span or it
+          does not. What it costs is a checker that reads prose with regular
+          expressions and so will be wrong at the edges, so every pattern is
+          narrow and every doubtful shape is passed over rather than reported.
+    consequences:
+      - >-
+        The gate holds `cited articles`, `quoted claims`, `stated relations`
+        and `path and line claims` (`.meta/checks/citations/claims.py`), over
+        the durable set `cited decisions` scans. A12's `checked_by` names
+        them.
+      - >-
+        The four read a document's scalars where `cited decisions` reads the
+        same file as text, so a claim made in a YAML comment has its number
+        resolved and nothing more.
+      - >-
+        Only an attributed quotation is read. `DR-043's step read "…"` puts a
+        noun between the citation and the words, attributing them to a step
+        rather than the entry, and the check passes it over.
+      - >-
+        A relation denied or entertained is passed over. A rejected
+        alternative states relations it argues against, and reporting those
+        would make the record's own form unwritable.
+      - >-
+        The rest of a claim, a paraphrase, is read by `just dereference`
+        (DR-332), which is not a gate.
+    falsifier: >-
+      A check firing on a claim that was true, often enough that somebody
+      rephrases prose to get past the checker rather than to be read. The
+      answer would be to narrow the pattern until it fires only on the shape
+      it names, or, where there is no such pattern, to withdraw that one of
+      the four.
+    rationale: |-
+      A12 asks that a citation carry the claim it names, and for a long time
+      nothing checked it because the claim looked like prose all the way down.
+
+      It is not. Four of the shapes a claim takes resolve against something
+      the repository already holds: an index of entries, an entry's own text,
+      a slot, a line of a file. The rest genuinely are prose. Splitting them
+      was the whole of the work.

@@ -54,10 +54,10 @@ gate`. There are no pull requests.
   Technical Writer register (spelled out, self-contained, citations
   dereferenced). When authoring durable artifacts, follow the Diátaxis compass,
   and apply the `/technical-writing` skill to docstrings, comments and
-  documentation (stereorepo's DR-175, stereorepo's DR-207).
+  documentation (stereorepo's DR-334, stereorepo's DR-207).
 - An empty directory carries a README saying what will live there.
 - The repository operator surface is `just --list`, run at the root
-  (stereorepo's DR-106). Recipes take only flags, subcommands and atomic
+  (stereorepo's DR-329). Recipes take only flags, subcommands and atomic
   identifiers (stereorepo's DR-259, stereorepo's DR-272); do not invoke a script
   under `.meta/` directly where a recipe wraps it. `just gate` is an exit condition, not an entrance condition:
   it runs once the work is done (in the pair loop, before landing), not at

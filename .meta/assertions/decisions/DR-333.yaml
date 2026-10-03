@@ -1,0 +1,61 @@
+decisions:
+  - id: work:decision/333
+    name: "DR-333 · Schemas and executable tooling remain in scaffold inheritance, and APM is reserved for cognitive primitives"
+    status: ADOPTED
+    supersedes:
+      - work:decision/173
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/meta-apm-readme
+      - work:artifact/meta-disciplines
+      - work:artifact/specialize
+      - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-apm-compile-agents
+    context: >-
+      DR-173 argued its rule partly from GitHub Actions workflows (`coder.yml`,
+      `review.yml`) that would have had to run scripts out of harness caches,
+      and settled where the signing channel under `.meta/say/` belonged. The
+      workflows and the channel are gone. The question it answered stands:
+      whether LinkML schemas (`.meta/work/`, `.meta/ddd/`) and executable tools
+      (`check.py`, `.meta/checks/`, `.meta/gate`, `.meta/hooks/`) could ride as
+      supporting resources inside APM skills rather than being copied by
+      Specialization's *Copy what is inherited* step.
+    alternatives:
+      - name: Package schemas and scripts as supporting resources inside APM skills
+        chosen: false
+        reason: >-
+          APM skills allow supporting directories (`scripts/`, `references/`),
+          but repository infrastructure inside them is copied into every
+          harness directory a compile targets (`.claude/skills/`,
+          `.agents/skills/`), which breaks one statement, one home (A8). And it
+          is circular: `.meta/gate` validates the assertions against the
+          LinkML schemas before any APM compile has run.
+      - name: Retain schemas and tooling in scaffold inheritance via Specialization, reserving APM for cognitive primitives
+        chosen: true
+        reason: >-
+          Schemas and CLI tools are repository infrastructure, not agent
+          cognitive primitives. Keeping them in `.meta/`, copied by
+          Specialization, keeps one home for each, and keeps `.meta/gate`
+          runnable on a fresh clone before APM has compiled anything.
+    consequences:
+      - >-
+        LinkML schemas and executable tooling stay in `.meta/` and are
+        inherited through Specialization's copy set.
+      - >-
+        What the compiler writes under `.meta/.apm/` is agent cognitive
+        primitives alone: `instructions`, `agents`, `skills` and `hooks`.
+      - >-
+        An APM hook that calls repository tooling points at the tool's path in
+        the repository, never at a copy in a harness directory.
+    falsifier: >-
+      An APM specification that standardizes machine-executable toolchains and
+      metamodel schemas without duplicating them across harness directories.
+    rationale: |-
+      Treating repository infrastructure and LinkML metamodels as agent prompt
+      resources is a category error.
+
+      APM's purpose in stereorepo is late-binding distribution of agent
+      guidance across model runtimes. Repository enforcement, the gate and
+      the schemas it reads belong to the repository itself, which
+      Specialization seeds once.

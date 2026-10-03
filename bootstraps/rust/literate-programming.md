@@ -76,7 +76,7 @@ checked:
 ## The reader's test and register
 
 Docstrings are addressed to a reader who wants to use the item, not to a
-reviewer who might object (DR-175).
+reviewer who might object (DR-334).
 
 Docstrings litigate when they anticipate objections, debate discarded
 alternatives, or narrate past bugs. A reader arriving at an item docstring needs

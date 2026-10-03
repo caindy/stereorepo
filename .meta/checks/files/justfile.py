@@ -1,7 +1,7 @@
 """What the root verb surface owes its callers: a recipe signature built from
 flags, subcommands and atomic identifiers, every parameter reaching the tool it
 was declared for, and a doc comment for the index `just --list` prints
-(stereorepo's DR-106, stereorepo's DR-259).
+(stereorepo's DR-329, stereorepo's DR-259).
 
 The surface this governs is the public one: a `just` private recipe (its name
 prefixed `_`) is an internal subroutine called only from another recipe's
@@ -184,7 +184,7 @@ def _departures(where: str, recipe: Recipe, declared: tuple[tuple[str, str], ...
                  for unknown in sorted(interpolated - known)]
 
     if name != "default" and not any(root in line for line in body for root in TOOL_ROOTS):
-        problems.append(f"{where} invokes no tool under .meta/ (stereorepo's DR-106)")
+        problems.append(f"{where} invokes no tool under .meta/ (stereorepo's DR-329)")
     if not documented:
         problems.append(f"{where} carries no doc comment, so `just --list` indexes it blank")
     return problems

@@ -1,4 +1,4 @@
-"""The files a render writes that are not prose: the justfile (stereorepo's DR-106) and the APM primitives (stereorepo's DR-172, stereorepo's DR-173).
+"""The files a render writes that are not prose: the justfile (stereorepo's DR-329) and the APM primitives (stereorepo's DR-172, stereorepo's DR-333).
 """
 
 from typing import Any
@@ -9,7 +9,7 @@ from lib.render import META, record
 def justfile() -> str:
     """The root's verb surface, rendered so that the one line in it that names
     anything comes from the assertions rather than a list kept beside them
-    (stereorepo's DR-106).
+    (stereorepo's DR-329).
 
     Every recipe invokes a tool under `.meta/` and implements nothing; `just
     --list` is the index. The doc comment on `gate` names what the runner
@@ -32,7 +32,7 @@ def justfile() -> str:
         "# edit the assertions and re-render.",
         "#",
         "# The verbs, typed. Every recipe invokes a tool under .meta/ and implements",
-        "# nothing; `just --list` is the index (stereorepo's DR-106). Not installed? `uvx --from rust-just just`.",
+        "# nothing; `just --list` is the index (stereorepo's DR-329). Not installed? `uvx --from rust-just just`.",
         "",
         "# every recipe, and what it does",
         "default:",
@@ -127,6 +127,6 @@ def justfile() -> str:
 
 
 def apm_primitives() -> dict[str, str | bytes]:
-    """Compiles .meta/assertions/ into .meta/.apm/ primitives and .meta/apm.yml (stereorepo's DR-172, stereorepo's DR-173)."""
+    """Compiles .meta/assertions/ into .meta/.apm/ primitives and .meta/apm.yml (stereorepo's DR-172, stereorepo's DR-333)."""
     import apm_compile
     return apm_compile.rendered_primitives(META)

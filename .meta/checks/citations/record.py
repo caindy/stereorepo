@@ -1,4 +1,4 @@
-"""A citation resolved against the record: a Decision that exists, an Artifact named by the Decision it cites, and the citations inherited material carries as stereorepo's (stereorepo's DR-132).
+"""A citation resolved against the record: a Decision that exists, an Artifact named by the Decision it cites, and the citations inherited material carries as stereorepo's (stereorepo's DR-121, stereorepo's DR-330).
 """
 
 
@@ -16,7 +16,7 @@ def cited_decisions(index: dict[str, Any]) -> list[str]:
     Ensures that Decision citations (`DR-nnn`) in durable files resolve to known Decision
     records in `index` (or the template seed), and enforces that files inherited by
     specialized portfolios use the qualified `stereorepo's DR-nnn` form
-    (stereorepo's DR-121, stereorepo's DR-124).
+    (stereorepo's DR-121, stereorepo's DR-330).
 
     Parameters:
         index (dict): LinkML model index mapping URI identifiers to entity tuples.

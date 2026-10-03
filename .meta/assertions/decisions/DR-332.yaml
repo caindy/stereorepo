@@ -1,0 +1,103 @@
+decisions:
+  - id: work:decision/332
+    name: "DR-332 · A gate is a predicate a re-run cannot overturn, so a citation's reading is a step that blocks nothing"
+    status: ADOPTED
+    supersedes:
+      - work:decision/134
+    applies:
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-dereference
+      - work:artifact/meta-charter
+      - work:artifact/justfile
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-checks-probes-tools-dereference
+      - work:artifact/meta-lib-dereference-asking
+      - work:artifact/meta-lib-dereference-reading
+      - work:artifact/meta-lib-dereference-report
+    context: >-
+      DR-134 placed the reading of a citation between a coder and a reviewer:
+      run by the coder before requesting review, in `coder.yml` on CI, with a
+      credential file written for the runner. The workflows, the two GitHub
+      Roles and the credential file are gone. A paraphrase that its entry
+      does not support is still the citation failure the four string-search
+      checks (DR-331) cannot catch.
+    alternatives:
+      - name: Leave the paraphrase to whoever reads next
+        chosen: false
+        reason: >-
+          A paraphrase is caught only where somebody opens the entry, so the
+          cost is a reading of the whole change to reach a few sentences. What
+          that buys over reading the pairs alone is nothing.
+      - name: A gate step that is red when the model disagrees
+        chosen: false
+        reason: >-
+          The verdict is a model's, so the same commit can be red on one run
+          and green on the next, and a red that a re-run clears teaches every
+          reader to re-run rather than to look. It would take the
+          deterministic steps' authority down with it.
+      - name: Among the gate's steps, reporting `?` and never `x`
+        chosen: false
+        reason: >-
+          The outcome A6 leaves unmarked is the step that could not run; a
+          step that ran and disagrees is saying something else, and one mark
+          for both leaves a reader unable to tell a missing model from a false
+          citation. It would also read the whole durable set on every run,
+          where what anyone wants read is what the branch changed.
+      - name: A step run by whoever wrote the citations, blocking nothing
+        chosen: true
+        reason: >-
+          It is the reading a careful reader does, made cheap and run where
+          the author can still act on it: over the citations this branch
+          wrote. Its `x` is a finding the author answers, by fixing the
+          sentence or by leaving it and saying why. What it costs: nothing
+          requires it, so a branch that skips it is exactly as safe as without
+          it, and it is wrong sometimes, which is affordable because it decides
+          nothing.
+    consequences:
+      - >-
+        `.meta/dereference.py` is the step and `just dereference` the verb. It
+        imports the durable set, the shape of a citation and the entry a
+        citation names from the gate's own checks rather than writing them
+        again, because two extractors would disagree about what a citation
+        is. Its own unit is a sentence: a page is cut on its blank lines and a
+        table on its rows.
+      - >-
+        The scope is the diff: a citation is read where this branch wrote or
+        changed its sentence, against the merge base, plus any citation whose
+        target moved under it (DR-192). `--sample` reads a rotating window of
+        the durable set and `--all` reads everything.
+      - >-
+        It reports in A21's three marks and is in no Project's `gate` string.
+        `?` keeps the meaning A6 gives it, that the pair could not be
+        answered, and a disagreement is `x`, which blocks nothing.
+      - >-
+        The model is the `claude` CLI on `PATH`, logged in as whatever account
+        it is. Without it every pair is `?` and the step says so.
+      - >-
+        A12's `checked_by` names it: a paraphrase is the author's to check
+        before the turn ends, a seat's or the developer's, with the other
+        seat's reading behind it. What it still is not is the gate's.
+    falsifier: >-
+      Authors reading its `x` and leaving the sentence unchanged, while the
+      other seat goes on finding unsupported paraphrases at the rate it does
+      now. That would say advice nobody must act on is not worth a model call
+      per citation. The other side is confident wrong verdicts: if an author
+      starts rewriting true sentences to satisfy the step, it costs more than
+      the reading it replaced.
+    rationale: |-
+      The question underneath is what a gate is here, and the answer this
+      entry takes is that a gate is a predicate a re-run cannot overturn.
+      Everything in `check.py` has that property. Red means a fact, and that
+      is why a red gate stops a landing.
+
+      A model's verdict on a paraphrase does not have it. Given the same
+      sentence and entry it can answer differently, and a check whose red is
+      provisional does not become trustworthy by being useful.
+
+      The pair loop already has a place for a reading that can send work
+      back: the other seat, which reads the turn and changes what it finds
+      wrong. Nothing about the paraphrase problem asks for a new kind of
+      authority. It asks for that reading to happen earlier, per citation, at
+      a smaller price, where the author can still answer it.

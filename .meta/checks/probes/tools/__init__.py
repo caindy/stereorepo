@@ -1,6 +1,6 @@
 """The tools beside the gate, run against the answers they exist to give (stereorepo's DR-209).
 
-`dereference.py`'s scopes and report (stereorepo's DR-134, stereorepo's DR-192),
+`dereference.py`'s scopes and report (stereorepo's DR-332, stereorepo's DR-192),
 `search.py`'s index and benchmark (stereorepo's DR-103), `apm_compile.py`'s byte
 fallback for a skill file that is not UTF-8 text (stereorepo's DR-208), `render.py`'s
 writes under a sandbox that denies one of them (stereorepo's DR-302), and the

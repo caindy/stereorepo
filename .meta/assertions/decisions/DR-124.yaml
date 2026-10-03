@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/124
     name: "DR-124 · A docstring is prose: every file a portfolio copies is held to the citation form, whatever its suffix"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/330
     applies:
       - work:article/12
     enacted_in:

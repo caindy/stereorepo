@@ -7,9 +7,9 @@ from typing import Any
 
 # What an `x` is, said where the `x` is read. A reader who does not know the
 # verdict is provisional re-runs until it clears, which is the habit
-# stereorepo's DR-134 names as the cost of a provisional red.
+# stereorepo's DR-332 names as the cost of a provisional red.
 READING = ("a mark above is a model's reading, and the same pair can answer differently on "
-           "a re-run with nothing changed (stereorepo's DR-134); answer it by fixing the "
+           "a re-run with nothing changed (stereorepo's DR-332); answer it by fixing the "
            "sentence, or by leaving it and saying why in the Issue file, and not by "
            "asking again")
 

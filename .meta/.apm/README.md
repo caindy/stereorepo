@@ -32,12 +32,12 @@ Primitives are **derived from `.meta/assertions/`**, never authored twice:
 | a Capability of kind SKILL | `skills` |
 | the gate | `hooks` |
 
-**Compiled by `.meta/apm_compile.py` / `.meta/render.py` from `.meta/assertions/` (stereorepo's DR-172, stereorepo's DR-173, stereorepo's DR-200).**
+**Compiled by `.meta/apm_compile.py` / `.meta/render.py` from `.meta/assertions/` (stereorepo's DR-172, stereorepo's DR-333, stereorepo's DR-200).**
 The primitives are generated derived artifacts rather than hand-written files.
 Running `just render` re-compiles them from the assertions and verifies that no
 drift has occurred.
 
-## What the canon says, settled in stereorepo's DR-172 and DR-173
+## What the canon says, settled in stereorepo's DR-172 and DR-333
 
 Checked against APM's own pages and verified in practice,
 per the rule that an adopted convention is defined by its canon and not by us.
@@ -47,7 +47,7 @@ per the rule that an adopted convention is defined by its canon and not by us.
   `--root <DIR>` to redirect generated harness files (`.claude/`, `.gemini/`, `.agents/`)
   and root context files (`AGENTS.md`, `CLAUDE.md`) to the repository root.
   Executing `cd .meta && apm compile --root .. --all` compiles from `.meta/` cleanly.
-- **Schemas and tooling stay in scaffold inheritance (stereorepo's DR-173).** LinkML schemas
+- **Schemas and tooling stay in scaffold inheritance (stereorepo's DR-333).** LinkML schemas
   (`.meta/work/`, `.meta/ddd/`) and executable tools (`.meta/hooks/`,
   `check.py`, `.meta/gate`) are repository infrastructure and metamodels, not agent
   cognitive primitives. Packaging them as skill resources would duplicate them across

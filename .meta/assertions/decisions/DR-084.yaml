@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/084
     name: "DR-084 · A decision names its Challenge, and what landed is rendered from the record"
-    status: ADOPTED
+    status: WITHDRAWN
+    withdrawn_because: "It made a Decision name the Challenge it served so that `render.py --landed` could render what landed, as a step of PR First before merging. The Challenge class, the `--landed` render and the merge step are all gone, so nothing is left for it to decide."
     applies:
       - work:article/8
       - work:article/11

@@ -1,0 +1,84 @@
+decisions:
+  - id: work:decision/329
+    name: "DR-329 · The root justfile is the verb surface: rendered, invoking only, and never in a seed"
+    status: ADOPTED
+    supersedes:
+      - work:decision/106
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/justfile
+      - work:artifact/meta-render
+      - work:artifact/meta-readme
+      - work:artifact/meta-disciplines
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-render-writers
+    context: >-
+      DR-106 put a rendered `justfile` at the root and listed its recipes as
+      `gate`, `render`, `pr`, `watch`, `sweep` and `landed`. The last four
+      drove pull requests, and an amendment had `gate.yml` call `just`. Pull
+      requests and the repository's workflows are gone; work reaches `main`
+      through the pair loop, and its verbs (`pair`, `groom`, `pair-status`,
+      `pair-accept`, `pair-resume`, `pair-watch`) sit in the same file.
+    alternatives:
+      - name: The commands as they are, typed from the load map
+        chosen: false
+        reason: >-
+          Each verb would be a line in `.meta/README.md`, read only once the
+          load map has been found. A developer arriving types the tool they
+          know before reading anything.
+      - name: A Makefile
+        chosen: false
+        reason: >-
+          make is a build tool, and a file that only invokes pays for build
+          semantics it never uses: `.PHONY` on every target, a recipe skipped
+          because a file has its name, arguments as `VAR=value`, and a help
+          target written by hand. It is on every machine, which is the one
+          thing it has over the choice below.
+      - name: A recipe per Project
+        chosen: false
+        reason: >-
+          `gate-rust-seed` beside `gate-meta` is a hand-kept list. One recipe
+          takes a word and the runner resolves it.
+      - name: A justfile, rendered, invoking only
+        chosen: true
+        reason: >-
+          `just` is a command runner with make's file shape and none of its
+          build rules: recipes take arguments, `just --list` prints every
+          recipe with its comment, and nothing is skipped for the name of a
+          file. The file is a render target, so its one derived line, what
+          `gate` takes, comes from the Projects and Products in
+          `structure.yaml`, and a portfolio's lists its own. What it costs:
+          `just` is not on a machine by default, so it is installed or run as
+          `uvx --from rust-just just`, and each verb has a second spelling
+          beside the tool's own, which is why every recipe is one line that
+          invokes.
+    consequences:
+      - >-
+        `render.py` writes the root `justfile`, and `rendered prose` holds it
+        against a fresh render like every other generated page. `just --list`
+        is the index of the repository's verbs.
+      - >-
+        A recipe invokes a tool under `.meta/` or `pair/` and never implements
+        one. `justfile_recipe_shape` (`.meta/checks/files/justfile.py`) holds
+        that, and DR-259 the shape of the arguments a recipe takes.
+      - >-
+        A seed carries no `justfile`, per DR-092: a Project's gate is its own
+        language's, and the verb comes from the root.
+      - >-
+        Specialization's *Copy what is inherited* step carries `.meta/gate`
+        with the `justfile`, so a portfolio inherits the runner as well as the
+        verb that calls it.
+    falsifier: >-
+      A recipe that grows a second line of logic and stays, or a portfolio
+      found with a `justfile` a render did not write. Either means the file
+      became a tool, and a tool belongs under `.meta/` with a gate over it.
+    rationale: |-
+      The developer asked for developer ergonomics: a root that can be typed
+      at, the way a Makefile-oriented repository can, with the file invoking
+      the Python tools rather than replacing them. `just` over make was the
+      trade: arguments and a listing, for an install.
+
+      What changed since DR-106 is the list of verbs and not the rule. The
+      recipes that served pull requests went with them, and the pair loop's
+      came in the same shape: one line each, invoking a tool.

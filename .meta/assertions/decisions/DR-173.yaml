@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/173
     name: "DR-173 · Schemas and executable tooling remain in scaffold inheritance, and APM is reserved for cognitive primitives"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/333
     applies:
       - work:article/8
     enacted_in:

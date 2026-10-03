@@ -64,10 +64,10 @@ observe. There are no pull requests.
   Technical Writer register (spelled out, self-contained, citations
   dereferenced). When authoring durable artifacts, follow the Diátaxis compass,
   and apply the `/technical-writing` skill to docstrings, comments and
-  documentation (DR-175, DR-207).
+  documentation (DR-334, DR-207).
 - An empty directory carries a README saying what will live there.
 - The repository operator surface is `just --list`, run at the root
-  (DR-106). Recipes take only flags, subcommands and atomic
+  (DR-329). Recipes take only flags, subcommands and atomic
   identifiers (DR-259, DR-272); do not invoke a script
   under `.meta/` directly where a recipe wraps it. `just gate` is an exit condition, not an entrance condition:
   it runs once the work is done (in the pair loop, before landing), not at

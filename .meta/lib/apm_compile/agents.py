@@ -1,4 +1,4 @@
-"""The agent primitives: Roles and Personas compiled to `agents/` (stereorepo's DR-173).
+"""The agent primitives: Roles and Personas compiled to `agents/` (stereorepo's DR-333).
 """
 from __future__ import annotations
 

@@ -10,7 +10,7 @@ which is a probe over the wiki's form and not over a tool beside the gate
 `checks/probes/wiki.py`.
 One further probe is over the form the prose in all three containers carries:
 the possessive that marks a citation as stereorepo's rather than a portfolio's
-own (stereorepo's DR-121, stereorepo's DR-132).
+own (stereorepo's DR-121, stereorepo's DR-330).
 Each check is run against strings and stand-in pages rather than the tree, so a
 case is one fixture and one expectation, and a failure names the case. The
 steps register here rather than beside the checks they exercise, because the
@@ -299,7 +299,7 @@ def citation_form_probes() -> list[str]:
     letter is widened. The number is spelled from `count` rather than typed,
     because `DR-` followed by digits in a file a portfolio copies is a citation
     as far as `cited decisions` is concerned, and this one is a fixture
-    (stereorepo's DR-124).
+    (stereorepo's DR-330).
     """
     problems = []
     count = 999
