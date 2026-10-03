@@ -23,6 +23,7 @@ from gate import (
     rendered,
     run,
     select,
+    tool,
     unselected,
 )
 
@@ -290,6 +291,17 @@ def test_only_a_finding_fails(tree: Tree, capsys: pytest.CaptureFixture[str]) ->
     assert "x  bad (1)\n     x\n" in out.out
     assert "?  steps that could not run (1)" in out.out
     assert out.err.startswith("usage: uv run gate [gate | lints")
+
+
+def test_a_tools_output_stays_off_the_reports(
+    tree: Tree, capfd: pytest.CaptureFixture[str]
+) -> None:
+    tree.write("loud.py", 'print("LOUD")\n')
+    steps: list[Step] = [("loud", lambda root: tool(root, "loud", [], "loud"))]
+    assert run(tree.root, steps, environ={}) == 0
+    out = capfd.readouterr()
+    assert out.out == "ok loud — loud\n"
+    assert "LOUD" in out.err
 
 
 def test_closing_block_conditions_on_ci() -> None:

@@ -165,6 +165,9 @@ def relative(root: Path, path: Path) -> str:
 def tool(cwd: Path, module: str, args: list[str], scope: str) -> Outcome:
     """Executes a Python module as a subprocess tool within the active interpreter.
 
+    The tool's standard output goes to the gate's standard error, so the gate's
+    standard output carries only step reports (Article 21).
+
     Args:
         cwd: Working directory for tool execution.
         module: Python module name to run via `-m`.
@@ -177,7 +180,7 @@ def tool(cwd: Path, module: str, args: list[str], scope: str) -> Outcome:
     """
     argv = [sys.executable, "-m", module, *args]
     try:
-        status = subprocess.run(argv, cwd=cwd, check=False)  # noqa: S603  # reason: fixed argv from STEPS, no shell, no input
+        status = subprocess.run(argv, cwd=cwd, stdout=sys.stderr, check=False)  # noqa: S603  # reason: fixed argv from STEPS, no shell, no input
     except OSError as error:
         return CouldNotRun(f"{module} did not start: {error}")
     if status.returncode == 0:
@@ -268,6 +271,9 @@ def test(root: Path) -> Outcome:
 def mutants(root: Path) -> Outcome:
     """Runs mutation testing via mutmut across packages under packages/.
 
+    `mutmut run` prints its progress to the gate's standard error, as `tool`
+    does, so the gate's standard output carries only step reports (Article 21).
+
     Args:
         root: Workspace root directory path.
 
@@ -289,6 +295,7 @@ def mutants(root: Path) -> Outcome:
         run_ = subprocess.run(  # noqa: S603  # reason: mutmut run fixed argv, no shell, no input
             [mutmut, "run", "--max-children", str(max_children)],
             cwd=package,
+            stdout=sys.stderr,
             check=False,
         )
         if run_.returncode != 0:
