@@ -14,7 +14,7 @@ answer from it shows as a wrong verdict rather than as a failure. Each is loaded
 asked one case at a time, and a failure names the case. The steps register here rather
 than beside the tools they exercise, because the gate over assertions should not take
 its imports from a test suite (stereorepo's DR-150). One module per probe,
-imported in the order the steps report in (stereorepo's DR-218).
+imported in the order the steps report in (stereorepo's DR-345).
 `test_brownfield` is scaffold-only, so it is imported last and only where it is present:
 a specialized portfolio has no adoption tool for it to probe (stereorepo's DR-305).
 """

@@ -8,7 +8,7 @@ verdict instead. Each is asked one case at a time, and a failure names
 the case. The steps register here rather than beside the checks they exercise,
 because the gate over assertions should not take its imports from a test suite
 (stereorepo's DR-150). One module per probe, re-exported in the order the steps
-report in (stereorepo's DR-218); the re-export is what imports the module and so
+report in (stereorepo's DR-345); the re-export is what imports the module and so
 what registers its step, which is why this package suppresses nothing.
 """
 from checks.probes.files.board import board_front_matter_probes, board_order_probes

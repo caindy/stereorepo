@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/218
     name: "DR-218 · A module under .meta/ that is imported rather than run becomes a package of its own name in place, whose __init__ registers what its modules define"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/345
     applies:
       - work:article/2
     enacted_in:

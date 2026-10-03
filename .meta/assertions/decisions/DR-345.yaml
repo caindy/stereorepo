@@ -1,0 +1,94 @@
+decisions:
+  - id: work:decision/345
+    name: "DR-345 · A module under .meta/ that is imported rather than run becomes a package of its own name in place, whose __init__ registers what its modules define"
+    status: ADOPTED
+    supersedes:
+      - work:decision/218
+    applies:
+      - work:article/2
+    enacted_in:
+      - work:artifact/meta-checks-probes-harness
+      - work:artifact/meta-checks-probes-harness-acts
+      - work:artifact/meta-checks-probes-harness-loaders
+      - work:artifact/meta-checks-probes-harness-fakes
+      - work:artifact/meta-checks-graph
+      - work:artifact/meta-checks-graph-structure
+      - work:artifact/meta-checks-graph-record
+      - work:artifact/meta-checks-graph-artifacts
+      - work:artifact/meta-checks-probes-tools
+      - work:artifact/meta-checks-probes-tools-dereference
+      - work:artifact/meta-checks-probes-tools-search
+      - work:artifact/meta-checks-probes-tools-apm-compile
+      - work:artifact/meta-checks-probes-tools-comments
+      - work:artifact/meta-checks-citations
+      - work:artifact/meta-checks-citations-loaders
+      - work:artifact/meta-checks-citations-prose
+      - work:artifact/meta-checks-citations-record
+      - work:artifact/meta-checks-citations-claims
+      - work:artifact/meta-assertions-structure
+      - work:artifact/meta-checks-files
+      - work:artifact/meta-lib-dereference-reading
+    context: >-
+      DR-218 settled how an imported module under `.meta/` splits, with the
+      loop probes' module as its example and the history logs of `check_pr`
+      and the channel as its evidence; all three are gone, and the rule stands
+      without them. DR-344 settles where a script's body goes: the script
+      stays at its path, because the justfile and the structure assertions
+      invoke it there, and its body lives under `.meta/lib/`, because a
+      package cannot take the name of a module beside it. An imported module
+      has no such path to keep. Nothing runs `.meta/checks/citations/` by
+      path: `check.py` imports `checks`, and importing `checks.citations`
+      registers its steps. So when that module outgrew one subject, a package
+      named `citations` took its name, and `import checks.citations` resolves
+      to the package because it is the only `citations` on the parent's path.
+      DR-342 asks one module for one subject, so that a history log's
+      Evidence names the file holding the step it cites.
+    alternatives:
+      - name: Move the module's body under .meta/lib/ as DR-344 does for scripts
+        chosen: false
+        reason: >-
+          A module nothing runs by path has no claim on its name that would
+          force its body aside, and a package under `lib/` would put the steps
+          two directories from the harness they import and the package that
+          registers them, for a reason that does not apply.
+      - name: Leave a thin module re-exporting from a differently named sibling package
+        chosen: false
+        reason: >-
+          A module that exists only to re-export a package beside it is the
+          entry-script shape without an entry script. It costs a second name
+          for the same subject and an Evidence line that could name either.
+      - name: Replace the module with a package of the same name in place, one module per subject, the __init__ importing each
+        chosen: true
+        reason: >-
+          `import checks.citations` still registers every step, in the order
+          the `__init__` lists them, which is the parent package's own pattern,
+          and the `__init__` re-exports the names callers imported from the
+          module, so `from checks.citations import FOREIGN` resolves as it did.
+          What it costs is that the artifact's path moves to the package's
+          `__init__.py`, and each Decision a step cites now names the module
+          that carries it.
+    consequences:
+      - >-
+        `.meta/checks/citations/`, `.meta/checks/graph/`, `.meta/checks/files/`,
+        `.meta/checks/probes/tools/` and `.meta/checks/probes/files/` are
+        packages whose `__init__` imports their modules in the order the steps
+        report in. `.meta/checks/probes/harness/` registers no step, and its
+        `__init__` re-exports what its modules define.
+      - >-
+        The type ratchet holds one number per module in place of the
+        package's (DR-210).
+      - >-
+        An imported module under `.meta/checks/` that outgrows one subject
+        splits the same way; a script splits as DR-344 says.
+    falsifier: >-
+      A step in a module of one of these packages that `python .meta/check.py`
+      does not run, or a name a caller imports from the package that its
+      `__init__` no longer binds.
+    rationale: |-
+      Two conventions rather than one, because the constraint that shaped
+      DR-344 is a fact about scripts and not about Python. A script's path is
+      its interface; a module's name is. Where the path is taken the body moves
+      aside; where only the name is, the package takes the name and nothing
+      that imported the module notices, provided the `__init__` binds every
+      name a caller imported from the old module. That is the thing to check
+      before splitting, and a grep for importers checks it.

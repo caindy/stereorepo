@@ -1,5 +1,5 @@
 """
-The ban on inline Python (stereorepo's DR-241): a shell script or a recipe runs a
+The ban on inline Python (stereorepo's DR-348): a shell script or a recipe runs a
 dedicated script under `.meta/` or a CLI flag, never an interpreter handed its
 code on the command line, on standard input or down a pipe, which is how code
 escapes the linters and the type checker this gate runs.
@@ -98,14 +98,14 @@ def _find_inline_python_in_file(path: pathlib.Path) -> list[str]:
         if INLINE_PYTHON.search(line):
             problems.append(
                 f"{path.relative_to(ROOT)}:{number} contains inline Python: '{stripped}' "
-                "— externalize to a dedicated .meta/ script or CLI flag (stereorepo's DR-241)"
+                "— externalize to a dedicated .meta/ script or CLI flag (stereorepo's DR-348)"
             )
     return problems
 
 
 @check("inline python")
 def no_inline_python() -> StepOutcome:
-    """Shell scripts contain no embedded inline Python invocations (stereorepo's DR-241).
+    """Shell scripts contain no embedded inline Python invocations (stereorepo's DR-348).
 
     Ensures that shell scripts and recipe
     definitions execute dedicated, type-checked Python scripts under `.meta/`

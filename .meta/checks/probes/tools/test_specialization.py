@@ -1,7 +1,7 @@
 """`test_specialization.py`'s fixture loading, path inheritance, token substitution, and
 shipped `.gitignore` probes.
 
-Cites stereorepo's DR-239 and stereorepo's DR-244.
+Cites stereorepo's DR-347 and stereorepo's DR-244.
 """
 
 from __future__ import annotations
@@ -279,7 +279,7 @@ def _check_bundle(runner: Any) -> list[str]:
 @check("test-specialization probes", pre=True)
 def test_specialization_probes() -> list[str]:
     """`test_specialization.py` fixture loading, workflow retargeting,
-    and placeholder substitution (stereorepo's DR-239, stereorepo's DR-244).
+    and placeholder substitution (stereorepo's DR-347, stereorepo's DR-244).
 
     Validates that:
     1. `tokens.json` contains all six expected template placeholder keys with non-empty strings.

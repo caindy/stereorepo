@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/259
     name: "DR-259 · Reserve the just verb surface for operator flags and identifiers by scoping authoring to skills"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/349
     supersedes:
       - work:decision/187
     applies:

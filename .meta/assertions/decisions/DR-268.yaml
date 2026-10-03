@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/268
     name: "DR-268 · Tooling shebangs retain python3 with Python 3.13 pre-baked in the runner image and asserted as a front-door prerequisite for fresh clones"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/351
     enacted_in:
       - work:artifact/meta-check
       - work:artifact/meta-checks-files-python

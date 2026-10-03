@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/239
     name: "DR-239 · An automated end-to-end Specialization dogfooding harness with pre-judged portfolio fixtures"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/347
     applies:
       - work:article/9
       - work:article/21

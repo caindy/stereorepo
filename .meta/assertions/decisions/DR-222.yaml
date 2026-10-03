@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/222
     name: "DR-222 · Only the developer puts a decision in force, and a change carrying one waits for it"
-    status: ADOPTED
+    status: WITHDRAWN
+    withdrawn_because: "It had only the developer adopt a decision, and a pull request carrying one wait for it, as steps of Written Decisions. Those steps and the pull request are gone; in the pair loop a seat writes a settled question as ADOPTED and commits it with the change, and a desk check is how the developer holds a change back, so nothing is left for it to decide."
     applies:
       - work:article/11
       - work:article/20

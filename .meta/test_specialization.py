@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Operational test runner for automated Specialization end-to-end verification.
 
-Cites DR-239 and DR-244.
+Cites DR-347 and DR-244.
 
 Executes the 8-step Specialization Discipline into an isolated, temporary git repository
 using pre-judged portfolio fixtures (DR-026, DR-341), validating that:

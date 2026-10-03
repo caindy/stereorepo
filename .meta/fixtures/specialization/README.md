@@ -1,6 +1,6 @@
 # Specialization Fixture
 
-Reference documentation for the synthetic portfolio specialization fixture (DR-026, DR-239, DR-244).
+Reference documentation for the synthetic portfolio specialization fixture (DR-026, DR-347, DR-244).
 
 ## Purpose
 

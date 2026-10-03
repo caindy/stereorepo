@@ -1,12 +1,12 @@
 """What the root verb surface owes its callers: a recipe signature built from
 flags, subcommands and atomic identifiers, every parameter reaching the tool it
 was declared for, and a doc comment for the index `just --list` prints
-(stereorepo's DR-329, stereorepo's DR-259).
+(stereorepo's DR-329, stereorepo's DR-349).
 
 The surface this governs is the public one: a `just` private recipe (its name
 prefixed `_`) is an internal subroutine called only from another recipe's
 body, never typed by an operator and never listed by `just --list`, so it
-sits outside stereorepo's DR-259's operator-facing contract and this module does
+sits outside stereorepo's DR-349's operator-facing contract and this module does
 not see it.
 """
 
@@ -75,7 +75,7 @@ CONTRACT: Contract = {
 """The declared shape of every root recipe: each parameter in signature order, paired with
 the kind of value it carries. There is no prose kind to declare, so a recipe taking a bare
 multi-word positional cannot be written down here and fails the step until it is redesigned
-(stereorepo's DR-259)."""
+(stereorepo's DR-349)."""
 
 
 def _parameters(raw: str) -> list[tuple[str, str]]:
@@ -171,7 +171,7 @@ def _departures(where: str, recipe: Recipe, declared: tuple[tuple[str, str], ...
         problems.append(
             f"{where} is not in the argument-passing contract — declare its parameters in "
             "CONTRACT as flags, a subcommand or an atomic identifier, or route it to an "
-            "agent skill if it takes prose (stereorepo's DR-259)"
+            "agent skill if it takes prose (stereorepo's DR-349)"
         )
     elif parameters != declared:
         problems.append(f"{where} takes {parameters}, but the contract declares {declared}")

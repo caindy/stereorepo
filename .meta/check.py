@@ -12,7 +12,7 @@ import sys
 
 if sys.hexversion < 0x030D0000:
     sys.exit(
-        f"check.py requires Python 3.13+ (stereorepo's DR-268); "
+        f"check.py requires Python 3.13+ (stereorepo's DR-351); "
         f"running on {sys.version.split()[0]}"
     )
 

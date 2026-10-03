@@ -1,0 +1,102 @@
+decisions:
+  - id: work:decision/349
+    name: "DR-349 · Root recipes take only flags, subcommands and atomic identifiers, and a tool that takes prose is reached through a skill"
+    status: ADOPTED
+    supersedes:
+      - work:decision/259
+      - work:decision/272
+    applies:
+      - work:article/8
+      - work:article/22
+    enacted_in:
+      - work:artifact/justfile
+      - work:artifact/meta-lib-render-writers
+      - work:artifact/meta-lib-render-skills
+      - work:artifact/meta-lib-search-build
+      - work:artifact/skill-wikisplain
+      - work:artifact/skill-search
+      - work:artifact/skill-technical-writing
+      - work:artifact/agents
+      - work:artifact/template-agents
+      - work:artifact/wiki-stereorepo-knowledge-management
+    context: >-
+      DR-259 and DR-272 set the argument contract of the root `justfile` and
+      applied it to wiki authoring and to search. They argued it from three
+      operational planes, one of them the channel and another GitHub, and from
+      recipes that are gone (`pr`, `merge-manager`); the planes and the recipes
+      are gone, and the contract stands on what remains. DR-329 makes the root
+      `justfile` the operator surface, which `just --list` indexes. `just`
+      interpolates a variadic `*args` unquoted, so a caller's quoted
+      multi-word argument reaches the tool as several, and whether that
+      matters depends on how the tool parses its arguments, which a caller
+      cannot see from `just --list`, against Article 22. Every recipe on the
+      surface takes flags, a subcommand or an identifier, where splitting
+      changes nothing. Two tools took prose: `wikisplain.py` a concept name
+      and `search.py` a query.
+    alternatives:
+      - name: Faithful forwarding across the whole surface
+        chosen: false
+        reason: >-
+          `set positional-arguments` and `"$@"` make `just` keep the caller's
+          quotes, but they let a tool taking prose sit on a surface whose other
+          recipes take none, and they invite more
+          prose-taking recipes to accumulate there rather than in skills.
+      - name: Tolerant tools that rejoin split arguments
+        chosen: false
+        reason: >-
+          Having every tool behind a variadic recipe take `nargs="+"` or
+          `nargs="*"` and rejoin the pieces pushes a shell-quoting workaround
+          into each tool, lets the tools diverge, and needs a check over every
+          `argparse` definition to hold. Both tools keep their rejoining as a
+          convenience for a terminal caller, not as the contract.
+      - name: Restrict a prose-taking recipe to one atomic token
+        chosen: false
+        reason: >-
+          It refuses the splat, but a concept name or a query is prose, so the
+          recipe either fails on an unquoted space or restricts lookups to one
+          word.
+      - name: Recipes take only flags, subcommands and identifiers, and prose-taking tools move to skills
+        chosen: true
+        reason: >-
+          The surface holds what its contract says it holds. The `/wikisplain`
+          skill runs `.meta/wikisplain.py` and the `/search` skill runs
+          `.meta/search.py` (the retrieval DR-337 settles) directly, where a
+          quoted argument reaches `sys.argv` whole.
+    consequences:
+      - >-
+        The root `justfile` has no `wikisplain` or `search` recipe, and
+        `.meta/lib/render/writers.py` writes none. Each recipe declares its
+        parameters in `CONTRACT` in `.meta/checks/files/justfile.py`, as flags,
+        a subcommand or an atomic identifier, and the `justfile recipe shape`
+        check refuses one that is undeclared or declared otherwise.
+      - >-
+        The `/wikisplain` and `/search` skills, rendered by
+        `.meta/lib/render/skills.py`, carry their tool's invocation. The
+        `/search` skill carries the execution environment the recipe held
+        (`uvx --python 3.13 --with linkml --with pyyaml python
+        .meta/search.py "<query>"`) and its options (`--limit`, `--detail`,
+        `--json`, `--benchmark`), because `.meta/lib/search/build.py` imports
+        `yaml` and reaches the assertions through `checks.collect`, which
+        imports `linkml_runtime`.
+      - >-
+        `.meta/lib/search/build.py` warns on stderr where `linkml_runtime` is
+        absent and the assertions go unindexed, so a wiki-only index is never
+        presented as a search of the whole corpus.
+      - >-
+        `wikisplain.py` keeps `nargs="+"` and `search.py` keeps `nargs="*"`,
+        each rejoining the pieces for a caller typing an unquoted argument at a
+        terminal; the `wikisplain argv probes` check holds the first.
+      - >-
+        `AGENTS.md`, `template/AGENTS.md` and the Knowledge Management page
+        route authoring and search with prose arguments to skills rather than
+        to the root surface.
+    falsifier: >-
+      A root recipe that accepts a bare multi-word prose positional, or a tool
+      that takes prose exposed as a `just` recipe rather than reached through
+      a skill or run directly.
+    rationale: |-
+      Looking down `just --list`, every recipe runs a gate, a compiler, the
+      pair loop or a status query, and each takes arguments that survive
+      `just`'s unquoted interpolation. A tool that takes prose breaks that cohesion and the
+      quoting contract together, and a skill, which runs the tool as a
+      process with its arguments intact, is where such a tool already belongs.

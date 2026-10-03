@@ -3,7 +3,7 @@
 Verifies that prose claims about schema slots resolve against declared schemas
 as part of the citation verification subject (stereorepo's DR-150, dividing the gate into
 per-subject check modules including prose claims about the record). Sits under the
-`.meta/checks/citations/` package following the package structure convention (stereorepo's DR-218,
+`.meta/checks/citations/` package following the package structure convention (stereorepo's DR-345,
 converting imported meta modules into packages whose __init__ registers defined members).
 
 Former slot checking derives historically deleted slots per class from git diffs,

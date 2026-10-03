@@ -1,0 +1,64 @@
+decisions:
+  - id: work:decision/348
+    name: "DR-348 · A shell script or a recipe never hands Python its code inline"
+    status: ADOPTED
+    supersedes:
+      - work:decision/241
+    enacted_in:
+      - work:artifact/meta-checks-files-inline-python
+    context: >-
+      DR-241 banned inline Python, arguing from GitHub Actions workflows,
+      composite actions, `coder.yml`, the channel's door and `check_pr.py`'s
+      `--unresolved-count` option; all of them are gone, and the rule stands
+      for what remains: the root `justfile` and the shell scripts in the tree.
+      Code handed to an interpreter as a string (`python3 -c '...'`, a heredoc
+      on standard input, or a pipe into an interpreter) exists only inside the
+      recipe or script that carries it, so `ruff`, `mypy`, a syntax check and
+      the docstring audit never see it, and logic written that way tends to
+      be copied rather than shared.
+    alternatives:
+      - name: Permit inline Python one-liners when concise or single-use
+        chosen: false
+        reason: >-
+          An exception for a short one-liner reintroduces unlinted, untyped
+          strings, and leaves a boundary subjective enough to drift into
+          multi-line blocks.
+      - name: Extract the inline snippets and lint them where they sit
+        chosen: false
+        reason: >-
+          Scraping Python out of shell strings to lint it is fragile, has no
+          editor support, and still gives the snippet no standalone execution
+          or test.
+      - name: Ban inline Python in recipes and shell scripts, and check it
+        chosen: true
+        reason: >-
+          Python a recipe or a script needs lives in a dedicated, linted and
+          type-checked script under `.meta/`, or behind a flag of an existing
+          tool. The `inline python` check (`no_inline_python`) refuses the
+          spellings habit reaches for.
+    consequences:
+      - >-
+        The root `justfile` and every shell script in the tree (a `.sh` or
+        `.bash` file, or an extensionless file with a shell shebang) run no
+        `python -c`, `python3 -c`, `uv run python -c`, heredoc into an
+        interpreter, or pipe into one.
+      - >-
+        `.meta/checks/files/inline_python.py` registers the `inline python`
+        check, which scans those files.
+    falsifier: >-
+      The `justfile` or a shell script containing an inline Python invocation
+      (such as `python3 -c`, `python3 <<`, `cat <<'PY' | python3`, or a
+      valued flag variant like `python3 -W ignore -c`) that `no_inline_python`
+      passes.
+    rationale: |-
+      With one developer and a pair of agents, mechanical checks are the
+      main defence against a silent defect, and code inside a shell string
+      escapes all of them. Requiring Python to live in a script under
+      `.meta/` means every line of it is formatted, linted, type-checked and
+      docstring-audited before it lands.
+
+      The check matches the spellings agents reach for by habit (`python`,
+      `python3`, `python3.12` or `uv run python`, followed by `-c`, a heredoc
+      or a bare `-`, or ending a pipeline). Indirect execution through a shell
+      variable or `eval` falls outside a regular expression; catching the
+      habitual forms keeps routine recipe work from reintroducing the rest.

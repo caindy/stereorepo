@@ -60,7 +60,7 @@ pair-resume *args:
 pair-watch *args:
     uv run --quiet --script pair/pair.py watch {{args}}
 
-# Specialization, end to end, in a scratch repository (stereorepo's DR-239, DR-244)
+# Specialization, end to end, in a scratch repository (stereorepo's DR-347, DR-244)
 test-specialization *args:
     uvx --python 3.13 --with pyyaml python .meta/test_specialization.py {{args}}
 

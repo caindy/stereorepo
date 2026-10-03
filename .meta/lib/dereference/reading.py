@@ -46,7 +46,7 @@ def citations() -> Any:
     grammar and the copy set are the `citations` package's, and nothing else in
     the gate is wanted here. Its own siblings are imported by plain name, so the
     directory goes on `sys.path` first, and the package is imported by name
-    since a package has no one file to load (stereorepo's DR-218).
+    since a package has no one file to load (stereorepo's DR-345).
     """
     if str(CHECKS) not in sys.path:
         sys.path.insert(0, str(CHECKS))

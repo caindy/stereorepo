@@ -41,7 +41,7 @@ def wikisplain_skill() -> str:
 
 def search_skill() -> str:
     """Operational retrieval skill querying assertions and wiki concepts off the
-    root verb surface (stereorepo's DR-103, stereorepo's DR-337, stereorepo's DR-272)."""
+    root verb surface (stereorepo's DR-103, stereorepo's DR-337, stereorepo's DR-349)."""
     return authored_skill("search")
 
 

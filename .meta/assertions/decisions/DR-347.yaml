@@ -1,0 +1,75 @@
+decisions:
+  - id: work:decision/347
+    name: "DR-347 · Specialization is tested end to end in a scratch repository with pre-judged portfolio fixtures"
+    status: ADOPTED
+    supersedes:
+      - work:decision/239
+    applies:
+      - work:article/9
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-test-specialization
+      - work:artifact/justfile
+      - work:artifact/meta-fixtures-specialization-readme
+      - work:artifact/meta-fixtures-specialization-tokens
+      - work:artifact/meta-checks-probes-tools-test-specialization
+    context: >-
+      DR-239 settled how Specialization is tested, naming a runner under a
+      name it no longer has and three GitHub Actions workflows that ran it on
+      a schedule, before a release and on dispatch; the workflows are gone, and
+      the rule stands without them. Specialization turns a clone into a
+      portfolio by the steps `SPECIALIZE.md` lists, and DR-341 has every
+      inherited check written over what the tree it runs in holds. Components
+      are tested apart (template conventions, surviving placeholders, APM
+      compilation), but only running every step into an empty repository shows
+      whether the result bootstraps a language Project and passes its own
+      gate. Without that run, the defects that show only in a portfolio (a
+      typing baseline leaking across, a section order `bootstrap.py` assumed,
+      a bare decision citation in a bootstrap skill, a corpus threshold a
+      probe fixed at stereorepo's size) surface only when the developer runs
+      the procedure by hand.
+    alternatives:
+      - name: Verify Specialization by hand before a release
+        chosen: false
+        reason: >-
+          Expensive, infrequent and error-prone, and it puts the developer
+          between every change and the finding that it broke a portfolio.
+      - name: Static checks over template files in isolation
+        chosen: false
+        reason: >-
+          A static check inspects a template without running its lifecycle. It
+          cannot see git initialization, bootstrap Project generation, or a
+          portfolio's gate running across its toolchains.
+      - name: An end-to-end runner into a scratch repository, with pre-judged fixtures
+        chosen: true
+        reason: >-
+          `.meta/test_specialization.py` runs every step of the procedure into
+          a temporary repository and then runs the portfolio's gate there.
+          The substitution fixtures (`.meta/fixtures/specialization/tokens.json`)
+          live outside `.meta/assertions/` (DR-026), and `just
+          test-specialization` puts the runner on the root surface (DR-329).
+    consequences:
+      - >-
+        `.meta/fixtures/specialization/tokens.json` defines pre-judged
+        substitution tokens for the template placeholders, and its `README.md`
+        documents the fixture's contract.
+      - >-
+        `.meta/test_specialization.py` runs every Specialization step end to
+        end into a temporary repository, and is the gate of the Project
+        `specialization` in `.meta/assertions/structure.yaml`.
+      - >-
+        `just test-specialization` exposes the runner on the root surface.
+      - >-
+        `.meta/checks/probes/tools/test_specialization.py` probes fixture
+        loading, retargeting and substitution.
+    falsifier: >-
+      A change to the scaffold, the template files, a bootstrap or inherited
+      tooling that breaks a step of Specialization, or makes a specialized
+      portfolio's gate fail, while `.meta/test_specialization.py` exits
+      cleanly.
+    rationale: |-
+      Per Article 9, a seed is data, and it is gated by rendering it and running
+      the real gates on the result. Specialization is stereorepo's primary seed
+      transformation, so running it end to end in a scratch repository is what
+      shows a change to the scaffold still produces a portfolio that gates
+      itself.

@@ -58,7 +58,7 @@ gate`. There are no pull requests.
 - An empty directory carries a README saying what will live there.
 - The repository operator surface is `just --list`, run at the root
   (stereorepo's DR-329). Recipes take only flags, subcommands and atomic
-  identifiers (stereorepo's DR-259, stereorepo's DR-272); do not invoke a script
+  identifiers (stereorepo's DR-349); do not invoke a script
   under `.meta/` directly where a recipe wraps it. `just gate` is an exit condition, not an entrance condition:
   it runs once the work is done (in the pair loop, before landing), not at
   session start. Prefer a targeted gate

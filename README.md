@@ -21,7 +21,7 @@ no pull requests.
 [`SPECIALIZE.md`](SPECIALIZE.md).** That is the whole entry point. The steps are
 an instruction to follow rather than a program to run, because the work is
 judgement about one specific portfolio. Running repository tooling on a fresh
-clone requires Python >= 3.13 (DR-268).
+clone requires Python >= 3.13 (DR-351).
 
 A repository that already holds a product is adopted rather than specialized:
 point the agent at [`ADOPT.md`](ADOPT.md) instead, with this repository checked

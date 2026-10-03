@@ -4,7 +4,7 @@ What the schemas state and LinkML cannot check: a reference that resolves to
 nothing, a cycle a path cannot traverse, a membership that crosses a file
 boundary, and the three counts over the Decision record that a rule cannot make
 (stereorepo's DR-150). One module per subject, imported in the order the steps
-report in (stereorepo's DR-218). History in graph.history.md (stereorepo's DR-171).
+report in (stereorepo's DR-345). History in graph.history.md (stereorepo's DR-171).
 """
 import checks.graph.structure  # noqa: I001  # reason: registration order is deliberate
 import checks.graph.record

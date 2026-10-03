@@ -1,0 +1,61 @@
+decisions:
+  - id: work:decision/350
+    name: "DR-350 · Mutation testing in both seed gates defaults to at most eight workers, with an override each"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/bootstraps-python-gate
+      - work:artifact/bootstraps-rust-xtask
+    supersedes:
+      - work:decision/262
+    context: >-
+      DR-262 bounded mutation-testing workers in the seed gates, arguing from
+      self-hosted runner pods on a shared host, a runner workflow, and
+      coder and reviewer loop sessions; the runners, the workflow and those
+      loops are gone, and the bound stands on what remains. A gate now runs on
+      the machine that runs the pair loop, beside the seats' sessions and
+      often beside another gate. `cargo xtask mutants` in
+      `bootstraps/rust/seed/xtask/src/lib.rs` already clamped its jobs to
+      `available_parallelism().clamp(1, 8)` with a `CARGO_MUTANTS_JOBS`
+      override, while `mutmut run` in
+      `bootstraps/python/seed/gate/src/gate/__init__.py` passed no
+      `--max-children`, and mutmut then defaults to `os.cpu_count()`, one
+      worker per core. Raising both to sixteen and declaring a static share of
+      cores per gate was weighed, and fails on the same fact: nothing
+      coordinates the gates that run at once.
+    alternatives:
+      - name: Raise the ceiling to sixteen and declare a static share of cores per gate
+        chosen: false
+        reason: >-
+          A static share is fictitious where nothing enforces it; two gates
+          each taking sixteen workers starve the seats' sessions and each
+          other.
+      - name: Run mutation testing with a single worker
+        chosen: false
+        reason: >-
+          Leaves idle cores idle, and the gate's wall-clock grows with the
+          mutant corpus.
+      - name: A default of at most eight in both seed gates, with an environment override each
+        chosen: true
+        reason: >-
+          Eight keeps one gate's mutation run parallel while leaving cores for
+          a second gate and for the seats when two run at once. Passing
+          `--max-children` as `min(os.cpu_count() or 4, 8)` brings Python to
+          parity with Rust's `clamp(1, 8)`, and `MUTMUT_MAX_CHILDREN` and
+          `CARGO_MUTANTS_JOBS` let a machine with cores to spare raise it.
+    consequences:
+      - >-
+        `bootstraps/python/seed/gate/src/gate/__init__.py` takes its worker
+        count from `MUTMUT_MAX_CHILDREN`, or `min(os.cpu_count() or 4, 8)`, and
+        passes it to `mutmut run --max-children`.
+      - >-
+        `bootstraps/rust/seed/xtask/src/lib.rs` keeps the `clamp(1, 8)`
+        default and the `CARGO_MUTANTS_JOBS` override.
+    falsifier: >-
+      Mutation testing in either seed gate starting more than eight workers
+      with no override set in the environment.
+    rationale: |-
+      Unbounded concurrency in one tool degrades everything else on the
+      machine through memory bandwidth and cache contention, and on this
+      machine everything else includes the seats. The same default in both
+      seed ecosystems makes a gate's burst predictable whichever language a
+      Project is written in.

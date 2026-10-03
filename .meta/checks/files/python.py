@@ -298,7 +298,7 @@ def meta_interpreter() -> StepOutcome:
     if sys.version_info[:2] < declared_floor:
         problems.append(
             f"running interpreter is {sys.version.split()[0]}, which is below "
-            f".meta/ruff.toml's declared floor of Python {version} (stereorepo's DR-268)"
+            f".meta/ruff.toml's declared floor of Python {version} (stereorepo's DR-351)"
         )
     calls = 0
     for source in sources.tree():

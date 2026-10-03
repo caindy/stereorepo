@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/262
     name: "DR-262 · Bounding mutation testing worker concurrency to eight across seed gates to reconcile with DR-147 burstable scheduling"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/350
     supersedes: []
     enacted_in:
       - work:artifact/bootstraps-python-gate

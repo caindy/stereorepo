@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/272
     name: "DR-272 · Reserve the root verb surface for operator flags and identifiers by scoping search to skills"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/349
     supersedes:
       - work:decision/194
     applies:

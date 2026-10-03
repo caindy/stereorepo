@@ -25,7 +25,7 @@ contract is the report shape `.meta/gate` parses: `ok <step>`,
 ## Wanted
 
 A recipe, `just audit <project> <bootstrap>` (atomic identifiers only,
-DR-259, DR-272), that runs the named Project's gate as
+DR-349), that runs the named Project's gate as
 `.meta/assertions/structure.yaml` declares it, reads its reports, and
 compares them with the named bootstrap. A gap is any of:
 

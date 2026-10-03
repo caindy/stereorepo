@@ -1,0 +1,62 @@
+decisions:
+  - id: work:decision/351
+    name: "DR-351 · Tooling shebangs keep python3, and Python 3.13 is asserted at the front door"
+    status: ADOPTED
+    supersedes:
+      - work:decision/268
+    enacted_in:
+      - work:artifact/meta-check
+      - work:artifact/meta-checks-files-python
+      - work:artifact/readme
+    context: >-
+      DR-268 kept the `python3` shebangs and set a Python 3.13 floor, arguing
+      half of it from a runner image that pre-baked the interpreter and listing
+      the channel's verbs and `check_pr.py` among the shebanged files; the
+      image, the verbs and `check_pr.py` are gone, and the front-door half
+      stands. Eight scripts under `.meta/` carry `#!/usr/bin/env python3`
+      (`bootstrap.py`, `release.py`, `check.py`, `render.py`, `apm_compile.py`,
+      `wikisplain.py`, `search.py`, `test_specialization.py`). That shebang
+      pins no version and runs whatever `python3` the machine provides.
+      `.meta/ruff.toml` declares `target-version = "py313"` (DR-177), so the
+      tooling may use Python 3.13 syntax, and the recipes pin `--python 3.13`
+      on `uvx`; a script run through its shebang bypasses `uvx`. Where the
+      machine's `python3` is older, 3.13 syntax fails at import with a bare
+      traceback and no diagnostic.
+    alternatives:
+      - name: Lower target-version in .meta/ruff.toml to the oldest python3 in use
+        chosen: false
+        reason: >-
+          Gives up Python 3.13 syntax already in the tree, and weakens the lint
+          to match an unpinned runtime.
+      - name: Route every python3 shebang through uvx --python 3.13
+        chosen: false
+        reason: >-
+          Uniform with the recipes, but puts a `uv` resolution in front of
+          every direct run of a script.
+      - name: Keep python3 shebangs and assert Python 3.13 as a prerequisite where a run begins
+        chosen: true
+        reason: >-
+          No resolution delay, and an older interpreter fails loudly and
+          helpfully rather than with a syntax traceback: `check.py` refuses it
+          before importing anything else, `meta interpreter` refuses it in the
+          gate, and the prerequisite is written where a fresh clone reads first.
+    consequences:
+      - >-
+        `.meta/check.py` asserts that `sys.hexversion` is at least Python 3.13
+        at module load, before any downstream import.
+      - >-
+        `meta interpreter` in `.meta/checks/files/python.py` asserts that the
+        running interpreter meets `.meta/ruff.toml`'s declared
+        `target-version`.
+      - >-
+        `README.md` states Python 3.13 or later as a prerequisite for a fresh
+        clone.
+    falsifier: >-
+      A script under `.meta/` failing with a syntax or import error under a
+      Python older than 3.13 without the entry-point guard or `meta
+      interpreter` rejecting the interpreter first.
+    rationale: |-
+      A scaffold cannot enforce a toolchain version on a machine it does not
+      own. It can declare the floor and assert it loudly at the front door,
+      which protects whoever runs it while keeping the scripts free of a
+      resolution step.

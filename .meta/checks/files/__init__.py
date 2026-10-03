@@ -5,7 +5,7 @@ survived, a link that resolves to nothing, a path that is the scaffold's alone,
 and a generated page that is behind its assertions or whose framing prose a
 portfolio would not inherit.
 One module per family of steps, imported in the order the steps report in
-(stereorepo's DR-218). `sources.tree()` is the tree as git sees it, which is
+(stereorepo's DR-345). `sources.tree()` is the tree as git sees it, which is
 the only list of files the gate trusts, and `citations.py` reads prose out of
 it (stereorepo's DR-150).
 

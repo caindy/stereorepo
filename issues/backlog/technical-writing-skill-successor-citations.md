@@ -4,7 +4,8 @@ difficulty: developer
 
 # Move the technical-writing and search skills' citations to the successors
 
-`trim-decision-records-065-177` and `trim-decision-records-179-217`
+`trim-decision-records-065-177`, `trim-decision-records-179-217` and
+`trim-decision-records-218-272`
 superseded records and moved every citation of them except those in the
 `/technical-writing` and `/search` skills. Both skills' sources are artifacts
 in `.meta/assertions/imported/structure.yaml` (`technical-writing` and
@@ -30,6 +31,7 @@ record names its successor instead:
 | DR-195 | DR-338 | technical-writing |
 | DR-198 | DR-339 | technical-writing |
 | DR-209 | DR-342 | technical-writing |
+| DR-272 | DR-349 | search |
 
 In the same edit, the `/technical-writing` skill's opening sentence drops
 `(work:personality/technical-writer)`: the Personality class is gone, and
@@ -40,6 +42,6 @@ committed.
 
 ## Done when
 
-A grep for the nine old numbers finds none of them in `structure.yaml`'s
+A grep for the ten old numbers finds none of them in `structure.yaml`'s
 skill text or in any of the four `SKILL.md` copies, neither names
 `work:personality/`, and `just render` leaves the tree unchanged.
