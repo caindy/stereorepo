@@ -8,6 +8,7 @@ decisions:
       - work:artifact/meta-check
       - work:artifact/meta-checks-files-python
       - work:artifact/readme
+      - work:artifact/specialize
     context: >-
       DR-268 kept the `python3` shebangs and set a Python 3.13 floor, arguing
       half of it from a runner image that pre-baked the interpreter and listing
@@ -51,6 +52,9 @@ decisions:
       - >-
         `README.md` states Python 3.13 or later as a prerequisite for a fresh
         clone.
+      - >-
+        `SPECIALIZE.md` states Python 3.13 or later as a prerequisite in its
+        first step.
     falsifier: >-
       A script under `.meta/` failing with a syntax or import error under a
       Python older than 3.13 without the entry-point guard or `meta

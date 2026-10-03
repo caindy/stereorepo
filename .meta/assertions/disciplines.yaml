@@ -18,9 +18,11 @@ disciplines:
       - id: work:discipline-step/specialization/start-a-new-empty-repo
         name: Start a new empty repo
         statement: >-
-          Copy only what the steps below name — never clone, and never copy the
-          whole tree: a clone carries the scaffold's commit history and an `origin` pointing back at it,
-          and neither belongs to a portfolio.
+          The tooling this portfolio inherits needs Python 3.13 or later (DR-351),
+          and `check.py` refuses an older interpreter. Copy only what the steps
+          below name — never clone, and never copy the whole tree: a clone
+          carries the scaffold's commit history and an `origin` pointing back
+          at it, and neither belongs to a portfolio.
       - id: work:discipline-step/specialization/copy-what-is-inherited
         name: Copy what is inherited
         statement: >-
