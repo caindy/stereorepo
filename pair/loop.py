@@ -67,7 +67,7 @@ from typing import Any
 import board
 import touched
 from board import git, git_ok, git_run
-from seats import Seat, TurnResult
+from seats import Seat, TurnResult, unwritable
 
 ROLES = ("primary", "secondary")
 ROUND_CAP = {"easy": 4, "medium": 8, "developer": 8, "hard": 4, None: 4}
@@ -89,6 +89,12 @@ COULD_NOT = re.compile(r"^\?  (?P<step>\S[^:\n]*): (?P<why>.*)$", re.MULTILINE)
 line of `closing_block`, `?  steps that could not run (n) — …`, has no colon
 after its step, and its detail lines are indented, so neither matches.
 """
+FAILED_STEP = re.compile(r"^x  (?P<step>\S.*) \((?P<count>\d+)\)$")
+"""A gate step that found something, in the shape `.meta/gate` reads it in (its `X`)."""
+FINDING = re.compile(r"^     (?P<finding>.+)$")
+"""One finding under a failed step, in the shape `.meta/gate` reads it in (its `PROBLEM`)."""
+RENDERED = "rendered prose"
+"""The gate step that finds a generated page differing from its render."""
 DELIVER_TAIL = 2_000
 """Less than `GATE_TAIL`: a failed delivery's tail goes into a pause reason, also notified."""
 LAND_TRIES = 5
@@ -205,7 +211,7 @@ def gate_fails(out: str, targets: Sequence[str] | None = None) -> GateFailure:
 
 
 class GateUnrunnable(str):
-    """A gate that passed with steps that could not run, which only the developer can supply."""
+    """A gate only the developer can make pass: a step could not run, or a page is unwritable."""
 
 
 def gate_unrunnable(out: str) -> GateUnrunnable | None:
@@ -222,6 +228,68 @@ def gate_unrunnable(out: str) -> GateUnrunnable | None:
         f"the gate could not run {len(steps)} step(s); "
         "supply what they need, then run again:\n" + "\n".join(steps)
     )
+
+
+def unwritable_pages(out: str, wt: Path, denied: Sequence[Path]) -> list[str] | None:
+    """The stale pages a failed gate's `out` names, when they are all it failed on.
+
+    Each page is a path relative to the worktree `wt`. They are returned only
+    when every failing step is `rendered prose` and every page it names lies
+    at or under one of `denied`, the paths the seats cannot write. Otherwise
+    the result is None, and the failure is the seats' to repair.
+
+    `rendered prose` names a page relative to `.meta/`. The last failed step
+    in `out` is the closing block of `.meta/gate`, with one line for each
+    failing Project, `<project>: <step>, …`, or a sentence saying why it
+    failed with no step. Every such line must name `rendered prose` alone, so
+    a finding that Projects gated in parallel print under the wrong step
+    cannot hide another failure.
+    """
+    blocks: list[tuple[str, list[str]]] = []
+    for line in out.splitlines():
+        if m := FAILED_STEP.match(line):
+            blocks.append((m["step"], []))
+        elif (m := FINDING.match(line)) and blocks:
+            blocks[-1][1].append(m["finding"])
+    if not blocks:
+        return None
+    *steps, (_, closing) = blocks
+    if not steps or not closing or any(line.partition(": ")[2] != RENDERED for line in closing):
+        return None
+    pages = []
+    for step, findings in steps:
+        if step.rpartition("/")[2] != RENDERED or not findings:
+            return None
+        for finding in findings:
+            page = os.path.normpath(f".meta/{finding}")
+            if page.startswith("..") or not any(
+                (wt / page).is_relative_to(d) for d in denied
+            ):
+                return None
+            pages.append(page)
+    return pages
+
+
+def gate_unwritable(
+    out: str, wt: Path, denied: Sequence[Path], tree: str
+) -> GateUnrunnable | None:
+    """The pause reason for a gate that failed only on pages the seats cannot write.
+
+    Rendering such a page needs a write the seats' sandbox refuses, so a
+    seat handed the failure can only fail again. The developer renders it in
+    the worktree `tree` outside the sandbox, and resuming commits the render
+    as their edit. A step that could not run is named in the same reason.
+    """
+    pages = unwritable_pages(out, wt, denied)
+    if pages is None:
+        return None
+    reason = (
+        f"the gate fails only on {len(pages)} page(s) the seats cannot write; "
+        f"run `just render` in {tree} outside the sandbox, then run again:\n"
+        + "\n".join(f"- {page}" for page in pages)
+    )
+    unrun = gate_unrunnable(out)
+    return GateUnrunnable(f"{reason}\n\n{unrun}" if unrun else reason)
 
 
 def home(stage: str) -> str:
@@ -735,6 +803,8 @@ class Loop:
 
     def work(self, st: State) -> str:  # noqa: C901, PLR0912  # reason: the resume of each paused retry and the turn loop share the one try whose finally stops the seats
         try:
+            if st.retry in ("merge", GATE) and board.head_and_dirty(self.wt)[1]:
+                self.absorb_developer(st, keep_approvals=True)
             if st.retry == "merge":
                 st.retry = st.paused = None
                 outcome = self.merge(st, force_gate=True)
@@ -939,8 +1009,16 @@ class Loop:
         st.sessions.pop(role, None)
         (self.dir / f"{role}.session").unlink(missing_ok=True)
 
-    def absorb_developer(self, st: State) -> bool:
-        """Commit edits the developer made in the worktree between turns, as a turn of their own."""
+    def absorb_developer(self, st: State, keep_approvals: bool = False) -> bool:
+        """Commit edits the developer made in the worktree between turns, as a turn of their own.
+
+        The edits clear the seats' approvals, unless `keep_approvals`: the
+        developer did what a gate pause asked for, such as a render the seats
+        cannot write, and the stage the seats agreed is closed again. `work`
+        commits those edits before it runs the gate again, because `merge`
+        rebases and then squashes, and a render left uncommitted would stop
+        the rebase or be left out of the squash.
+        """
         head, dirty = board.head_and_dirty(self.wt)
         if not dirty and head == st.head:
             return False
@@ -957,7 +1035,8 @@ class Loop:
             )
             head = git(self.wt, "rev-parse", "HEAD")
         st.head = head
-        st.approvals = []
+        if not keep_approvals:
+            st.approvals = []
         st.note = (
             st.note
             + "\n\nThe developer changed things since the last turn; see the changes below."
@@ -1293,8 +1372,9 @@ class Loop:
         """Gate what the branch changes against `main`, or None when it passes.
 
         A gate that passes with a step that could not run is a
-        `GateUnrunnable`, not a pass. A gate that fails is a `GateFailure`
-        even when its output also holds such a step.
+        `GateUnrunnable`, not a pass. So is a gate that fails only on pages the
+        seats cannot write (`gate_unwritable`). Any other gate that fails is a
+        `GateFailure`, even when its output also holds such a step or page.
 
         Only the Projects the change touches and the Products built from them
         are gated (`touched.select`, stereorepo's DR-303); a branch that
@@ -1309,7 +1389,11 @@ class Loop:
             return None
         targets = touched.select(self.wt, changed)
         ok, out = self.gate(self.wt, targets)
-        return gate_unrunnable(out) if ok else gate_fails(out, targets)
+        if ok:
+            return gate_unrunnable(out)
+        return gate_unwritable(
+            out, self.wt, unwritable(self.wt), self.tree
+        ) or gate_fails(out, targets)
 
     def touches_code(self) -> bool:
         changed = git(

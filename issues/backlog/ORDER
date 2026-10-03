@@ -1,5 +1,4 @@
 # groomed below
-pause-on-a-render-the-seat-cannot-write
 python-seed-gate-stdout
 bootstrap-render-step
 retire-count-slots

@@ -402,6 +402,26 @@ def confinement(cwd: Path) -> Confinement:
     return Confinement(allow, sorted(deny), env, sockets, "\n".join(gitconfig) + "\n")
 
 
+SANDBOX_DENIED = [
+    ".claude/skills",
+    ".claude/hooks",
+    ".claude/settings.json",
+    ".claude/settings.local.json",
+]
+"""Paths under the worktree that Claude Code's sandbox refuses writes to on its own.
+
+`confinement` does not name them, and the sandbox does not report them, so
+this copies what a seat's sandbox listed as denied within its working
+directory (observed 2026-10-03). A page `just render` writes under one of
+them is one the seats cannot bring up to date.
+"""
+
+
+def unwritable(cwd: Path) -> list[Path]:
+    """Every path a seat working in the worktree `cwd` cannot write at or under."""
+    return [*confinement(cwd).deny, *(cwd / p for p in SANDBOX_DENIED)]
+
+
 def command(
     system_prompt: str,
     confined: Confinement,

@@ -110,6 +110,15 @@ repeated or side-by-side comparisons (`prompts/primary.md`,
    and note. Once the developer has supplied it, `just pair` runs that gate
    again before any seat takes a turn. This holds for the gate at the end of
    a stage and for the gate while landing.
+
+   A gate that fails only on `rendered prose` pages the seats cannot write
+   pauses the same way. Such pages sit under `.claude/skills/`, which Claude
+   Code's sandbox denies the seats (`SANDBOX_DENIED` in `pair/seats.py`), or
+   under a path `confinement()` denies. The pause names each page; the
+   developer runs `just render` in the worktree outside the sandbox, and
+   `just pair` commits that render as the developer's edit, keeping the
+   approvals, before it runs the gate again. A gate that fails on anything
+   else as well goes back to the seats whole.
 3. **Sending back.** An Issue file that gains a `Needs elaboration` section, or
    a stage that runs past its round cap, sends the Issue to `issues/backlog/` on
    `main` with that section, without its code. It sits out of the running order

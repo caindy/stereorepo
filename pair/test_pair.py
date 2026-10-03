@@ -39,6 +39,7 @@ from loop import (
     status,
     status_json,
     status_view,
+    unwritable_pages,
 )
 from seats import (
     ALLOWED,
@@ -50,6 +51,7 @@ from seats import (
     command,
     confinement,
     is_refusal,
+    unwritable,
     versioned_gpg_conf,
 )
 from watch import ENDED_FIRST, NOT_RUNNING, watch
@@ -329,11 +331,11 @@ class Bench:
         bench = self
 
         class TestLoop(Loop):
-            def absorb_developer(self, st):  # type: ignore[no-untyped-def]
+            def absorb_developer(self, st, keep_approvals=False):  # type: ignore[no-untyped-def]
                 edit = bench.developer_between.pop(len(bench.sent), None)
                 if edit:
                     edit(self.wt)
-                return super().absorb_developer(st)
+                return super().absorb_developer(st, keep_approvals)
 
             def land(self, st, sha, retry="merge"):  # type: ignore[no-untyped-def]
                 if bench.before_land:
@@ -450,6 +452,16 @@ class Bench:
 PLAN = "\n## The plan\n\nChange a.txt.\n"
 UNRUNNABLE = (True, "ok a — 1 test\n?  proj/neo4j tests: no Docker daemon\n")
 """A gate that passes with a step that could not run."""
+SKILL_PAGE = ".claude/skills/s/SKILL.md"
+STALE_SKILL = (
+    False,
+    "ok meta/schemas — 3\n"
+    "x  meta/rendered prose (1)\n"
+    "     ../.claude/skills/s/SKILL.md\n"
+    "x  meta (1)\n"
+    "     meta: rendered prose\n",
+)
+"""A gate that fails only on a page under `.claude/skills/`, which the seats cannot write."""
 
 
 class LoopTest(unittest.TestCase):
@@ -688,6 +700,87 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertEqual(len(b.sent), sent)
         self.assertEqual(b.gate_runs, 3)
+
+    def test_a_gate_failing_only_on_a_page_the_seats_cannot_write_pauses(
+        self,
+    ) -> None:
+        b = self.b
+        self.implemented("x")
+        b.gates = [STALE_SKILL]
+        self.assertEqual(b.loop.run(once=True), "paused")
+        st = b.state()
+        self.assertEqual(st.retry, "gate")
+        assert st.paused is not None
+        self.assertIn(f"- {SKILL_PAGE}", st.paused)
+        self.assertIn("run `just render`", st.paused)
+        self.assertIn("outside the sandbox", st.paused)
+        self.assertEqual(st.approvals, ["primary", "secondary"])
+        self.assertFalse(b.on_main("a.txt"))
+        sent = len(b.sent)
+        write(SKILL_PAGE, "rendered\n")(b.loop.wt)
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(len(b.sent), sent)
+        self.assertTrue(b.on_main("a.txt"))
+        self.assertTrue(b.on_main(SKILL_PAGE))
+
+    def test_a_page_the_seats_cannot_write_while_landing_pauses_the_landing(
+        self,
+    ) -> None:
+        b = self.b
+
+        def commits(repo: Path) -> None:
+            write("b.txt", "main\n")(repo)
+            sh(repo, "add", "b.txt")
+            sh(repo, "commit", "-q", "-m", "add b.txt")
+
+        self.implemented("x")
+        b.gates = [True, STALE_SKILL]
+        b.during_gate = [commits]
+        self.assertEqual(b.loop.run(once=True), "paused")
+        self.assertEqual(b.state().retry, "merge")
+        write(SKILL_PAGE, "rendered\n")(b.loop.wt)
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertTrue(b.on_main(SKILL_PAGE))
+        self.assertTrue(b.on_main("b.txt"))
+
+    def test_a_page_the_seats_cannot_write_and_a_step_that_could_not_run_name_both(
+        self,
+    ) -> None:
+        b = self.b
+        self.implemented("x")
+        b.gates = [(False, STALE_SKILL[1] + "?  b: no tool\n")]
+        self.assertEqual(b.loop.run(once=True), "paused")
+        paused = b.state().paused
+        assert paused is not None
+        self.assertIn(f"- {SKILL_PAGE}", paused)
+        self.assertIn("- b: no tool", paused)
+
+    def test_a_stale_page_beside_another_failure_goes_to_the_primary(self) -> None:
+        b = self.b
+        self.implemented("x")
+        out = (
+            "x  meta/rendered prose (1)\n     ../.claude/skills/s/SKILL.md\n"
+            "x  meta/a (1)\n     boom\n"
+            "x  meta (1)\n     meta: rendered prose, a\n"
+        )
+        b.gates = [(False, out), True]
+        b.script(("primary", write("a.txt", "2")), ("secondary", quiet))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.sent[6][0], "primary")
+        self.assertIn("x  meta/a (1)", b.sent[6][1])
+
+    def test_a_stale_page_the_seats_can_write_goes_to_the_primary(self) -> None:
+        b = self.b
+        self.implemented("x")
+        out = (
+            "x  meta/rendered prose (1)\n     ../README.md\n"
+            "x  meta (1)\n     meta: rendered prose\n"
+        )
+        b.gates = [(False, out), True]
+        b.script(("primary", write("README.md", "2")), ("secondary", quiet))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.sent[6][0], "primary")
+        self.assertIn("../README.md", b.sent[6][1])
 
     def test_an_unmet_requirement_other_than_the_gate_goes_to_the_other_seat(
         self,
@@ -1536,6 +1629,53 @@ class GateUnrunnableTest(unittest.TestCase):
 
     def test_a_gate_where_every_step_ran_is_none(self) -> None:
         self.assertIsNone(gate_unrunnable("ok a — 1\nok b — 2\nok portfolio — 3 steps\n"))
+
+
+class UnwritablePagesTest(unittest.TestCase):
+    """`unwritable_pages` answers only when every failure is a page the seats cannot write."""
+
+    wt = Path("/w")
+    denied = (Path("/w/.claude/skills"), Path("/elsewhere"))
+
+    def pages(self, out: str) -> list[str] | None:
+        return unwritable_pages(out, self.wt, self.denied)
+
+    def test_a_stale_skill_page_alone_is_named_from_the_worktree(self) -> None:
+        self.assertEqual(self.pages(STALE_SKILL[1]), [SKILL_PAGE])
+
+    def test_another_failing_step_is_none(self) -> None:
+        out = (
+            "x  meta/rendered prose (1)\n     ../.claude/skills/s/SKILL.md\n"
+            "x  meta/a (1)\n     boom\n"
+            "x  meta (1)\n     meta: rendered prose, a\n"
+        )
+        self.assertIsNone(self.pages(out))
+
+    def test_a_stale_page_the_seats_can_write_is_none(self) -> None:
+        out = (
+            "x  meta/rendered prose (1)\n     ../README.md\n"
+            "x  meta (1)\n     meta: rendered prose\n"
+        )
+        self.assertIsNone(self.pages(out))
+
+    def test_a_finding_that_is_not_a_page_is_none(self) -> None:
+        out = (
+            "x  meta/rendered prose (1)\n     x.md exists but nothing renders it\n"
+            "x  meta (1)\n     meta: rendered prose\n"
+        )
+        self.assertIsNone(self.pages(out))
+
+    def test_a_project_that_failed_with_no_step_is_none(self) -> None:
+        out = STALE_SKILL[1] + (
+            "     rust-seed: every step reported ok or ? and the gate exited 1\n"
+        )
+        self.assertIsNone(self.pages(out))
+
+    def test_output_without_the_closing_block_is_none(self) -> None:
+        self.assertIsNone(self.pages("FAILED: test_widget"))
+        self.assertIsNone(
+            self.pages("x  meta/rendered prose (1)\n     ../.claude/skills/s/SKILL.md\n")
+        )
 
 
 class SeatModelTest(unittest.TestCase):
@@ -4226,6 +4366,15 @@ class ConfinementTest(unittest.TestCase):
         for path in confined.allow:
             self.assertFalse(self.denied(path, confined.deny), path)
         self.assertNotIn(self.common, confined.allow)
+
+    def test_unwritable_holds_the_confinement_and_what_the_sandbox_denies_itself(
+        self,
+    ) -> None:
+        held = unwritable(self.wt)
+        for path in confinement(self.wt).deny:
+            self.assertIn(path, held)
+        self.assertTrue(self.denied(self.wt / ".claude" / "skills" / "s" / "SKILL.md", held))
+        self.assertFalse(self.denied(self.wt / "README.md", held))
 
     def test_uv_tools_and_cargo_binaries_stay_out_of_reach(self) -> None:
         confined = confinement(self.wt)
