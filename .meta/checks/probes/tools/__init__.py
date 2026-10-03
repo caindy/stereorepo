@@ -2,7 +2,8 @@
 
 `dereference.py`'s scopes and report (stereorepo's DR-134, stereorepo's DR-192),
 `search.py`'s index and benchmark (stereorepo's DR-103), `apm_compile.py`'s byte
-fallback for a skill file that is not UTF-8 text (stereorepo's DR-208), and the
+fallback for a skill file that is not UTF-8 text (stereorepo's DR-208), `render.py`'s
+writes under a sandbox that denies one of them (stereorepo's DR-302), and the
 detectors of `comments.py` that the comment steps read through (stereorepo's DR-207),
 and `.meta/gate`'s own runner, which every step of every Project reports through
 (stereorepo's DR-092), with the specialization and brownfield runners, the comment
@@ -22,6 +23,7 @@ import pathlib  # noqa: I001  # reason: registration order is deliberate
 import checks.probes.tools.dereference
 import checks.probes.tools.search
 import checks.probes.tools.apm_compile
+import checks.probes.tools.render
 import checks.probes.tools.terms
 import checks.probes.tools.test_specialization
 import checks.probes.tools.gate

@@ -9,6 +9,13 @@ import subprocess
 
 from lib.apm_compile import META, ROOT
 
+UNWRITTEN = "ERROR: could not write "
+"""The prefix of an action naming a file `reconcile_harnesses` could not write.
+
+The path that follows is relative to the root. Render reads it back to tell a
+failed write from the other actions, so it is the whole phrase and not just
+`ERROR:`, which `reconcile_root` also uses for a missing `AGENTS.md`."""
+
 
 def check_root_symlinks(root_dir: pathlib.Path = ROOT) -> list[str]:
     """Checks that root harness documentation symlinks point to AGENTS.md (stereorepo's DR-172)."""
@@ -89,7 +96,10 @@ def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = 
 
     When Microsoft APM CLI is present, invokes `apm install ./.meta --target antigravity,codex`
     to deploy skills, agents, and hooks into `.agents/` and `.codex/`.
-    When APM CLI is absent, projects `.meta/.apm/skills/` into `.agents/skills/` directly.
+    When APM CLI is absent, projects `.meta/.apm/skills/` into `.agents/skills/` directly,
+    copying only a file that is missing or whose bytes differ. A file that cannot be
+    written is reported as an action starting with `UNWRITTEN` and the projection
+    carries on, so a seat's sandbox that denies one write leaves the rest current.
     """
     actions = []
     apm_bin = shutil.which("apm")
@@ -111,8 +121,17 @@ def reconcile_harnesses(meta_dir: pathlib.Path = META, root_dir: pathlib.Path = 
         for item in sorted(src_skills.iterdir()):
             if not item.is_dir():
                 continue
-            dest_skill_dir = dest_skills / item.name
-            shutil.copytree(item, dest_skill_dir, dirs_exist_ok=True)
+            for src in sorted(item.rglob("*")):
+                if not src.is_file():
+                    continue
+                dest = dest_skills / item.name / src.relative_to(item)
+                try:
+                    if dest.is_file() and dest.read_bytes() == src.read_bytes():
+                        continue
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(src, dest)
+                except OSError:
+                    actions.append(UNWRITTEN + str(dest.relative_to(root_dir)))
         actions.append("Projected skills from .meta/.apm/skills/ into .agents/skills/")
 
     return actions
