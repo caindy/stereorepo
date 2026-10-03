@@ -91,7 +91,8 @@ def verb_surface_probes() -> list[str]:
     the operator surface the contract governs even where its own shape would
     otherwise be refused. A surface holding no recipe the
     contract declares is reported as the missing recipe rather than passing
-    silently.
+    silently. A surface without `release`, one of `SCAFFOLD_RECIPES`, passes
+    as a portfolio's and is reported missing as the scaffold's.
     """
     contract: Contract = {"landed": (("n", IDENTIFIER), ("args", FLAGS))}
     problems = []
@@ -123,5 +124,19 @@ def verb_surface_probes() -> list[str]:
         outcome = justfile_recipe_shape(path=path, contract=contract)
         if not isinstance(outcome, Found):
             problems.append(f"verb surface: a surface missing a declared recipe came to {outcome!r}, not Found")
+
+        path.write_text(CONFORMING, encoding="utf-8")
+        with_release: Contract = {**contract, "release": (("args", FLAGS),)}
+        without = "a surface without 'release'"
+        outcome = justfile_recipe_shape(path=path, contract=with_release, scaffold=False)
+        if not isinstance(outcome, Passed):
+            problems.append(f"verb surface: {without}, as a portfolio's, came to {outcome!r}")
+        outcome = justfile_recipe_shape(path=path, contract=with_release, scaffold=True)
+        missing = "the contract declares 'release'"
+        if not isinstance(outcome, Found):
+            problems.append(f"verb surface: {without}, as the scaffold's, came to {outcome!r}")
+        elif not any(missing in problem for problem in outcome.problems):
+            problems.append(f"verb surface: {without}, as the scaffold's, was found as "
+                            f"{list(outcome.problems)}, which does not say {missing!r}")
 
     return problems

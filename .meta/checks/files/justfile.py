@@ -47,7 +47,7 @@ TOOL_ROOTS = (".meta/", "pair/")
 """Where a recipe's tool may live: the staging ground, or the scaffold-only pair loop."""
 
 SCAFFOLD_RECIPES = ("test-specialization", "adapt", "pair", "groom", "pair-status",
-                    "pair-accept", "pair-resume", "pair-watch")
+                    "pair-accept", "pair-resume", "pair-watch", "release")
 """Recipes rendered only in the scaffold, which a portfolio's surface does not hold."""
 
 IDENTIFIER = "identifier"
@@ -194,6 +194,7 @@ def _departures(where: str, recipe: Recipe, declared: tuple[tuple[str, str], ...
 def justfile_recipe_shape(
     path: pathlib.Path = JUSTFILE,
     contract: Contract = CONTRACT,
+    scaffold: bool | None = None,
 ) -> StepOutcome:
     """Checks that root recipes meet the declared argument-passing contract.
 
@@ -207,7 +208,14 @@ def justfile_recipe_shape(
     names a declared parameter or a name the file assigns at its top level, an
     unnamed one expanding to nothing rather than failing; every body invokes a
     tool under `.meta/`, or the pair loop under `pair/`; and every recipe
-    carries the doc comment `just --list` prints as the index.
+    carries the doc comment `just --list` prints as the index. A portfolio's
+    surface is not held to `SCAFFOLD_RECIPES`, which only the scaffold renders.
+
+    Args:
+        path: The justfile to read.
+        contract: The recipes the surface must hold, against their parameters.
+        scaffold: Whether the surface is the scaffold's, which holds
+            `SCAFFOLD_RECIPES`; `None` asks whether `template/` exists.
 
     Returns:
         Passed | Found | CouldNotRun: The recipes checked, or one line per departure.
@@ -221,7 +229,9 @@ def justfile_recipe_shape(
         return CouldNotRun(f"{path.name} holds no recipes")
 
     effective_contract = dict(contract)
-    if not TEMPLATE.is_dir():
+    if scaffold is None:
+        scaffold = TEMPLATE.is_dir()
+    if not scaffold:
         for scaffold_recipe in SCAFFOLD_RECIPES:
             effective_contract.pop(scaffold_recipe, None)
 
