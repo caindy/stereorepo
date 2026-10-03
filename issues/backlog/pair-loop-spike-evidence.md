@@ -28,8 +28,11 @@ suggests goes in a new Issue.
 Each open question on the two pages is followed by the spike's answer
 and a citation, and the developer has checked the answers against the spike.
 
-# Needs elaboration
+## Where the spike lives
 
-The developer needs to put a copy of `docs/PAIR_LOOP_SPIKE.md` where a seat
-can read it, for instance under this Issue's slug in the worktree, or say
-where it lives.
+The developer's checkout of `caindy/booktutor` holds it at
+`/Users/christopher/tutorly_project/booktutor/docs/PAIR_LOOP_SPIKE.md`, last
+changed in commit `cdfa78d` (2026-09-29). A seat can read it there. Its
+section "Open questions (WHY_FORK.md, section 8)" answers the questions, and
+the hypothesis runs above it (H1 to H9) hold the evidence. Cite it as
+`docs/PAIR_LOOP_SPIKE.md` in `caindy/booktutor` at `cdfa78d`.
