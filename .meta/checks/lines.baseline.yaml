@@ -69,7 +69,7 @@
 .meta/lib/dereference/cli.py: 0
 .meta/lib/dereference/reading.py: 10
 .meta/lib/render/decisions.py: 3
-.meta/lib/render/pages.py: 5
+.meta/lib/render/pages.py: 4
 .meta/lib/render/record.py: 2
 .meta/lib/render/targets.py: 1
 .meta/lib/render/writers.py: 3

@@ -44,7 +44,11 @@ def _term_table(rows: Sequence[dict[str, Any]]) -> list[str]:
 
 def _scheme(scheme: dict[str, Any], members: Sequence[dict[str, Any]],
             concepts: Sequence[dict[str, Any]]) -> list[str]:
-    """One scheme's section: its authority, the loose terms, a table under each hub, and every scope note."""
+    """One scheme's section: its authority, the loose terms, a table under each hub, and every scope note.
+
+    A folded scope note keeps a paragraph break as one newline, so each newline
+    becomes a blank line and every paragraph renders as a paragraph of its own.
+    """
     out = [f"### {scheme['name']}\n", f"_Authority: {scheme.get('authority', 'unstated')}._\n"]
     hubs = [c for c in members if any(m.get("broader") == c["id"] for m in concepts)]
     grouped: dict[str, list[dict[str, Any]]] = {h["id"]: [] for h in hubs}
@@ -58,7 +62,8 @@ def _scheme(scheme: dict[str, Any], members: Sequence[dict[str, Any]],
     for h in hubs:
         if grouped[h["id"]]:
             out += [f"#### {h['pref_label']}\n", f"_{h['definition'].strip()}_\n", *_term_table(grouped[h["id"]])]
-    out += [f"**{c['pref_label']}.** {c['scope_note'].strip()}\n" for c in members if c.get("scope_note")]
+    out += [f"**{c['pref_label']}.** " + c["scope_note"].strip().replace("\n", "\n\n") + "\n"
+            for c in members if c.get("scope_note")]
     return out
 
 

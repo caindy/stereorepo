@@ -28,6 +28,7 @@ _Authority: Eric Evans, and About Face for the persona work._
 **Invariant (of an Aggregate).** Carried by the `invariants` slot on Entity, ValueObject and Aggregate. DDD keeps this word; stereorepo's clauses are Articles, which is part of why the rename was worth making.
 
 **Ubiquitous Language.** A portfolio's own domain language. stereorepo's vocabulary is imported alongside it to articulate the discipline, and has no authority over it.
+
 Adopted here as a Discipline of the same name — DDD names the thing, and stereorepo names the practice of defining, maintaining and adhering to one.
 
 **Published Language.** What stereorepo offers a portfolio, and what DDD offers stereorepo.
@@ -187,12 +188,17 @@ _Authority: Stephen Toulmin, *The Uses of Argument* (1958), as caindy/fitch-mvp'
 | **Evidence** | Hard ground truths, telemetry, or verified physical/digital data streams. | receipt, proof |
 
 **Claim.** That sentence is the opening of the `Claim` class in `schema/epistemology.yaml` in caindy/fitch-mvp, quoted whole and unaltered. The schema models Toulmin's ontology of argument on LinkML — the same technology this vocabulary uses — and names Stephen Toulmin as the source; his published one is *The Uses of Argument* (1958). Quoted rather than paraphrased, because four systems are intended to merge and a shared word that acquires a second meaning here is the drift this vocabulary exists to prevent.
+
 The same class continues: "A claim is its text and its warrants", and its Qualifier "is not stored", a claim carrying no probability of its own. `Warrant` and `Qualifier` are that schema's terms and are not minted here.
+
 What a history entry asserts, what an Article holds against an artifact, and what a Citation names in its target are each a Claim. Whether the rest of Toulmin's ontology is taken with it is a judgement for later, not settled here (stereorepo's DR-228).
 
 **Evidence.** That sentence is the opening of the `Evidence` class in `schema/epistemology.yaml` in caindy/fitch-mvp, quoted whole and unaltered, for the reason Claim's is.
+
 The same class continues: "Toulmin's Grounds (Data) by default, reached from a warrant through `grounds`; also Backing when it lends a credence, which is how a data stream earns a track record. The two are positions in an argument, not kinds of evidence." `Grounds`, `Backing` and `Warrant` are that schema's terms, and the slot the quotation names is its slot, not one here; none of them is minted here.
+
 A Citation can be Evidence and is not the same thing: a citation names an upstream authority, and one that cannot go stale is what stereorepo's DR-171 refused, which is why the collision is recorded rather than the word avoided.
+
 What is distinctive here is not that a history entry names Evidence but that it names Evidence which can fail: stereorepo's DR-171 turned down commit hashes and pull request citations as not mechanically falsifiable, because a hash is unchanged when the change it records is undone, so nothing detects that the entry has gone stale. The `Evidence:` line is held to a symbol a parser resolves, which is what lets an entry go stale when the test it names is gone; the word itself carries no such requirement (stereorepo's DR-228).
 
 ### APM primitives

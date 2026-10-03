@@ -1,10 +1,13 @@
-"""`render.py` and `apm_compile.reconcile_harnesses` under a write the sandbox denies.
+"""`render.py` and `reconcile_harnesses` under a write the sandbox denies, and scope notes.
 
 The seat's sandbox denies writes under `.claude/` (stereorepo's DR-302).
 
 A read-only file stands in for the sandbox: render must leave a current file
 untouched, write every other file when one cannot be written, and name that one
 rather than end in a traceback.
+
+A folded scope note reaches the vocabulary page with one newline at each
+paragraph break, and each of its paragraphs must still render as a paragraph.
 """
 import importlib
 import pathlib
@@ -14,10 +17,12 @@ import sys
 import tempfile
 from unittest import mock
 
+import yaml
+
 from checks.collect import check
 from checks.probes.harness import outcome
 from lib.apm_compile import harness
-from lib.render import cli, targets
+from lib.render import cli, pages, targets
 
 PAGES = {"a.md": "A\n", "../x/SKILL.md": "X\n"}
 """Two pages: one inside the scratch `meta` directory, one beside it as a `.claude/` skill is."""
@@ -133,3 +138,30 @@ def harness_projection_probes() -> list[str]:
             problems.append("harness: the new skill file was not copied")
         _writable(root)
     return problems
+
+
+SCOPE_NOTES = """
+- id: a
+  pref_label: A
+  definition: D
+  scope_note: >-
+    first
+
+    second
+- id: b
+  pref_label: B
+  definition: D
+  scope_note: >-
+    only
+"""
+"""Two concepts as the loader reads them: one folded two-paragraph note, one single paragraph."""
+
+
+@check("render scope note probes", pre=True)
+def render_scope_note_probes() -> list[str]:
+    """Each paragraph of a scope note is its own paragraph, the first led by the bold label."""
+    members = yaml.safe_load(SCOPE_NOTES)
+    got = pages._scheme({"name": "S"}, members, members)
+    wanted = ("**A.** first\n\nsecond\n", "**B.** only\n")
+    return [f"render: no scope note entry {want!r} in {got!r}"
+            for want in wanted if want not in got]
