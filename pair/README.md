@@ -45,7 +45,16 @@ idle: its last `result` is in and no background task it started is still
 running, so a gate a seat runs in the background belongs to the turn that
 started it. A seat whose turn would end with such a task running is asked,
 once, to wait for it or stop it. After every turn the loop commits whatever
-the seat left uncommitted, with a `Seat:` trailer. An implementing seat runs
+the seat left uncommitted, with a `Seat:` trailer. It then keeps the turn's
+closing message in the Issue file: it appends the message under a
+`## Pair notes` heading, labelled with the seat, the stage and the turn, and
+commits it on its own (`Loop.keep_note`). The other seat reads the note in
+its next diff. A seat learns nothing else of what the other said, and the
+notes land in `issues/done/` with the Issue. Every line is quoted with `> `,
+so a note never adds a heading the loop reads, such as `Needs elaboration` or
+`The plan`. The note is not the seat's change: a turn whose only change is its
+note is quiet. A grooming pass, a turn that lost its Issue file, and an empty
+message keep no note. An implementing seat runs
 only the gate of each Project its change touches: `just gate meta` always, and
 `just gate pair` when it changes `pair/`, for example
 (`prompts/stage-in-progress.md`). The loop's own gate runs before the Issue

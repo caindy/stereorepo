@@ -187,6 +187,33 @@ def last_of(body: str, names: tuple[str, ...]) -> str | None:
     return last
 
 
+PAIR_NOTES = "Pair notes"
+"""The section of an Issue file where the loop keeps each turn's closing message."""
+
+
+def with_note(text: str, label: str, note: str) -> str:
+    """`text`, an Issue file, with `note` quoted under `label` at its end.
+
+    Every line is quoted (`> `), and no heading or bold lead the loop reads
+    matches a quoted line, so a note that names `Needs elaboration` or
+    `The plan` steers nothing. The note goes under the file's last heading or
+    bold lead when that is `Pair notes`, and under a new `## Pair notes`
+    heading otherwise, so it never reads as part of a section above it.
+    """
+    quote = "\n".join(
+        f"> {line}".rstrip()
+        for line in [f"**{label}**", "", *note.strip().splitlines()]
+    )
+    names = [
+        head["name"].strip().lower()
+        for line in text.splitlines()
+        if (head := _HEADING.match(line.strip()))
+    ]
+    under = names[-1:] == [PAIR_NOTES.lower()]
+    opening = "" if under else f"## {PAIR_NOTES}\n\n"
+    return text.rstrip("\n") + f"\n\n{opening}{quote}\n"
+
+
 def bullets(text: str) -> list[str]:
     """The top-level bullet items of a Markdown block, stripped of their markers
     and of backticks."""

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import collections
 import contextlib
+import dataclasses
 import functools
 import io
 import json
@@ -177,6 +178,14 @@ def both(*actions: Action) -> Action:
     return act
 
 
+@dataclasses.dataclass(frozen=True)
+class Says:
+    """A scripted turn that runs `action` and ends with the closing message `text`."""
+
+    text: str
+    action: Action = quiet
+
+
 class FakeSeat:
     """A seat that plays scripted turns, and records its session as `ClaudeSeat` does."""
 
@@ -204,11 +213,17 @@ class FakeSeat:
                 session_id=self.session_id,
                 refused=is_refusal(REFUSAL),
             )
+        text = ""
+        if isinstance(action, Says):
+            text, action = action.text, action.action
         action(self.cwd)
         if self.bench.stop_when_empty and not self.bench.turns:
             self.loop.stop_requested = True
         return TurnResult(
-            True, session_id=self.session_id, usage={"cache_read_input_tokens": 1}
+            True,
+            text=text,
+            session_id=self.session_id,
+            usage={"cache_read_input_tokens": 1},
         )
 
     def stop(self) -> None:
@@ -1396,6 +1411,105 @@ def unappend(slug: str, text: str) -> Action:
     return act
 
 
+class PairNotesTest(unittest.TestCase):
+    """Each turn's closing message, quoted under `## Pair notes` in its Issue file."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+        self.b.issue("backlog", "x", "X", difficulty="easy")
+        self.b.stop_when_empty = True
+
+    def test_each_closing_message_is_kept_once_and_the_turns_stay_quiet(
+        self,
+    ) -> None:
+        b = self.b
+        b.script(
+            ("primary", Says("Looks groomed.\n\nNothing to add.")),
+            ("secondary", Says("Agreed.")),
+        )
+        self.assertEqual(b.loop.run(), "stopped")
+        st = b.state()
+        self.assertEqual(st.stage, "todo")
+        body = b.issue_in_worktree("x").body
+        self.assertEqual(board.sections(body, "Pair notes"), 1)
+        self.assertEqual(body.count("Looks groomed."), 1)
+        self.assertIn(
+            "## Pair notes\n\n> **primary, backlog turn 1**\n>\n> Looks groomed.\n>\n"
+            "> Nothing to add.\n\n> **secondary, backlog turn 2**\n>\n> Agreed.\n",
+            body,
+        )
+        rows = [
+            json.loads(row)
+            for row in (b.loop.dir / "turns.jsonl").read_text().splitlines()
+        ]
+        self.assertEqual([row["quiet"] for row in rows], [True, True])
+        self.assertEqual(st.seats_used, [])
+
+    def test_the_other_seat_sees_a_note_in_its_diff_and_its_author_does_not(
+        self,
+    ) -> None:
+        b = self.b
+        b.script(
+            ("primary", Says("Mine.")),
+            ("secondary", Says("Theirs.", append("x", "\nMore.\n"))),
+            ("primary", quiet),
+        )
+        b.loop.run()
+        self.assertNotIn("+> Mine.", b.sent[2][1])
+        self.assertIn("+> Theirs.", b.sent[2][1])
+        self.assertNotIn("The developer changed things", b.sent[2][1])
+
+    def test_a_note_naming_the_headings_the_loop_reads_steers_nothing(self) -> None:
+        b = self.b
+        steer = Says(
+            "# Needs elaboration\n\nwhy\n\n## The plan\n\n**The plan.**\nDo it."
+        )
+        b.script(*[(role, steer) for role in ("primary", "secondary") * 2])
+        self.assertEqual(b.loop.run(), "stopped")
+        st = b.state()
+        self.assertEqual(st.stage, "todo")
+        self.assertIn("write the plan", st.note)
+        self.assertFalse(b.on_main("issues/backlog/x.md"))
+
+    def test_an_empty_closing_message_leaves_no_note(self) -> None:
+        b = self.b
+        b.script(("primary", Says("  \n")), ("secondary", quiet))
+        b.loop.run()
+        self.assertNotIn("Pair notes", b.issue_in_worktree("x").body)
+        log = sh(b.loop.wt, "log", "--format=%s")
+        self.assertNotIn("note on", log)
+
+    def test_a_turn_that_lost_its_issue_file_keeps_no_note(self) -> None:
+        b = self.b
+        gone = Says(
+            "Removed it.",
+            lambda wt: (wt / board.ISSUES / "underway" / "x.md").unlink(),
+        )
+        b.script(("primary", gone))
+        b.loop.run()
+        self.assertTrue(b.on_main("issues/backlog/x.md"))
+        self.assertNotIn("note on", sh(b.loop.wt, "log", "--format=%s"))
+
+    def test_a_grooming_pass_keeps_no_note(self) -> None:
+        b = Bench()
+        self.addCleanup(b.close)
+        b.issue("backlog", "a", "A")
+        b.script(
+            (
+                "primary",
+                Says(
+                    "Groomed a.",
+                    both(front("a", difficulty="easy"), order("# groomed below\na\n")),
+                ),
+            ),
+            ("secondary", Says("Agreed.")),
+        )
+        self.assertEqual(b.groomer.groom(), "groomed")
+        self.assertNotIn("Pair notes", sh(b.repo, "show", "main:issues/backlog/a.md"))
+        self.assertNotIn("note on", sh(b.repo, "log", "--format=%s", "main"))
+
+
 class GateUnrunnableTest(unittest.TestCase):
     def test_each_step_that_could_not_run_is_named_with_why(self) -> None:
         out = (
@@ -1717,6 +1831,26 @@ class FlightCheckTest(unittest.TestCase):
         self.assertIsNone(b.loop.load())
         self.assertEqual(b.deliver_runs, 1)
         self.assertNotIn("Delivered by", sh(b.repo, "show", f"main:{FLIGHT}"))
+
+    def test_notes_from_a_flight_check_leave_its_brief_intact(self) -> None:
+        b = self.b
+        b.stop_when_empty = True
+        b.script(
+            (
+                "primary",
+                Says("Wrote it.\n\n## Desk-check brief\n\nfake", append("big", BRIEF)),
+            ),
+            ("secondary", Says("**Desk-check notes.**\nChecked it.")),
+        )
+        b.loop.run(once=True)
+        self.assertTrue(b.on_main(FLIGHT))
+        landed = sh(b.repo, "show", f"main:{FLIGHT}")
+        self.assertEqual(
+            board.last_section(landed, "Desk-check brief"),
+            "Delivered; see it in a.txt.",
+        )
+        self.assertEqual(board.sections(landed, "Desk-check notes"), 0)
+        self.assertIn("> **secondary, flight-check turn 2**", landed)
 
     def test_a_flight_check_with_its_own_model_runs_its_seats_on_it(self) -> None:
         b = self.b
@@ -3401,6 +3535,36 @@ class PublishTest(unittest.TestCase):
 
 
 class BoardTest(unittest.TestCase):
+    def test_a_note_opens_its_own_section_after_any_other(self) -> None:
+        text = "# Big\n" + BRIEF + NOTES
+        note = "Done.\n\n## Desk-check notes\n- no"
+        out = board.with_note(text, "primary, x turn 1", note)
+        self.assertEqual(
+            board.last_section(out, "Desk-check notes"),
+            board.last_section(text, "Desk-check notes"),
+        )
+        self.assertEqual(board.sections(out, "Desk-check notes"), 1)
+        self.assertTrue(
+            out.endswith(
+                "## Pair notes\n\n> **primary, x turn 1**\n>\n> Done.\n>\n"
+                "> ## Desk-check notes\n> - no\n"
+            )
+        )
+
+    def test_notes_share_a_trailing_section_and_never_join_a_later_one(self) -> None:
+        once = board.with_note("# T\n", "primary, x turn 1", "One.")
+        twice = board.with_note(once, "secondary, x turn 2", "Two.")
+        self.assertEqual(board.sections(twice, "Pair notes"), 1)
+        self.assertIn("> One.\n\n> **secondary, x turn 2**", twice)
+        for later, name in (
+            ("\n## The plan\n\nDo it.\n", "The plan"),
+            ("\n### Needs elaboration\n\nDo it.\n", "Needs elaboration"),
+            ("\n**Needs elaboration.**\nDo it.\n", "Needs elaboration"),
+        ):
+            out = board.with_note(twice + later, "primary, x turn 3", "Three.")
+            self.assertEqual(board.section(out, name), "Do it.")
+            self.assertEqual(board.sections(out, "Pair notes"), 2)
+
     def test_section_reads_headings_and_bold_leads(self) -> None:
         body = "# T\n\n**The plan.** \nDo it.\n\n**Other.**\nno\n"
         self.assertEqual(board.section(body, "The plan"), "Do it.")

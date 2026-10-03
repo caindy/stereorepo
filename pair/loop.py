@@ -13,6 +13,11 @@ whether the gate passes) and decides what happens next:
   section, and sits out until the developer answers it.
 - Otherwise the other seat takes the next turn.
 
+After each turn the loop also keeps the seat's closing message in the issue
+file, quoted under `## Pair notes` (`Loop.keep_note`), where the other seat
+reads it in its diff. The note is not the seat's change, so it never makes a
+turn count as one.
+
 The loop takes the next issue in running order as it stands, a ripe Flight
 first, and starts it by moving its file from `issues/backlog/` to
 `issues/underway/` in a commit of its own on `main`, so the board there shows
@@ -771,6 +776,7 @@ class Loop:
                 if result is None:
                     return "paused"
                 quiet = self.settle(st, role)
+                self.keep_note(st, role, result)
                 st.in_turn = None
                 self.record(st, role, result, quiet)
                 outcome = self.decide(st, role, quiet)
@@ -997,6 +1003,36 @@ class Loop:
             st.seats_used.append(role)
         st.head = st.seen[role] = head
         return quiet
+
+    def keep_note(self, st: State, role: str, result: TurnResult) -> None:
+        """Append the turn's closing message to the issue file and commit it.
+
+        `settle` has already judged the turn from the seat's own changes, so
+        the note never makes a turn count as a change. Moving `st.head` keeps
+        `absorb_developer` from taking the note's commit for the developer's,
+        and moving `st.seen[role]` past it keeps the seat from being shown its
+        own note, while the other seat sees it in its diff. A grooming pass has
+        no issue file, and a turn that lost its file is sent back by `decide`.
+        """
+        if st.stage == GROOMING or not result.text.strip():
+            return
+        issue = board.read(self.wt, st.slug)
+        if issue is None:
+            return
+        path = self.wt / issue.path
+        label = f"{role}, {st.stage} turn {st.turn + 1}"
+        path.write_text(board.with_note(path.read_text(), label, result.text))
+        git(self.wt, "add", "--", issue.path)
+        git(
+            self.wt,
+            "commit",
+            "-q",
+            "-m",
+            f"{role}: note on {st.stage} turn {st.turn + 1}",
+            "-m",
+            "Seat: loop",
+        )
+        st.head = st.seen[role] = git(self.wt, "rev-parse", "HEAD")
 
     def record(self, st: State, role: str, result: TurnResult, quiet: bool) -> None:
         usage = result.usage
