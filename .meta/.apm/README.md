@@ -16,7 +16,7 @@ to make.
   skills/<name>/SKILL.md      a cross-tool meta-guide, with its resources
   prompts/<name>.prompt.md    an executable workflow; also becomes a command
   instructions/<name>.instructions.md   guidance, scoped by an applyTo glob
-  agents/<name>.agent.md      a specialized personality
+  agents/<name>.agent.md      a Role or Persona, as an agent
   hooks/<name>.json           lifecycle handlers
 ```
 
@@ -28,7 +28,7 @@ Primitives are **derived from `.meta/assertions/`**, never authored twice:
 |---|---|
 | a Discipline | `instructions`, with `applies_to` as the `applyTo` glob |
 | the Ubiquitous Language | `instructions` scoped to everything — how the language reaches every harness |
-| a Personality, or a Persona to interrogate | `agents` |
+| a Role, with its communication style, or a Persona to interrogate | `agents` |
 | a Capability of kind SKILL | `skills` |
 | the gate | `hooks` |
 

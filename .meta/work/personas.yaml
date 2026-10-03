@@ -186,7 +186,6 @@ classes:
       - behaviors
       - frustrations
       - proficiencies
-      - personality
     slot_usage:
       name:
         required: true

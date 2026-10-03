@@ -1,5 +1,4 @@
 # groomed below
-remove-personality-residue
 template-excludes-retired-say-path
 specialize-python-prerequisite
 scaffold-recipes-from-the-render
