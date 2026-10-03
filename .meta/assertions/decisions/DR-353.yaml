@@ -1,0 +1,66 @@
+decisions:
+  - id: work:decision/353
+    name: "DR-353 · `just audit` compares a Project's gate with a bootstrap by step name and report shape, and prints each gap as an Issue"
+    status: ADOPTED
+    applies:
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-audit
+      - work:artifact/meta-checks-probes-tools-audit
+      - work:artifact/justfile
+    context: >-
+      DR-312 makes a bootstrap a reference and an audit for a product that
+      already exists, and its second consequence says the audit was not
+      built. The reference is already machine-readable: each bootstrap in
+      `bootstraps.yaml` names, for every implemented Discipline, the gate
+      steps that hold it, and Article 21 fixes the shape every gate reports
+      in. The question was how deep an audit should look, and what it should
+      do with what it finds.
+    alternatives:
+      - name: Judge whether each reported step does what the bootstrap's step does
+        chosen: false
+        reason: >-
+          Two products' steps need not work alike, which is DR-312's point,
+          and judging them would mean a model of every tool a step might run.
+      - name: Write each gap into `issues/backlog/` directly
+        chosen: false
+        reason: >-
+          The audit runs from a stereorepo checkout against what may be
+          another product's tree, and which gaps are worth an Issue is the
+          developer's call; a printed Issue is one cut away from committed.
+      - name: Compare step names and report shape, and print each gap as an Issue
+        chosen: true
+        reason: >-
+          Both are facts the reference already states and a gate run already
+          shows, so the audit needs no knowledge the assertions do not hold.
+    consequences:
+      - >-
+        `just audit <project> <bootstrap>` takes both by the last segment of
+        their ids, runs the Project's gate as `structure.yaml` declares it,
+        and exits non-zero when it finds a gap. Each gap is printed after a
+        comment naming the backlog file it would be.
+      - >-
+        A step counts as reported whatever its mark, so a failing gate can
+        audit clean; whether steps pass is the gate's question, not the
+        audit's.
+      - >-
+        One missing step is one gap naming every Discipline it leaves
+        unheld, and every line in none of Article 21's shapes is one gap
+        together, quoting the first ten, so a noisy gate yields one
+        readable Issue rather than many. A gate
+        that reports no step at all is one gap, without the list of every
+        step it therefore misses.
+      - >-
+        The audit is scaffold-only, as the adoption tool is (DR-305): the
+        bootstrap records it compares with stay in stereorepo, and a
+        specialized portfolio holds none. It audits the Projects stereorepo
+        asserts.
+      - >-
+        The audit reuses `.meta/gate`'s patterns, so the shapes the audit
+        accepts are the shapes the gate reads.
+    falsifier: >-
+      A product audits clean and its gate still cannot be read by
+      `.meta/gate`, or leaves a Discipline its bootstrap holds unheld.
+    rationale: |-
+      The audit checks what the reference states and the gate shows, and
+      leaves to the developer what neither can settle.

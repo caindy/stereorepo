@@ -47,7 +47,7 @@ TOOL_ROOTS = (".meta/", "pair/")
 """Where a recipe's tool may live: the staging ground, or the scaffold-only pair loop."""
 
 SCAFFOLD_RECIPES = ("test-specialization", "adapt", "pair", "groom", "pair-status",
-                    "pair-accept", "pair-resume", "pair-watch", "release")
+                    "pair-accept", "pair-resume", "pair-watch", "release", "audit")
 """Recipes rendered only in the scaffold, which a portfolio's surface does not hold."""
 
 IDENTIFIER = "identifier"
@@ -61,6 +61,7 @@ CONTRACT: Contract = {
     "terms": (("args", FLAGS),),
     "apm": (("args", FLAGS),),
     "bootstrap": (("args", FLAGS),),
+    "audit": (("project", IDENTIFIER), ("bootstrap", IDENTIFIER)),
     "sync": (("args", FLAGS),),
     "test-specialization": (("args", FLAGS),),
     "release": (("args", FLAGS),),

@@ -68,6 +68,10 @@ test-specialization *args:
 release *args:
     uvx --python 3.13 --with pyyaml python .meta/release.py {{args}}
 
+# audit a Project's gate against a language Bootstrap, printing each gap as an Issue (stereorepo's DR-353)
+audit project bootstrap:
+    .meta/audit.py {{project}} {{bootstrap}}
+
 # plan brownfield adoption for an existing Product repository
 adapt *args:
     .meta/adapt.py {{args}}

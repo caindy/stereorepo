@@ -115,6 +115,15 @@ def justfile() -> str:
             "    uvx --python 3.13 --with pyyaml python .meta/release.py {{args}}",
         ]
 
+    if "work:artifact/meta-audit" in artifacts:
+        lines += [
+            "",
+            "# audit a Project's gate against a language Bootstrap, printing each gap as an Issue"
+            " (stereorepo's DR-353)",
+            "audit project bootstrap:",
+            "    .meta/audit.py {{project}} {{bootstrap}}",
+        ]
+
     if "work:artifact/meta-adapt" in artifacts:
         lines += [
             "",

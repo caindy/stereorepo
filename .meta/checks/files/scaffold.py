@@ -11,9 +11,11 @@ from checks.files import sources
 
 SCAFFOLD_ONLY = ("template/", "SPECIALIZE.md", "ADOPT.md", "bootstraps/", "pair/",
                  ".meta/adapt.py", ".meta/lib/adapt/",
-                 ".meta/checks/probes/tools/test_brownfield.py")
+                 ".meta/checks/probes/tools/test_brownfield.py",
+                 ".meta/audit.py", ".meta/checks/probes/tools/audit.py")
 """Paths the scaffold has and a portfolio does not, at the top level or below it, such as the
-brownfield adoption tool and its probe (stereorepo's DR-305)."""
+brownfield adoption tool, the audit against the bootstraps a portfolio does not hold, and their
+probes (stereorepo's DR-305, stereorepo's DR-353)."""
 
 
 def scaffold_only_lines(path: pathlib.Path, names: Sequence[str],

@@ -324,6 +324,9 @@ artifacts:
   - id: work:artifact/meta-bundle
     name: .meta/bundle.py
     path: .meta/bundle.py
+  - id: work:artifact/meta-audit
+    name: .meta/audit.py
+    path: .meta/audit.py
   - id: work:artifact/meta-adapt
     name: .meta/adapt.py
     path: .meta/adapt.py
@@ -519,6 +522,9 @@ artifacts:
   - id: work:artifact/meta-checks-probes-tools-gate
     name: .meta/checks/probes/tools/gate.py
     path: .meta/checks/probes/tools/gate.py
+  - id: work:artifact/meta-checks-probes-tools-audit
+    name: .meta/checks/probes/tools/audit.py
+    path: .meta/checks/probes/tools/audit.py
   - id: work:artifact/meta-checks-probes-tools-comments
     name: .meta/checks/probes/tools/comments.py
     path: .meta/checks/probes/tools/comments.py

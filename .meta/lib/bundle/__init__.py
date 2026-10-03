@@ -23,6 +23,7 @@ YAML_MAPPING = "YAML mapping"
 SCAFFOLD_ONLY_PATHS: tuple[str, ...] = (
     "SPECIALIZE.md", "ADOPT.md", "template", "bootstraps", "pair", ".meta/adapt.py",
     ".meta/lib/adapt", ".meta/checks/probes/tools/test_brownfield.py",
+    ".meta/audit.py", ".meta/checks/probes/tools/audit.py",
 )
 """Paths the scaffold has and a portfolio does not, relative to the root (stereorepo's DR-305).
 
