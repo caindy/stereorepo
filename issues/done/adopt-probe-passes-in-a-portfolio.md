@@ -66,7 +66,7 @@ a view shaped like a portfolio, from inside stereorepo's own gate.
 ## The plan
 
 Everything happens in `.meta/checks/probes/files/rendered.py`. `pages.adopt()`
-(`.meta/lib/render/pages.py:199`) already answers `None` where
+(in `.meta/lib/render/pages.py`) already answers `None` where
 `assertions/disciplines.yaml` holds no Adoption, so it does not change.
 
 1. **Confirm the finding.** Search `.meta/gate`, `.meta/checks/`, `pair/`

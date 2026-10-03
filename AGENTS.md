@@ -54,6 +54,10 @@ observe. There are no pull requests.
 - Use the vocabulary from the ontology of work in preference to synonyms: an
   *Issue*, not a ticket or story; a *seat*, not a coder or reviewer; the
   *developer*, not the user or the owner.
+- Cite code by its path and the name of the thing in it (a function,
+  class, constant, test, heading or step), such as `CONTEXT` in
+  `pair/seats.py`, never by line number: a line number moves when the file
+  above it changes (DR-355).
 - When a question that demanded an answer is settled, write it as
   `.meta/assertions/decisions/DR-nnn.yaml`, where the number is the highest number the record holds plus one,
   re-render, and commit it with the change.

@@ -148,7 +148,7 @@ it holds an Issue, so either waits for the other.
   state file it finds. Each block shows the paused reason and a take-over line
   for its own worktree. The text for a single state stays as it is today. The
   "last turns" tail reads each directory's `turns.jsonl`.
-- **README.** Rewrite the paragraph at `pair/README.md:157`, which says the two
+- **README.** Rewrite the paragraph under "Grooming the backlog" in `pair/README.md` that opens "A pass and an Issue share", which says the two
   wait for each other. Also update the runtime-state table (`.pair/` versus
   `.pair/groom/`, and the two locks) and the watch, steer and take-over rows,
   so that each names both worktrees.

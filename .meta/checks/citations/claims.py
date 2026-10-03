@@ -1,4 +1,4 @@
-"""What a citation goes on to claim: an Article that resolves, a quotation that appears where it is attributed, a relation that is the slot it claims to be, and a line that reads what it is cited for (A12).
+"""What a citation goes on to claim: an Article that resolves, a quotation that appears where it is attributed, and a relation that is the slot it claims to be (A12); and no citation of a line (stereorepo's DR-355).
 """
 import re
 from typing import Any
@@ -160,53 +160,30 @@ def stated_relations(index: dict[str, Any]) -> list[str]:
     return problems
 
 
-# A path and a line, cited as one code span, which is the form a reviewer writes
-# a precedent in. Anchored to the span so that `see foo.py:1` is prose about a
-# file rather than a claim about a line.
+# A path and a line, cited as one code span. Anchored to the span so that
+# `see foo.py:1` is prose about a file rather than a citation of a line.
 PATH_LINE = re.compile(r"`(?P<path>[^`\s:]*[./][^`\s:]*):(?P<line>\d+)`")
 
 
-@check("path and line claims")
-def path_and_line_claims() -> list[str]:
-    """Validate that `path:line` citations point to existing lines containing adjacent code spans.
+@check("no line citations")
+def no_line_citations() -> list[str]:
+    """Refuse every `path:line` code span in durable prose (stereorepo's DR-355).
 
-    Ensures that file line references cited beside code snippets in prose exist and contain
-    the referenced tokens.
+    A line number moves whenever the file above it changes, so a citation of
+    one fails on edits to a file the citing prose never touched. Prose cites
+    the path and the thing in it instead: a function, class, constant, test,
+    heading or step. Fenced code blocks are not prose, so tool output there
+    is not read.
 
     Returns:
-        list[str]: Validation problem messages for nonexistent paths, out-of-range lines,
-        or mismatched line contents.
+        list[str]: One message per `path:line` code span, naming the file that
+        holds it.
     """
-    problems = []
-    for path in loaders.durable(loaders.copied_files()):
-        rel = path.relative_to(ROOT)
-        for span in prose.prose(path):
-            for m in PATH_LINE.finditer(span):
-                target = ROOT / m["path"]
-                if not target.is_file():
-                    problems.append(f"{rel}: {m.group(0)} names no file")
-                    continue
-                try:
-                    lines = target.read_text().splitlines()
-                except (UnicodeDecodeError, OSError):
-                    continue
-                number = int(m["line"])
-                if not 1 <= number <= len(lines):
-                    problems.append(f"{rel}: {m.group(0)} cites a line of a file "
-                                    f"with {len(lines)}")
-                    continue
-                after = prose.SPAN.findall(span[m.end():m.end() + 60].split(". ")[0])[:1]
-                back = span[max(0, m.start() - 60):m.start()].rsplit(". ")[-1]
-                if span[:m.start() - len(back)].count("`") % 2:
-                    back = back.partition("`")[2]
-                before = prose.SPAN.findall(back)[-1:]
-                near = [s for s in (s.strip("` ") for s in after + before) if s]
-                if near and not any(s in lines[number - 1] for s in near):
-                    problems.append(
-                        f"{rel}: {m.group(0)} is cited beside "
-                        + ", ".join(f"`{s}`" for s in near)
-                        + f", and line {number} reads `{lines[number - 1].strip()}`")
-    return problems
+    return [f"{path.relative_to(ROOT)}: {m.group(0)} cites a line; "
+            "name the path and the thing in it instead"
+            for path in loaders.durable(loaders.copied_files())
+            for span in prose.prose(path)
+            for m in PATH_LINE.finditer(span)]
 
 
 # A Discipline step is an identified entity with a semantic slug CURIE, cited

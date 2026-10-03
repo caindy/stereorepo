@@ -82,7 +82,7 @@ Everything here is prose and assertions: no Python changes. Steps in order:
      loop.
    - Developer scope note (~line 232): add the Flight to what waits for the
      desk check.
-2. **`Issue` class** (`.meta/work/purpose.yaml:10`): "a parent issue" becomes
+2. **`Issue` class** (in `.meta/work/purpose.yaml`): "a parent issue" becomes
    "a Flight".
 3. **Wiki page.** Scaffold `wiki/stereorepo/flight.md` with `/wikisplain`. It
    needs a bold lead definition, and it explains why a Flight is not a Sprint

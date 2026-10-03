@@ -2,8 +2,9 @@
 
 A12 asks three things of a citation, and the steps here resolve them in turn:
 the number it names, and then the claim it goes on to make — an Article that
-resolves, a quotation that appears where it is attributed, a relation that is
-the slot it claims to be, and a line that reads what it is cited for (stereorepo's DR-150).
+resolves, a quotation that appears where it is attributed, and a relation that
+is the slot it claims to be (stereorepo's DR-150). No citation names a line
+(stereorepo's DR-355).
 One module per subject (stereorepo's DR-345); every name is re-exported here, so
 `from checks.citations import FOREIGN` resolves as it did.
 
@@ -27,7 +28,7 @@ from checks.citations.claims import (
     SUBJECT,
     cited_articles,
     cited_discipline_steps,
-    path_and_line_claims,
+    no_line_citations,
     quoted_claims,
     refused_ordinal_step_citations,
     stated_relations,
@@ -64,8 +65,8 @@ __all__ = [
     "entry_text",
     "flat",
     "loaders",
+    "no_line_citations",
     "normalise",
-    "path_and_line_claims",
     "prose",
     "quoted_claims",
     "record",

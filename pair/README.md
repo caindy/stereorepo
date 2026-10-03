@@ -54,8 +54,8 @@ notes land in `issues/done/` with the Issue. Every line is quoted with `> `,
 so a note never adds a heading the loop reads, such as `Needs elaboration` or
 `The plan`. A code span citing a path and a line comes out as the path
 followed by `line` and the number (`board.with_note`): the seat's gate never
-saw its note, so a stale citation in it would otherwise fail the
-`path and line claims` step on the next seat's turn. The note is not the seat's change: a turn whose only change is its
+saw its note, so a line citation in it would otherwise fail the
+`no line citations` step on the next seat's turn. The note is not the seat's change: a turn whose only change is its
 note is quiet. A grooming pass, a turn that lost its Issue file, and an empty
 message keep no note. An implementing seat runs
 only the gate of each Project its change touches: `just gate meta` always, and

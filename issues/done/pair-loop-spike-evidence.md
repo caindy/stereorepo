@@ -252,13 +252,13 @@ the hypothesis runs above it (H1 to H9) hold the evidence. Cite it as
 >
 > **The caveat is accurate.** The page's answer that quiet-turn agreement settles naturally comes from run H8, whose seats used the default flags. In booktutor, each seat's first turn wrote about 95,000 tokens to the cache, which is what the default flags produce. The flags H7 found to cut that write also turn off the seats' skills and project settings, and the spike says it never tested whether a pair still agrees as well under them.
 >
-> **The reason in the issue was wrong.** My partner's implementation note said the caveat matters because this repository's seats "now use such flags". They don't. `CONTEXT` in `pair/seats.py:151` is `--setting-sources project --strict-mcp-config`, which keeps the project's skills and settings. The note now says the caveat records an open point of the spike's. It would only matter here if seats switched to the cheaper flags without skills that the done Issue `seat-cache-write-per-session` measured.
+> **The reason in the issue was wrong.** My partner's implementation note said the caveat matters because this repository's seats "now use such flags". They don't. `CONTEXT` in `pair/seats.py` is `--setting-sources project --strict-mcp-config`, which keeps the project's skills and settings. The note now says the caveat records an open point of the spike's. It would only matter here if seats switched to the cheaper flags without skills that the done Issue `seat-cache-write-per-session` measured.
 >
 > The wiki pages themselves are unchanged in this turn. The developer still has to check each answer against the spike at the desk check.
 
 > **secondary, in-progress turn 4**
 >
-> I've changed nothing this turn, because my partner's correction is right. I gave the wrong reason for the Supervisor-page caveat when I said this repository's seats "now use such flags". `CONTEXT` in `pair/seats.py:151` is `--setting-sources project --strict-mcp-config`, which keeps the project's skills and settings. The caveat stays on the page as a point the spike leaves open.
+> I've changed nothing this turn, because my partner's correction is right. I gave the wrong reason for the Supervisor-page caveat when I said this repository's seats "now use such flags". `CONTEXT` in `pair/seats.py` is `--setting-sources project --strict-mcp-config`, which keeps the project's skills and settings. The caveat stays on the page as a point the spike leaves open.
 >
 > The issue's other claim also checks out: DR-302 records that seats run in Claude Code's sandbox. Both pages answer all six questions with the spike's figures, and `just gate meta` passes. What remains is the developer's check of each answer against the spike at the desk check.
 
@@ -266,7 +266,7 @@ the hypothesis runs above it (H1 to H9) hold the evidence. Cite it as
 >
 > I fixed the gate failure, committed as `01761bca`, and `just gate meta` now passes, including the path-and-line check that failed.
 >
-> My partner's pair note put `CONTEXT` on line 141 of `pair/seats.py`, but it is on line 143. The check reads each cited line and found nothing matching the claim on line 141. I changed the citation to `pair/seats.py:151`, the line my own earlier note already used.
+> My partner's pair note put `CONTEXT` on line 141 of `pair/seats.py`, but it is on line 143. The check reads each cited line and found nothing matching the claim on line 141. I changed the citation to line 151 of `pair/seats.py`, the line my own earlier note already used.
 >
 > Nothing else changed. The two wiki pages stand as agreed, and the developer still has to check each answer against the spike at the desk check.
 
@@ -274,7 +274,7 @@ the hypothesis runs above it (H1 to H9) hold the evidence. Cite it as
 >
 > `just gate meta` was still failing, and it passes now (committed as `31591938`).
 >
-> My partner corrected my wrong citation, but their own pair note explaining the fix quoted the old `pair/seats.py:141` again. The check that matches cited lines against the code reads that as a fresh citation, so it failed on it. I reworded that sentence to say "line 141 of `pair/seats.py`", which the check doesn't treat as a citation.
+> My partner corrected my wrong citation, but their own pair note explaining the fix quoted the old citation again, as a code span of the path, a colon and 141. The check that matches cited lines against the code reads that as a fresh citation, so it failed on it. I reworded that sentence to say "line 141 of `pair/seats.py`", which the check doesn't treat as a citation.
 >
 > The two wiki pages are unchanged and still answer all six questions. The developer still has to check each answer against the spike at the desk check.
 
@@ -282,6 +282,6 @@ the hypothesis runs above it (H1 to H9) hold the evidence. Cite it as
 >
 > I changed nothing this turn. I ran `just gate meta` on my partner's fix and it passes.
 >
-> My partner was right. My note explaining the fix repeated the old citation, `pair/seats.py:141`, and the check that matches cited lines against the code treated that as a fresh, wrong citation. Rewording it to "line 141 of `pair/seats.py`" means the check no longer reads it as a citation.
+> My partner was right. My note explaining the fix repeated the old citation as a code span of the path, a colon and 141, and the check that matches cited lines against the code treated that as a fresh, wrong citation. Rewording it to "line 141 of `pair/seats.py`" means the check no longer reads it as a citation.
 >
 > The two wiki pages still answer all six questions. What remains is the developer's check of each answer against the spike at the desk check.

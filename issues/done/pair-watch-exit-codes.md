@@ -80,7 +80,7 @@ prints 2, the same code as `just pair-watch --until nonsense; echo $?`.
 Risk: low. The only callers of `watch`'s code are sessions that read it.
 Nothing in the repository branches on 1 or 2 from `pair-watch`: `AGENTS.md`
 says only that it exits non-zero when the loop ends first, and
-`pair/README.md:193` names the recipe without a code.
+the "Using it" table in `pair/README.md` names the recipe without a code.
 
 ## Notes
 

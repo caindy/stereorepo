@@ -122,7 +122,7 @@ fit, including its `@check` line and its docstrings.
 > I made two small additions to the "Done when" section of the Issue and left `difficulty: easy` as it was.
 >
 > I checked the Issue against the code first, and it is accurate:
-> - **Where the bug is:** `.meta/lib/render/pages.py:65` writes each scope note on one line after its bold label and keeps the paragraph breaks as single newlines.
+> - **Where the bug is:** `_scheme` in `.meta/lib/render/pages.py` writes each scope note on one line after its bold label and keeps the paragraph breaks as single newlines.
 > - **Which notes show it:** in `.meta/assertions/imported/vocabulary.yaml`, the only scope notes with paragraph breaks are those of Ubiquitous Language, Claim and Evidence. All three are plain folded text with no extra-indented lines. So the fix the Issue asks for, turning each newline into a blank line, can't damage anything else.
 >
 > What I added:
@@ -140,7 +140,7 @@ fit, including its `@check` line and its docstrings.
 >
 > I added a `## The plan` section to the Issue file and changed no code. The fix is three small steps:
 >
-> 1. **The renderer:** in `.meta/lib/render/pages.py:65`, turn each newline in a scope note into a blank line, so each paragraph becomes its own Markdown paragraph. A one-paragraph note has no newline in it, so it comes out exactly as it does now.
+> 1. **The renderer:** in `_scheme` in `.meta/lib/render/pages.py`, turn each newline in a scope note into a blank line, so each paragraph becomes its own Markdown paragraph. A one-paragraph note has no newline in it, so it comes out exactly as it does now.
 > 2. **The probe:** add a new check to `.meta/checks/probes/tools/render.py` that builds two concepts from YAML, one with a two-paragraph scope note and one with a single paragraph. It renders them through the same function `.meta/vocabulary.md` uses and compares the output for each exactly. The file's opening docstring gets widened to cover this new check.
 > 3. **Re-render:** run `just render` and commit `.meta/vocabulary.md`. The only change should be one new blank line inside each of the scope notes of Ubiquitous Language, Claim and Evidence.
 >
@@ -150,7 +150,7 @@ fit, including its `@check` line and its docstrings.
 
 > **secondary, todo turn 2**
 >
-> I made three small corrections to the plan's text and changed no code. The plan itself is sound: the fix belongs at `.meta/lib/render/pages.py:65`, and a one-paragraph scope note has no newline, so it comes out unchanged.
+> I made three small corrections to the plan's text and changed no code. The plan itself is sound: the fix belongs in `_scheme` in `.meta/lib/render/pages.py`, and a one-paragraph scope note has no newline, so it comes out unchanged.
 >
 > - **The probe's test data:** each test concept must carry `id`, `pref_label` and `definition`. `_scheme` puts concepts without narrower terms into a term table, and that table reads `definition`. A probe built without it would crash.
 > - **Why the probe calls the private function:** the plan said this was fine because the probe sits beside the code it checks. It doesn't: the probe is under `.meta/checks/`, not next to `pages.py`. The plan now gives the real reason: `vocabulary()` reads the real assertion files, so testing through it would test the repository's data rather than the rendering rule.

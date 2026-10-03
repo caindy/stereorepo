@@ -1,0 +1,61 @@
+decisions:
+  - id: work:decision/355
+    name: "DR-355 · Prose cites code by its path and the name of the thing in it, never by line number"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-check
+      - work:artifact/meta-checks-citations-prose
+    context: >-
+      DR-130 and DR-331 put a `path and line claims` step in the gate, which
+      read each code span of a path, a colon and a line number in durable
+      prose and checked that the line held the code spans written beside it.
+      A line number moves whenever the file above it changes, so an edit to
+      one file failed the gate on prose in another that nobody touched. On
+      2026-10-03, adding three entries to `DISALLOWED` in `pair/seats.py`
+      failed the `meta` gate on a pair note in a done Issue that cited
+      `CONTEXT` by its old line, and on `release-recipe-is-scaffold-only`
+      seats spent two turns rewording each other's notes for the same
+      reason. The question was whether a line number is worth citing at all.
+    alternatives:
+      - name: Keep verifying cited lines
+        chosen: false
+        reason: >-
+          The check is right about each citation and still fails the edit
+          that moved the line rather than the prose that cited it, so whoever
+          changes a file pays for every citation of it anywhere.
+      - name: Rewrite line citations out of every Issue file, as pair notes are
+        chosen: false
+        reason: >-
+          It keeps a form that goes stale silently: a citation no check reads
+          points at whatever line now holds that number.
+      - name: Refuse line citations, and cite the path and a name
+        chosen: true
+        reason: >-
+          A function, class, constant, test, heading or step keeps its name
+          when lines move above it, so a citation by name stays true across
+          edits that do not touch the thing it names.
+    consequences:
+      - >-
+        `no_line_citations` in `.meta/checks/citations/claims.py` replaces
+        `path_and_line_claims`: the `no line citations` step refuses every
+        code span of a path, a colon and a line number in durable prose,
+        Issue files included, and resolves none. Fenced code blocks, where
+        tool output lives, are not read.
+      - >-
+        This amends DR-130 and DR-331, which named the step that verified
+        lines; the rest of what they decided stands.
+      - >-
+        The Conventions list in `AGENTS.md` states the rule. The
+        `/technical-writing` skill states it once the developer renders it
+        outside the seats' sandbox
+        (`technical-writing-skill-no-line-citations`).
+      - >-
+        `board.with_note` in `pair/board.py` still rewrites a pair note's line
+        citations out of the refused form, so a seat's closing message cannot
+        fail the next seat's gate.
+    falsifier: >-
+      A citation by path and name goes stale as often as line citations did,
+      or a reader cannot find the thing a citation names without its line.
+    rationale: |-
+      A name survives the edits a line number does not, and refusing the form
+      costs the writer one word.

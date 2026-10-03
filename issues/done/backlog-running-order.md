@@ -83,7 +83,7 @@ does not write the order; `backlog-grooming-pass` does.
    `None`, the text becomes `# <slug>` plus a `# Needs elaboration` section
    saying the Issue's file was gone from its branch. Update the method
    docstring, the `notify`/`say` wording, the module docstring (lines 11–12),
-   and the one sentence in `pair/README.md:42` that names the send-back
+   and the one sentence in `pair/README.md`'s "Sending back" step that names the send-back
    destination, because this change makes it false. This overlaps
    `backlog-and-roadmap-words` on purpose. That Issue still owns the rest of
    `pair/README.md` and every other README.
@@ -152,7 +152,7 @@ does not write the order; `backlog-grooming-pass` does.
 - **More sentences made false.** `issues/backlog/README.md` said the loop
   runs in filename order, and `issues/roadmap/README.md` said send-backs land
   there. The stage tables in `issues/README.md` and `template/issues/README.md`
-  said both. Each was corrected in place, like `pair/README.md:42`. The rest of the
+  said both. Each was corrected in place, like the "Sending back" step in `pair/README.md`. The rest of the
   wording is still `backlog-and-roadmap-words`'s.
 - **A step with no sources.** `board_order` takes only its `root` seam, so the
   gate passes it nothing. It reads `issues/backlog/ORDER` from disk rather than

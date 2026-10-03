@@ -48,9 +48,21 @@ Evidence: `.meta/checks/citations/claims.py::stated_relations`
 Prose citing specific source lines (`path:line`) beside code snippets decayed
 when file edits shifted line offsets. Established:
 `path_and_line_claims()` verifies that cited lines exist and contain the
-neighboring code tokens referenced in prose.
+neighboring code tokens referenced in prose. The next entry replaced that
+step.
 
-Evidence: `.meta/checks/citations/claims.py::path_and_line_claims`
+Evidence: `.meta/checks/citations/claims.py::no_line_citations`
+
+### Line citations refused
+
+Verifying cited lines still failed the gate on files nobody touched: an edit
+that moved lines in a source file made a citation of it elsewhere stale, so
+the edit failed on prose it never changed, pair notes and done Issue files
+included. Established: `no_line_citations()` refuses every `path:line` code
+span in durable prose instead of resolving it, and prose cites the path and
+the name of the thing in it (stereorepo's DR-355).
+
+Evidence: `.meta/checks/citations/claims.py::no_line_citations`
 
 ### Disagreement between file citations and record enactment slots
 

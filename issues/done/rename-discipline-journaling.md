@@ -192,7 +192,7 @@ hit@5 ≥ 15/18. Check `.meta/disciplines.md` for a "Routing" heading.
 >
 > I checked my partner's two corrections against the code and both are right, so I've left the plan as it stands.
 >
-> - **Search commands:** no recipe runs search. The commands in the plan are the ones the search skill documents in `.meta/.apm/skills/search/SKILL.md`. The pass mark of 15 out of 18 queries matches the floor set in `.meta/lib/search/benchmark.py:128`.
+> - **Search commands:** no recipe runs search. The commands in the plan are the ones the search skill documents in `.meta/.apm/skills/search/SKILL.md`. The pass mark of 15 out of 18 queries matches the floor set by `min_hits` in `run_benchmark` in `.meta/lib/search/benchmark.py`.
 > - **Step 8:** the render builds `.gitattributes` from the files it produces, not from what is on disk, so one render is enough. If the old `journaling.instructions.md` is left in place, `unrendered` in `.meta/lib/render/targets.py` lists it as unrendered.
 
 ## What was done
