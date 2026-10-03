@@ -3,7 +3,7 @@
 
 Compiles declarative assertions and bootstrap capabilities into Agent Package
 Manager (APM) primitives and reconciles root agent harness configurations
-(stereorepo's DR-007, stereorepo's DR-172, stereorepo's DR-173, stereorepo's DR-200,
+(stereorepo's DR-325, stereorepo's DR-172, stereorepo's DR-173, stereorepo's DR-200,
 stereorepo's DR-208).
 
 History in apm_compile.history.md (stereorepo's DR-171).

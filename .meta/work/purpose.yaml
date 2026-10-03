@@ -102,12 +102,12 @@ classes:
       that has it. It is the element that names the Persona.
     comments:
       - >-
-        It states the *user's* job, not the worker's (stereorepo's DR-021), so it
+        It states the *user's* job, not the worker's (stereorepo's DR-327), so it
         names a Persona.
       - >-
         `serves` names the END goals this need advances, and is **required**. A
         need that advances none of a Persona's goals is a need nobody has
-        (stereorepo's DR-039). An END goal with no Job to be Done is a user need
+        (stereorepo's DR-327). An END goal with no Job to be Done is a user need
         nobody is working on.
     slots:
       - situation

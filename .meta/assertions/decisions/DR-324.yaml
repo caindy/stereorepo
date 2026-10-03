@@ -1,0 +1,45 @@
+decisions:
+  - id: work:decision/324
+    name: "DR-324 · A skill composes tools, a tool is atomic, and nothing more is reified ahead of a consumer"
+    status: ADOPTED
+    supersedes:
+      - work:decision/006
+      - work:decision/008
+    enacted_in:
+      - work:artifact/meta-assertions-imported-authority
+      - work:artifact/meta-work-authority
+    context: >-
+      DR-006 added `Capability.composed_of` and argued it from a bill of
+      materials and an audit trail resolved down to what runs, neither of
+      which the ontology has. DR-008 reverted a `Provisioning` enum, a
+      `PackageRef` class and a `package_ref` slot that reified a Capability
+      as an installable package, and argued the revert partly from the same
+      bill of materials.
+    alternatives:
+      - name: Reify a Capability as a package (DR-008's reverted schema)
+        chosen: false
+        reason: >-
+          Nothing reads it. A coordinate system invented ahead of its
+          consumer is one that will be wrong.
+      - name: Record composition and stop there
+        chosen: true
+        reason: >-
+          `composed_of` is read by whoever resolves a skill to the tools it
+          runs, and the atomicity rule is checked by `linkml-validate`.
+    consequences:
+      - >-
+        A Capability of kind TOOL carries no `composed_of`; a skill composes
+        tools and may compose other skills.
+      - >-
+        How a Capability is provisioned (a Dockerfile, a nix expression, a
+        package) stays out of the schema until something consumes it.
+    falsifier: >-
+      A consumer in the repository that needs to know how a Capability is
+      installed and cannot learn it from `composed_of` and the tool's name.
+    rationale: |-
+      Taking "a Capability is a skill or a tool" literally, `echo` and `bash`
+      are tools and reading and writing files is a skill that combines them.
+      Saying so is cheap and is checked. Saying more, how each tool arrives
+      on the machine, has no reader yet; a coordinate system invented ahead
+      of its consumer is one that will be wrong, which is the Nothing
+      Unconsumed discipline at the creation boundary.

@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/019
     name: "DR-019 · Persona splits into Personality and Persona"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/327
     enacted_in:
       - work:artifact/meta-work-personas
     rationale: |-

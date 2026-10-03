@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/020
     name: "DR-020 · Persona goals are typed, and the End tier is Goal-shaped"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/327
     alternatives:
       - name: "Make the End tier an instance of Goal"
         chosen: false

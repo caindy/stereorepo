@@ -1,0 +1,43 @@
+decisions:
+  - id: work:decision/325
+    name: "DR-325 · APM is the packaging target for agent primitives"
+    status: ADOPTED
+    supersedes:
+      - work:decision/007
+    enacted_in:
+      - work:artifact/meta-apm-readme
+    context: >-
+      DR-007 chose APM so that a Role and a Persona could be installed outside
+      `.meta/`, and argued the fit from a seam between a Role, which travels,
+      and a Remit, a grant over Securables, which does not. The ontology no
+      longer has a Remit or a Securable, and APM now carries more than Roles
+      and Personas.
+    alternatives:
+      - name: Write each harness's files by hand
+        chosen: false
+        reason: >-
+          `.claude/`, `.gemini/` and `.github/` would each hold a copy of the
+          same guidance, and the copies drift.
+      - name: Compile primitives with APM
+        chosen: true
+        reason: >-
+          One primitive under `.meta/.apm/` compiles to every harness APM
+          targets, and the primitives are themselves rendered from the
+          assertions.
+    consequences:
+      - >-
+        What travels is what an agent reads or runs: a skill, a Discipline's
+        instructions, an agent compiled from a Persona or a Role, and a hook.
+      - >-
+        What does not travel stays in the scaffold's copy set: the schemas,
+        the checks and the gate (DR-173), and tool permissions, for which APM
+        has no primitive.
+    falsifier: >-
+      A primitive that a harness needs and APM cannot express, so that it has
+      to be written by hand into a harness directory.
+    rationale: |-
+      An agent primitive is written once and read by several harnesses, and
+      APM is the tool that turns the one into the several. The boundary of
+      what it packages is the boundary of what an agent consumes; everything
+      else is repository infrastructure, which a portfolio inherits by
+      Specialization rather than by install.

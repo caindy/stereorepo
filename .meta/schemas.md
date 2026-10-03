@@ -11,7 +11,7 @@ _The ontologies, and how to exercise them._
 
 Start from `work_ontology.yaml`'s load map, then read the module that covers
 what you are touching. A module explains itself, in LinkML rather than in prose
-(stereorepo's DR-003).
+(stereorepo's DR-323).
 
 ### Exercising them
 

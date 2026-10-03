@@ -1,0 +1,46 @@
+decisions:
+  - id: work:decision/326
+    name: "DR-326 · Two languages: the portfolio's own, and stereorepo's imported"
+    status: ADOPTED
+    supersedes:
+      - work:decision/015
+    enacted_in:
+      - work:artifact/meta-assertions-domain-vocabulary
+    context: >-
+      DR-015's rule stands, but its list of the imported vocabulary named
+      Challenge, Goal and Job, which the ontology no longer has.
+    alternatives:
+      - name: One language, stereorepo's, used for the domain as well
+        chosen: false
+        reason: >-
+          A portfolio's domain has words stereorepo has never heard, and
+          stereorepo's words would displace them.
+      - name: Two languages, kept in separate files
+        chosen: true
+        reason: >-
+          The portfolio owns its domain language, and `sync` can carry the
+          imported one forward without touching it.
+    consequences:
+      - >-
+        `.meta/assertions/domain_vocabulary.yaml` is the portfolio's own and is
+        never synced; the imported vocabulary lives under
+        `.meta/assertions/imported/` and is.
+    falsifier: >-
+      A `sync` that overwrites a term a portfolio defined in its own domain
+      vocabulary.
+    rationale: |-
+      A generated portfolio has its own *sui generis* Ubiquitous Language,
+      drawn from its domain. stereorepo's vocabulary — Persona, Job to be
+      Done, Capability, Role, Discipline, Article, Issue, Specialization and
+      the rest — is **imported** to articulate the discipline. It never
+      replaces the domain language and has no authority over it.
+
+      In DDD's context-mapping terms this is a **Published Language** offered
+      upstream by stereorepo, which a portfolio **conforms** to for discipline
+      talk while staying sovereign over its own domain.
+
+      The consequence is structural: the two must be **separable in the file
+      tree**, or `sync` cannot tell them apart. Sync pulls the imported
+      vocabulary and machinery forward; a portfolio's own language is its own
+      decision, and overwriting a project's own decisions is the failure that
+      sync exists to prevent.

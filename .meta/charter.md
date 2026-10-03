@@ -71,9 +71,9 @@ _Retired when:_ A step whose scope is printed from what its run collected, so no
 
 ### A8. An artifact prevents drift only if something consumes it — and consumption is not sufficient. Ask what it is checked against.
 
-**Enforces** Nothing Unconsumed. **Checked by** Orphan detection, which enforces the necessary half only, and the second seat inspecting the creation boundary against speculative abstractions ahead of a consumer (stereorepo's DR-008).
+**Enforces** Nothing Unconsumed. **Checked by** Orphan detection, which enforces the necessary half only, and the second seat inspecting the creation boundary against speculative abstractions ahead of a consumer (stereorepo's DR-324).
 
-_In practice:_ `templates/decision.md` is consumed by whoever writes a Decision, and checked against the `Decision` class by `check.py`. At the creation boundary, capability reification on the schema was reverted in stereorepo's DR-008, because a coordinate system invented ahead of its consumer is debris before it is written.
+_In practice:_ `templates/decision.md` is consumed by whoever writes a Decision, and checked against the `Decision` class by `check.py`. At the creation boundary, capability reification on the schema was reverted, and stereorepo's DR-324 keeps it out, because a coordinate system invented ahead of its consumer is debris before it is written.
 
 _Retired when:_ An artifact whose future requirements and downstream consumers are proven so invariant that building speculative coordinate systems ahead of consumption demonstrably prevents more rework than it introduces.
 
@@ -167,4 +167,4 @@ _Retired when:_ A landed Claim about behaviour or history that no party checked 
 
 ---
 
-**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml)
+**Where this came from.** [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml), [DR-328](assertions/decisions/DR-328.yaml)

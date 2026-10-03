@@ -126,13 +126,13 @@ articles:
     checked_by: >-
       Orphan detection, which enforces the necessary half only, and the second
       seat inspecting the creation boundary against speculative abstractions
-      ahead of a consumer (stereorepo's DR-008).
+      ahead of a consumer (stereorepo's DR-324).
     example: >-
       `templates/decision.md` is consumed by whoever writes a Decision, and
       checked against the `Decision` class by `check.py`. At the creation
-      boundary, capability reification on the schema was reverted in
-      stereorepo's DR-008, because a coordinate system invented ahead of its
-      consumer is debris before it is written.
+      boundary, capability reification on the schema was reverted, and
+      stereorepo's DR-324 keeps it out, because a coordinate system invented
+      ahead of its consumer is debris before it is written.
     falsifier: >-
       An artifact whose future requirements and downstream consumers are proven so
       invariant that building speculative coordinate systems ahead of consumption

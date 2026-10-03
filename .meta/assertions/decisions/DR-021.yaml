@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/021
     name: "DR-021 · A Job to be Done states the user's job, and names a Persona"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/327
     alternatives:
       - name: "A Job to be Done names a Role"
         chosen: false

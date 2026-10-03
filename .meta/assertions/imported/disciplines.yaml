@@ -299,7 +299,7 @@ disciplines:
       The rule binds in both directions: after the fact, deleting unconsumed
       debris; and at the **creation boundary** (popularly known as YAGNI), refusing
       speculative coordinate systems, schemas, and metamodels ahead of an active
-      consumer. As stereorepo's DR-008 observed, a coordinate system invented ahead of its
+      consumer. As stereorepo's DR-324 observed, a coordinate system invented ahead of its
       consumer is one that will be wrong.
     judgement: >-
       Whether a consumer actually checks the artifact or merely loads it, and
@@ -311,7 +311,7 @@ disciplines:
         name: Refuse speculative abstractions
         statement: >-
           Do not introduce schemas, coordinate systems, or metamodels ahead of concrete producers
-          and consumers at the creation boundary (stereorepo's DR-008).
+          and consumers at the creation boundary (stereorepo's DR-324).
       - id: work:discipline-step/nothing-unconsumed/name-artifact-consumers-and-checks
         name: Name artifact consumers and checks
         statement: >-

@@ -1,0 +1,41 @@
+decisions:
+  - id: work:decision/323
+    name: "DR-323 · The ontology of work is LinkML, and validation is what makes it checkable"
+    status: ADOPTED
+    supersedes:
+      - work:decision/003
+    enacted_in:
+      - work:artifact/meta-schemas
+    context: >-
+      DR-003 chose LinkML for the ontology and argued it with two classes the
+      ontology no longer has: a SMART Goal whose four parts were required, and
+      a structured Definition of Done. The rule stands; its examples do not.
+    alternatives:
+      - name: Keep the ontology as prose
+        chosen: false
+        reason: >-
+          Prose can say that a Job to be Done serves a Persona's goal, and
+          nothing fails when one does not.
+      - name: Formalise it in LinkML
+        chosen: true
+        reason: >-
+          `linkml-validate` refuses an instance that breaks a required slot or
+          a rule, so the vocabulary is checked rather than only read.
+    consequences:
+      - >-
+        Every class derives from the abstract `WorkEntity`, and classes refer
+        to one another by reference, so one Capability is named by many Roles
+        without being copied into each.
+      - >-
+        A constraint the schema can state is stated there: a JobToBeDone
+        without `serves` fails validation, and so does a Capability of kind
+        TOOL that carries `composed_of`.
+    falsifier: >-
+      An instance that breaks a required slot or a rule of `.meta/work/`
+      passing `linkml-validate`.
+    rationale: |-
+      An ontology is worth having only where it can be held against the
+      files that use it, and LinkML is the form in which that holding is a
+      command. Composition by reference keeps one definition per thing; a
+      required slot or a rule turns a sentence of the vocabulary into a
+      validation failure.

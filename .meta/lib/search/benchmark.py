@@ -67,7 +67,7 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
         ),
         (
             "which languages can a new portfolio choose",
-            ["work:discipline/specialization", "work:decision/046", "work:decision/014", "work:decision/015"],
+            ["work:discipline/specialization", "work:decision/046", "work:decision/014", "work:decision/326"],
         ),
         (
             "what makes the scaffold its own product",

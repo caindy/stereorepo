@@ -176,7 +176,7 @@ classes:
         evaluates proposals against the Persona's 3-tier goal hierarchy and
         rejection boundaries (stereorepo's DR-200).
       - >-
-        A JobToBeDone names the Persona whose need it is (stereorepo's DR-021). Interrogating
+        A JobToBeDone names the Persona whose need it is (stereorepo's DR-327). Interrogating
         a Persona to surface one is the intended path from user research into
         the work.
     slots:

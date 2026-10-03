@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/006
     name: "DR-006 · Skills compose tools; tools are atomic"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/324
     enacted_in:
       - work:artifact/meta-assertions-imported-authority
     rationale: |-

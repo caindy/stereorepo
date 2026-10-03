@@ -1,0 +1,79 @@
+decisions:
+  - id: work:decision/327
+    name: "DR-327 · A Persona's END goals are served by a Job to be Done that names the Persona"
+    status: ADOPTED
+    supersedes:
+      - work:decision/019
+      - work:decision/020
+      - work:decision/021
+      - work:decision/031
+      - work:decision/039
+    enacted_in:
+      - work:artifact/meta-work-personas
+      - work:artifact/meta-work-purpose
+    context: >-
+      Five records built the chain from a user to the work done for them.
+      Their rules stand, and their arguments ran through classes the ontology
+      no longer has: a Personality split from Persona and adopted by an Actor
+      (DR-019), a work Goal with a Deadline and a Challenge that a Job to be
+      Done fed and an Agency held (DR-020, DR-021, DR-039), and the
+      Permission and AuditRecord pair that DR-031 drew its arithmetic from.
+      What remains is Persona, PersonaGoal and JobToBeDone.
+    alternatives:
+      - name: A Job to be Done names a Role
+        chosen: false
+        reason: >-
+          A Role is a named set of Capabilities, which is a worker's role. A
+          Job to be Done states the user's job.
+      - name: A Job to be Done names only its Persona
+        chosen: false
+        reason: >-
+          Naming the Persona narrows the need to a set of goals without
+          resolving it to one, so whether the work is relevant cannot be
+          falsified.
+      - name: Persona goals as a flat list of strings
+        chosen: false
+        reason: >-
+          An END goal is specific and has a plain test for having been
+          reached; a string cannot say which goals have that test and which
+          do not.
+      - name: A Job to be Done names its Persona and serves at least one of its END goals
+        chosen: true
+        reason: >-
+          The need is attributed to one user archetype and resolved to the
+          goals it advances, and both ends of the edge can be counted.
+    consequences:
+      - >-
+        A Persona is Alan Cooper's: a named user archetype the product is
+        designed for, of one of About Face's six PersonaKinds, including
+        CUSTOMER (the buyer who is not the user) and SERVED (affected without
+        touching the interface).
+      - >-
+        A PersonaGoal is identified and tiered END, EXPERIENCE or LIFE. An END
+        goal is specific, has a plain test for having been reached, and is
+        standing rather than a bounded commitment. Business and technical
+        goals are not persona goals.
+      - >-
+        `JobToBeDone.persona` and `JobToBeDone.serves` are required. That a
+        served goal is END tier and held by the Job to be Done's own Persona
+        cannot be said in LinkML, so the `served goals` graph check holds it.
+      - >-
+        The register an agent speaks in is a Role's `communication_style`,
+        not a property of the Persona it serves.
+    falsifier: >-
+      A Job to be Done that a user really has and that advances none of its
+      Persona's END goals, which would mean the goals are not the whole of
+      what the Persona needs.
+    rationale: |-
+      The edge earns its place by making a subtraction possible: an END goal
+      with no Job to be Done is a user need nobody is working on, and a Job
+      to be Done serving none is work with no user justification. Both
+      counts are only as good as the edge, which is why a served goal that
+      is the wrong tier, or another Persona's, has to be refused rather than
+      tolerated.
+
+      The Persona says who the work is for and the Role says who does it,
+      which are independent facts; neither is implied by the other.
+      Requiring `serves` asks for nothing the work does not already produce,
+      because interrogating a Persona surfaces its END goals before a Job to
+      be Done is written.

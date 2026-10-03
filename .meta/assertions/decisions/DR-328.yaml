@@ -1,0 +1,40 @@
+decisions:
+  - id: work:decision/328
+    name: "DR-328 · The Charter and its Articles"
+    status: ADOPTED
+    supersedes:
+      - work:decision/048
+    applies:
+      - work:article/1
+      - work:article/12
+    enacted_in:
+      - work:artifact/meta-charter
+    context: >-
+      DR-048 named the Charter and its Articles, and kept them empirical
+      through an `origin` slot carrying the failure each Article came from;
+      DR-087 removed that slot and made `example` required. DR-048 also
+      asserted two Personalities for two kinds of writing, a class the
+      ontology no longer has; DR-198 holds the two regimes of writing now,
+      and a Role's `communication_style` the register of dialogue.
+    alternatives:
+      - name: Keep the name Invariant
+        chosen: false
+        reason: >-
+          Too general, and it collides with DDD's `invariants` slot on an
+          Aggregate, which DDD keeps.
+      - name: Article, and the Articles together are the Charter
+        chosen: true
+        reason: >-
+          A charter grants and binds, which is what a working agreement does.
+    consequences:
+      - >-
+        An Article carries an `example` of following it and a `falsifier`
+        saying what would end it. The reason it exists is a Decision's.
+    falsifier: >-
+      An Article whose `example` and `falsifier` cannot be held against any
+      artifact, so that it is argued with only by amendment.
+    rationale: |-
+      What the borrowed word must not lose is that an Article is held against
+      the work, not drafted ahead of it. An Article that can be shown
+      followed, and shown false, can be argued with on evidence; one that
+      cannot is an opinion that has borrowed the Charter's authority.

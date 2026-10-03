@@ -21,23 +21,23 @@ and what question it answered; only the entry is sufficient to apply it.
 | :-- | :-- | :-- |
 | [DR-001](assertions/decisions/DR-001.yaml) | `.meta/` is the staging ground | Adopted |
 | [DR-002](assertions/decisions/DR-002.yaml) | Rough in an ontology of work | Adopted |
-| [DR-003](assertions/decisions/DR-003.yaml) | Formalise the ontology in LinkML | Adopted |
-| [DR-006](assertions/decisions/DR-006.yaml) | Skills compose tools; tools are atomic | Adopted |
-| [DR-007](assertions/decisions/DR-007.yaml) | APM is the packaging target | Adopted |
-| [DR-008](assertions/decisions/DR-008.yaml) | Reverted: capability reification on the schema | Adopted |
+| [DR-003](assertions/decisions/DR-003.yaml) | Formalise the ontology in LinkML | Superseded by [DR-323](assertions/decisions/DR-323.yaml) |
+| [DR-006](assertions/decisions/DR-006.yaml) | Skills compose tools; tools are atomic | Superseded by [DR-324](assertions/decisions/DR-324.yaml) |
+| [DR-007](assertions/decisions/DR-007.yaml) | APM is the packaging target | Superseded by [DR-325](assertions/decisions/DR-325.yaml) |
+| [DR-008](assertions/decisions/DR-008.yaml) | Reverted: capability reification on the schema | Superseded by [DR-324](assertions/decisions/DR-324.yaml) |
 | [DR-009](assertions/decisions/DR-009.yaml) | Commit per settled decision | Adopted |
 | [DR-010](assertions/decisions/DR-010.yaml) | Placeholder READMEs in empty directories | Adopted |
 | [DR-011](assertions/decisions/DR-011.yaml) | `.agents/` is staged under `.meta/` | Adopted |
 | [DR-012](assertions/decisions/DR-012.yaml) | Decisions are recorded in the repo | Adopted |
 | [DR-013](assertions/decisions/DR-013.yaml) | Specialization is an instruction, not a build step | Adopted |
 | [DR-014](assertions/decisions/DR-014.yaml) | A stereorepo is a monorepo: one portfolio, one bounded context, one language | Adopted |
-| [DR-015](assertions/decisions/DR-015.yaml) | Two languages: the portfolio's own, and stereorepo's imported | Adopted |
+| [DR-015](assertions/decisions/DR-015.yaml) | Two languages: the portfolio's own, and stereorepo's imported | Superseded by [DR-326](assertions/decisions/DR-326.yaml) |
 | [DR-016](assertions/decisions/DR-016.yaml) | stereorepo republishes DDD; portfolios conform transitively | Adopted |
 | [DR-017](assertions/decisions/DR-017.yaml) | DDD is reified as LinkML alongside the work ontology | Adopted |
 | [DR-018](assertions/decisions/DR-018.yaml) | A Ubiquitous Language is a set of Concepts, not a set of Terms | Adopted |
-| [DR-019](assertions/decisions/DR-019.yaml) | Persona splits into Personality and Persona | Adopted |
-| [DR-020](assertions/decisions/DR-020.yaml) | Persona goals are typed, and the End tier is Goal-shaped | Adopted |
-| [DR-021](assertions/decisions/DR-021.yaml) | A Job to be Done states the user's job, and names a Persona | Adopted |
+| [DR-019](assertions/decisions/DR-019.yaml) | Persona splits into Personality and Persona | Superseded by [DR-327](assertions/decisions/DR-327.yaml) |
+| [DR-020](assertions/decisions/DR-020.yaml) | Persona goals are typed, and the End tier is Goal-shaped | Superseded by [DR-327](assertions/decisions/DR-327.yaml) |
+| [DR-021](assertions/decisions/DR-021.yaml) | A Job to be Done states the user's job, and names a Persona | Superseded by [DR-327](assertions/decisions/DR-327.yaml) |
 | [DR-022](assertions/decisions/DR-022.yaml) | Literate Programming and Progressive Disclosure are Disciplines | Adopted |
 | [DR-023](assertions/decisions/DR-023.yaml) | The work ontology splits into seven modules | Adopted |
 | [DR-024](assertions/decisions/DR-024.yaml) | `.meta/README.md` splits into a core and six satellites | Adopted |
@@ -47,13 +47,13 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-028](assertions/decisions/DR-028.yaml) | The DDD schema modularises, and the Portfolio link is typed | Adopted |
 | [DR-029](assertions/decisions/DR-029.yaml) | The invariants get a checker, and it is the `.meta` Project's gate | Adopted |
 | [DR-030](assertions/decisions/DR-030.yaml) | Dogfooding is a Discipline, and the scaffold is a Product | Adopted |
-| [DR-031](assertions/decisions/DR-031.yaml) | A persona goal is identified, and a Job to be Done names the ones it serves | Adopted |
+| [DR-031](assertions/decisions/DR-031.yaml) | A persona goal is identified, and a Job to be Done names the ones it serves | Superseded by [DR-327](assertions/decisions/DR-327.yaml) |
 | [DR-032](assertions/decisions/DR-032.yaml) | Assertions split by ownership | Adopted |
 | [DR-033](assertions/decisions/DR-033.yaml) | `README.md` for arriving, `SPECIALIZE.md` for acting | Adopted |
 | [DR-034](assertions/decisions/DR-034.yaml) | `template/` holds the replacements, and the gate catches what is left unfilled | Adopted |
 | [DR-035](assertions/decisions/DR-035.yaml) | Specializing for real, three times | Adopted |
 | [DR-037](assertions/decisions/DR-037.yaml) | One Bounded Context per portfolio is checked, not typed | Adopted |
-| [DR-039](assertions/decisions/DR-039.yaml) | The dead-end check moves from the gate into the schema | Adopted |
+| [DR-039](assertions/decisions/DR-039.yaml) | The dead-end check moves from the gate into the schema | Superseded by [DR-327](assertions/decisions/DR-327.yaml) |
 | [DR-040](assertions/decisions/DR-040.yaml) | Primitives are authored in `.meta/.apm/`, not `.meta/.agents/` | Adopted |
 | [DR-041](assertions/decisions/DR-041.yaml) | The `stakeholders/` taxonomy, and why it needs no term of its own | Adopted |
 | [DR-042](assertions/decisions/DR-042.yaml) | Modelling the Developer is a Discipline | Adopted |
@@ -61,7 +61,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-044](assertions/decisions/DR-044.yaml) | Literate Programming stops prescribing where prose sits | Adopted |
 | [DR-046](assertions/decisions/DR-046.yaml) | Bootstraps live in the monorepo, and Specialization picks a language | Adopted |
 | [DR-047](assertions/decisions/DR-047.yaml) | An Invariant is not a Discipline with fewer words | Adopted |
-| [DR-048](assertions/decisions/DR-048.yaml) | The Charter and its Articles; two Personalities for two kinds of writing | Adopted |
+| [DR-048](assertions/decisions/DR-048.yaml) | The Charter and its Articles; two Personalities for two kinds of writing | Superseded by [DR-328](assertions/decisions/DR-328.yaml) |
 | [DR-049](assertions/decisions/DR-049.yaml) | ADRs are the Project level of Written Decisions | Adopted |
 | [DR-050](assertions/decisions/DR-050.yaml) | Journaling is a Discipline, and structure replaces restraint | Adopted |
 | [DR-051](assertions/decisions/DR-051.yaml) | The vocabulary is grouped, because a term nobody can find is a term nobody uses | Adopted |
@@ -185,6 +185,12 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-320](assertions/decisions/DR-320.yaml) | The developer cuts an APM release with `just release`, not a workflow on a tag | Adopted |
 | [DR-321](assertions/decisions/DR-321.yaml) | A change to what a portfolio receives gates a specialized portfolio before it lands | Adopted |
 | [DR-322](assertions/decisions/DR-322.yaml) | A portfolio's sync runs the checkout's own `bundle.py` | Adopted |
+| [DR-323](assertions/decisions/DR-323.yaml) | The ontology of work is LinkML, and validation is what makes it checkable | Adopted |
+| [DR-324](assertions/decisions/DR-324.yaml) | A skill composes tools, a tool is atomic, and nothing more is reified ahead of a consumer | Adopted |
+| [DR-325](assertions/decisions/DR-325.yaml) | APM is the packaging target for agent primitives | Adopted |
+| [DR-326](assertions/decisions/DR-326.yaml) | Two languages: the portfolio's own, and stereorepo's imported | Adopted |
+| [DR-327](assertions/decisions/DR-327.yaml) | A Persona's END goals are served by a Job to be Done that names the Persona | Adopted |
+| [DR-328](assertions/decisions/DR-328.yaml) | The Charter and its Articles | Adopted |
 
 ## Holes
 
@@ -207,14 +213,14 @@ and the query a reader in a file actually has.
 | [`.claude/skills/technical-writing/SKILL.md`](../.claude/skills/technical-writing/SKILL.md) | [DR-194](assertions/decisions/DR-194.yaml), [DR-196](assertions/decisions/DR-196.yaml), [DR-198](assertions/decisions/DR-198.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml) |
 | [`.claude/skills/wikisplain/SKILL.md`](../.claude/skills/wikisplain/SKILL.md) | [DR-187](assertions/decisions/DR-187.yaml), [DR-259](assertions/decisions/DR-259.yaml) |
 | [`.gitattributes`](../.gitattributes) | [DR-143](assertions/decisions/DR-143.yaml) |
-| [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml), [DR-172](assertions/decisions/DR-172.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-319](assertions/decisions/DR-319.yaml), [DR-320](assertions/decisions/DR-320.yaml) |
+| [`.meta/.apm/README.md`](.apm/README.md) | [DR-007](assertions/decisions/DR-007.yaml), [DR-172](assertions/decisions/DR-172.yaml), [DR-173](assertions/decisions/DR-173.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-319](assertions/decisions/DR-319.yaml), [DR-320](assertions/decisions/DR-320.yaml), [DR-325](assertions/decisions/DR-325.yaml) |
 | [`.meta/README.md`](README.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-024](assertions/decisions/DR-024.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-032](assertions/decisions/DR-032.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/apm.yml`](apm.yml) | [DR-206](assertions/decisions/DR-206.yaml) |
 | [`.meta/apm_compile.py`](apm_compile.py) | [DR-201](assertions/decisions/DR-201.yaml), [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-212](assertions/decisions/DR-212.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/assertions/disciplines.yaml`](assertions/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-204](assertions/decisions/DR-204.yaml), [DR-222](assertions/decisions/DR-222.yaml), [DR-227](assertions/decisions/DR-227.yaml), [DR-234](assertions/decisions/DR-234.yaml), [DR-270](assertions/decisions/DR-270.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml) |
-| [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml) |
+| [`.meta/assertions/domain_vocabulary.yaml`](assertions/domain_vocabulary.yaml) | [DR-015](assertions/decisions/DR-015.yaml), [DR-326](assertions/decisions/DR-326.yaml) |
 | [`.meta/assertions/imported/README.md`](assertions/imported/README.md) | [DR-121](assertions/decisions/DR-121.yaml) |
-| [`.meta/assertions/imported/authority.yaml`](assertions/imported/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml) |
+| [`.meta/assertions/imported/authority.yaml`](assertions/imported/authority.yaml) | [DR-006](assertions/decisions/DR-006.yaml), [DR-324](assertions/decisions/DR-324.yaml) |
 | [`.meta/assertions/imported/charter.yaml`](assertions/imported/charter.yaml) | [DR-228](assertions/decisions/DR-228.yaml), [DR-297](assertions/decisions/DR-297.yaml) |
 | [`.meta/assertions/imported/disciplines.yaml`](assertions/imported/disciplines.yaml) | [DR-184](assertions/decisions/DR-184.yaml), [DR-196](assertions/decisions/DR-196.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-229](assertions/decisions/DR-229.yaml), [DR-270](assertions/decisions/DR-270.yaml) |
 | [`.meta/assertions/imported/vocabulary.yaml`](assertions/imported/vocabulary.yaml) | [DR-182](assertions/decisions/DR-182.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-298](assertions/decisions/DR-298.yaml), [DR-319](assertions/decisions/DR-319.yaml) |
@@ -223,7 +229,7 @@ and the query a reader in a file actually has.
 | [`.meta/baselines/file_sizes.baseline.yaml`](baselines/file_sizes.baseline.yaml) | [DR-314](assertions/decisions/DR-314.yaml) |
 | [`.meta/bootstrap.py`](bootstrap.py) | [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-312](assertions/decisions/DR-312.yaml) |
 | [`.meta/bundle.py`](bundle.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml), [DR-322](assertions/decisions/DR-322.yaml) |
-| [`.meta/charter.md`](charter.md) | [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml) |
+| [`.meta/charter.md`](charter.md) | [DR-047](assertions/decisions/DR-047.yaml), [DR-048](assertions/decisions/DR-048.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-092](assertions/decisions/DR-092.yaml), [DR-104](assertions/decisions/DR-104.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-134](assertions/decisions/DR-134.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-205](assertions/decisions/DR-205.yaml), [DR-216](assertions/decisions/DR-216.yaml), [DR-229](assertions/decisions/DR-229.yaml), [DR-328](assertions/decisions/DR-328.yaml) |
 | [`.meta/check.py`](check.py) | [DR-014](assertions/decisions/DR-014.yaml), [DR-029](assertions/decisions/DR-029.yaml), [DR-034](assertions/decisions/DR-034.yaml), [DR-037](assertions/decisions/DR-037.yaml), [DR-053](assertions/decisions/DR-053.yaml), [DR-078](assertions/decisions/DR-078.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-124](assertions/decisions/DR-124.yaml), [DR-125](assertions/decisions/DR-125.yaml), [DR-130](assertions/decisions/DR-130.yaml), [DR-131](assertions/decisions/DR-131.yaml), [DR-132](assertions/decisions/DR-132.yaml), [DR-144](assertions/decisions/DR-144.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-169](assertions/decisions/DR-169.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-261](assertions/decisions/DR-261.yaml), [DR-268](assertions/decisions/DR-268.yaml) |
 | [`.meta/checks/citations/__init__.py`](checks/citations/__init__.py) | [DR-150](assertions/decisions/DR-150.yaml), [DR-171](assertions/decisions/DR-171.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-218](assertions/decisions/DR-218.yaml) |
 | [`.meta/checks/citations/claims.py`](checks/citations/claims.py) | [DR-043](assertions/decisions/DR-043.yaml), [DR-044](assertions/decisions/DR-044.yaml), [DR-175](assertions/decisions/DR-175.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-270](assertions/decisions/DR-270.yaml) |
@@ -319,18 +325,18 @@ and the query a reader in a file actually has.
 | [`.meta/release.py`](release.py) | [DR-320](assertions/decisions/DR-320.yaml) |
 | [`.meta/render.py`](render.py) | [DR-011](assertions/decisions/DR-011.yaml), [DR-026](assertions/decisions/DR-026.yaml), [DR-040](assertions/decisions/DR-040.yaml), [DR-059](assertions/decisions/DR-059.yaml), [DR-077](assertions/decisions/DR-077.yaml), [DR-082](assertions/decisions/DR-082.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-106](assertions/decisions/DR-106.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-143](assertions/decisions/DR-143.yaml), [DR-144](assertions/decisions/DR-144.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-154](assertions/decisions/DR-154.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-187](assertions/decisions/DR-187.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-217](assertions/decisions/DR-217.yaml) |
 | [`.meta/ruff.toml`](ruff.toml) | [DR-177](assertions/decisions/DR-177.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-220](assertions/decisions/DR-220.yaml), [DR-263](assertions/decisions/DR-263.yaml) |
-| [`.meta/schemas.md`](schemas.md) | [DR-003](assertions/decisions/DR-003.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-183](assertions/decisions/DR-183.yaml) |
+| [`.meta/schemas.md`](schemas.md) | [DR-003](assertions/decisions/DR-003.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-183](assertions/decisions/DR-183.yaml), [DR-323](assertions/decisions/DR-323.yaml) |
 | [`.meta/search.py`](search.py) | [DR-194](assertions/decisions/DR-194.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-204](assertions/decisions/DR-204.yaml) |
 | [`.meta/terms.py`](terms.py) | [DR-234](assertions/decisions/DR-234.yaml), [DR-271](assertions/decisions/DR-271.yaml), [DR-279](assertions/decisions/DR-279.yaml) |
 | [`.meta/test_specialization.py`](test_specialization.py) | [DR-239](assertions/decisions/DR-239.yaml), [DR-244](assertions/decisions/DR-244.yaml), [DR-305](assertions/decisions/DR-305.yaml), [DR-321](assertions/decisions/DR-321.yaml) |
 | [`.meta/vocabulary.md`](vocabulary.md) | [DR-051](assertions/decisions/DR-051.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-182](assertions/decisions/DR-182.yaml) |
 | [`.meta/wikisplain.py`](wikisplain.py) | [DR-187](assertions/decisions/DR-187.yaml), [DR-231](assertions/decisions/DR-231.yaml) |
-| [`.meta/work/authority.yaml`](work/authority.yaml) | [DR-008](assertions/decisions/DR-008.yaml) |
+| [`.meta/work/authority.yaml`](work/authority.yaml) | [DR-008](assertions/decisions/DR-008.yaml), [DR-324](assertions/decisions/DR-324.yaml) |
 | [`.meta/work/core.yaml`](work/core.yaml) | [DR-125](assertions/decisions/DR-125.yaml), [DR-152](assertions/decisions/DR-152.yaml) |
 | [`.meta/work/decisions.yaml`](work/decisions.yaml) | [DR-049](assertions/decisions/DR-049.yaml), [DR-065](assertions/decisions/DR-065.yaml), [DR-081](assertions/decisions/DR-081.yaml), [DR-093](assertions/decisions/DR-093.yaml), [DR-121](assertions/decisions/DR-121.yaml), [DR-227](assertions/decisions/DR-227.yaml) |
 | [`.meta/work/disciplines.yaml`](work/disciplines.yaml) | [DR-025](assertions/decisions/DR-025.yaml), [DR-085](assertions/decisions/DR-085.yaml), [DR-087](assertions/decisions/DR-087.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-270](assertions/decisions/DR-270.yaml) |
-| [`.meta/work/personas.yaml`](work/personas.yaml) | [DR-019](assertions/decisions/DR-019.yaml), [DR-020](assertions/decisions/DR-020.yaml), [DR-021](assertions/decisions/DR-021.yaml), [DR-200](assertions/decisions/DR-200.yaml) |
-| [`.meta/work/purpose.yaml`](work/purpose.yaml) | [DR-031](assertions/decisions/DR-031.yaml), [DR-039](assertions/decisions/DR-039.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-298](assertions/decisions/DR-298.yaml) |
+| [`.meta/work/personas.yaml`](work/personas.yaml) | [DR-019](assertions/decisions/DR-019.yaml), [DR-020](assertions/decisions/DR-020.yaml), [DR-021](assertions/decisions/DR-021.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-327](assertions/decisions/DR-327.yaml) |
+| [`.meta/work/purpose.yaml`](work/purpose.yaml) | [DR-031](assertions/decisions/DR-031.yaml), [DR-039](assertions/decisions/DR-039.yaml), [DR-084](assertions/decisions/DR-084.yaml), [DR-298](assertions/decisions/DR-298.yaml), [DR-327](assertions/decisions/DR-327.yaml) |
 | [`.meta/work/structure.yaml`](work/structure.yaml) | [DR-027](assertions/decisions/DR-027.yaml), [DR-079](assertions/decisions/DR-079.yaml), [DR-144](assertions/decisions/DR-144.yaml), [DR-152](assertions/decisions/DR-152.yaml), [DR-304](assertions/decisions/DR-304.yaml) |
 | [`.meta/work_ontology.yaml`](work_ontology.yaml) | [DR-002](assertions/decisions/DR-002.yaml), [DR-023](assertions/decisions/DR-023.yaml) |
 | [`AGENTS.md`](../AGENTS.md) | [DR-001](assertions/decisions/DR-001.yaml), [DR-009](assertions/decisions/DR-009.yaml), [DR-010](assertions/decisions/DR-010.yaml), [DR-190](assertions/decisions/DR-190.yaml), [DR-198](assertions/decisions/DR-198.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-259](assertions/decisions/DR-259.yaml), [DR-272](assertions/decisions/DR-272.yaml), [DR-297](assertions/decisions/DR-297.yaml), [DR-308](assertions/decisions/DR-308.yaml), [DR-310](assertions/decisions/DR-310.yaml), [DR-312](assertions/decisions/DR-312.yaml), [DR-313](assertions/decisions/DR-313.yaml) |

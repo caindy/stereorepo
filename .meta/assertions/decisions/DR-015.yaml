@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/015
     name: "DR-015 · Two languages: the portfolio's own, and stereorepo's imported"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/326
     enacted_in:
       - work:artifact/meta-assertions-domain-vocabulary
     rationale: |-

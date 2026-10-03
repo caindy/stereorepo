@@ -1,7 +1,8 @@
 decisions:
   - id: work:decision/039
     name: "DR-039 · The dead-end check moves from the gate into the schema"
-    status: ADOPTED
+    status: SUPERSEDED
+    superseded_by: work:decision/327
     alternatives:
       - name: "Keep the gate check as a belt"
         chosen: false
