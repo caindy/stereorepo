@@ -4512,6 +4512,7 @@ class ClaudeSeatTest(unittest.TestCase):
         seat = self.seat([result("stale")], [result("answer")])
         self.started(seat)
         turn = seat.send("go")
+        self.assertTrue(turn.ok, turn.error)
         self.assertEqual(turn.text, "answer")
         kinds = [e["type"] for e in self.logged()]
         self.assertEqual(kinds, ["result", "pair/sent", "result"])
@@ -4527,10 +4528,8 @@ class ClaudeSeatTest(unittest.TestCase):
 
     def test_a_task_that_never_finishes_times_the_turn_out(self) -> None:
         init = {"emit": {"type": "system", "subtype": "init", "session_id": "s1"}}
-        seat = self.seat(
-            [init], [task("task_started", "t9", "Serve"), result("done")], timeout=1
-        )
-        self.started(seat)
+        seat = self.seat([init, task("task_started", "t9", "Serve")], [], timeout=1)
+        self.started(seat, lines=2)
         turn = seat.send("go")
         self.assertFalse(turn.ok)
         self.assertIn("t9", turn.error or "")
