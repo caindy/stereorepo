@@ -116,6 +116,16 @@ slots:
       The command that must pass before work on this Project is claimed done.
       One per Project, and green before anything is called finished.
 
+  gate_keys:
+    description: >-
+      The names of the variables in the Portfolio's root `.env` that the pair
+      loop starts its landing gate with. Names only, never values, so the list
+      is auditable in git. The loop reads the list from `main`, so a branch
+      cannot widen it, and no seat is ever given the values
+      (stereorepo's DR-357).
+    range: string
+    multivalued: true
+
   excluded_paths:
     description: >-
       File paths or glob patterns excluded from artifact completeness checks.
@@ -177,6 +187,7 @@ classes:
       the unit that Specialization produces.
     slots:
       - bounded_context
+      - gate_keys
     slot_usage:
       name:
         required: true

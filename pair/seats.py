@@ -25,7 +25,7 @@ import shutil
 import subprocess
 import threading
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -312,20 +312,46 @@ def env_names(path: Path) -> set[str]:
     the seat from starting, and a file the loop cannot read names nothing:
     it is still denied, and the loop holds none of its values either.
     """
+    return {name for name, _ in env_lines(path)}
+
+
+def env_values(path: Path, names: Iterable[str]) -> dict[str, str]:
+    """The values the key file `path` gives the variables in `names`.
+
+    Lines are read as `env_names` reads them. A value loses its surrounding
+    whitespace and one pair of matching `"` or `'` quotes around it, as
+    python-dotenv reads it; nothing else is unescaped. A later line for a
+    name wins. A file the loop cannot read gives nothing.
+    """
+    wanted = set(names)
+    values = {}
+    for name, value in env_lines(path):
+        if name in wanted:
+            value = value.strip()
+            for quote in "\"'":
+                if len(value) > 1 and value.startswith(quote) and value.endswith(quote):
+                    value = value[1:-1]
+                    break
+            values[name] = value
+    return values
+
+
+def env_lines(path: Path) -> list[tuple[str, str]]:
+    """Each `(name, raw value)` the key file `path` sets, in file order."""
     try:
         text = path.read_text(errors="replace")
     except OSError:
-        return set()
-    names = set()
+        return []
+    pairs = []
     for raw in text.splitlines():
         line = raw.strip()
         if not line or line.startswith("#") or "=" not in line:
             continue
-        name = line.split("=", 1)[0].strip()
-        name = name.removeprefix("export ").strip()
+        name, value = line.split("=", 1)
+        name = name.strip().removeprefix("export ").strip()
         if name:
-            names.add(name)
-    return names
+            pairs.append((name, value))
+    return pairs
 
 
 def key_files(roots: list[Path]) -> list[Path]:

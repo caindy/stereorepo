@@ -119,6 +119,14 @@ repeated or side-by-side comparisons (`prompts/primary.md`,
    `just pair` commits that render as the developer's edit, keeping the
    approvals, before it runs the gate again. A gate that fails on anything
    else as well goes back to the seats whole.
+
+   A test that needs a key from the portfolio's `.env` finds none in the
+   worktree, since git does not check out an ignored file and the seats may
+   not read it (`confinement()`). The gate gets the keys `.env` holds whose
+   names `portfolio.gate_keys` in `main`'s `.meta/assertions/structure.yaml`
+   lists, in its own process's environment and nowhere else (`Loop.gate_env`
+   in `pair/loop.py`). Each such value in the gate's output is replaced by
+   its name in angle brackets before a seat reads it (stereorepo's DR-357).
 3. **Sending back.** An Issue file that gains a `Needs elaboration` section, or
    a stage that runs past its round cap, sends the Issue to `issues/backlog/` on
    `main` with that section, without its code. It sits out of the running order

@@ -66,8 +66,9 @@ from typing import Any
 
 import board
 import touched
+import yaml
 from board import git, git_ok, git_run
-from seats import Seat, TurnResult, unwritable
+from seats import Seat, TurnResult, env_values, unwritable
 
 ROLES = ("primary", "secondary")
 ROUND_CAP = {"easy": 4, "medium": 8, "developer": 8, "hard": 4, None: 4}
@@ -109,8 +110,12 @@ RESTARTED = (
 )
 
 SeatFactory = Callable[[str, Path, "str | None", "str | None"], Seat]
-Gate = Callable[[Path, "Sequence[str] | None"], "tuple[bool, str]"]
-"""Runs the gate in a tree over the named Projects, or over every Project for `None`."""
+Gate = Callable[[Path, "Sequence[str] | None", "Mapping[str, str]"], "tuple[bool, str]"]
+"""Runs the gate in a tree over the named Projects, or over every Project for `None`.
+
+The mapping holds the variables the gate's process is given beyond the loop's
+own environment: the portfolio's declared keys (`Loop.gate_env`).
+"""
 Deliver = Callable[[Path], "tuple[bool, str] | None"]
 
 
@@ -208,6 +213,18 @@ def gate_fails(out: str, targets: Sequence[str] | None = None) -> GateFailure:
     """The requirement a failed gate leaves: what was gated, and the tail of its output."""
     command = " ".join(["just gate", *(targets or [])])
     return GateFailure(f"`{command}` fails:\n```\n{out[-GATE_TAIL:]}\n```")
+
+
+def redact(out: str, env: Mapping[str, str]) -> str:
+    """`out` with each value of `env` replaced by its name in angle brackets.
+
+    Longer values go first, so a value that contains another is replaced
+    whole rather than leaving its remainder.
+    """
+    for name, value in sorted(env.items(), key=lambda item: -len(item[1])):
+        if value:
+            out = out.replace(value, f"<{name}>")
+    return out
 
 
 class GateUnrunnable(str):
@@ -1381,6 +1398,10 @@ class Loop:
         changes nothing passes without running the gate. Renames are listed as
         a deletion and an addition, so a file moved out of a Project still
         gates the Project it left.
+
+        The gate is given the portfolio's declared keys (`gate_env`), and any
+        of their values in its output is redacted (`redact`) before the output
+        becomes a requirement or a pause reason a seat reads.
         """
         changed = git(
             self.wt, "diff", "--name-only", "--no-renames", f"{self.main}...HEAD"
@@ -1388,12 +1409,34 @@ class Loop:
         if not changed:
             return None
         targets = touched.select(self.wt, changed)
-        ok, out = self.gate(self.wt, targets)
+        env = self.gate_env()
+        ok, out = self.gate(self.wt, targets, env)
+        out = redact(out, env)
         if ok:
             return gate_unrunnable(out)
         return gate_unwritable(
             out, self.wt, unwritable(self.wt), self.tree
         ) or gate_fails(out, targets)
+
+    def gate_env(self) -> dict[str, str]:
+        """The declared keys the landing gate is started with, by name.
+
+        The names are `portfolio.gate_keys` in `main`'s structure, not the
+        branch's, so a seat cannot widen the list; the values are those of the
+        `.env` at the main checkout's root, which the worktree lacks and no seat
+        can read (stereorepo's DR-357). A name `.env` does not set, or sets to
+        nothing, is left out, and structure that is missing or does not parse
+        declares nothing.
+        """
+        text = board.show(self.repo, self.main, str(touched.STRUCTURE))
+        try:
+            data = yaml.safe_load(text) or {}
+        except yaml.YAMLError:
+            return {}
+        portfolio = data.get("portfolio") if isinstance(data, dict) else None
+        names = (portfolio or {}).get("gate_keys") or []
+        values = env_values(self.repo / ".env", [str(name) for name in names])
+        return {name: value for name, value in values.items() if value}
 
     def touches_code(self) -> bool:
         changed = git(

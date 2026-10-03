@@ -1,0 +1,68 @@
+decisions:
+  - id: work:decision/357
+    name: "DR-357 · Keys reach the supervisor's landing gate, by the names `main` declares, and never a seat"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+      - work:artifact/pair-readme
+    context: >-
+      The pair loop gates a branch in `worktrees/pair`, which has no `.env`
+      because git does not check out an ignored file, and since
+      `seats-never-hold-keys` the seats may neither read a portfolio's key
+      files nor inherit the variables they set. A test that needs a key
+      therefore fails or reports `?` at the landing gate, and a `?` holds the
+      landing until the developer acts. fitch-mvp's `live-generation-run`
+      needed a Gemini key from its `.env` and could not land. The question
+      was how a test that needs a key can pass the landing gate without a
+      seat holding the key.
+    alternatives:
+      - name: Copy or link `.env` into the worktree
+        chosen: false
+        reason: >-
+          The worktree is where the seats work, so every key in the file
+          would be within their reach, undoing `seats-never-hold-keys`.
+      - name: Give the gate every variable in `.env`
+        chosen: false
+        reason: >-
+          Code on the branch runs in the gate, so each key it is given is one
+          the branch's tests may use. The developer should choose which, and
+          the choice should be auditable.
+      - name: Give the gate the variables `main` names, from the main checkout's `.env`
+        chosen: true
+        reason: >-
+          `portfolio.gate_keys` in `.meta/assertions/structure.yaml` lists
+          names only, so the choice sits in git without the values. Read from
+          `main`, it cannot be widened by a branch the seats write. The loop
+          starts the gate outside the seats' sandbox, so the values reach the
+          gate's process alone.
+    consequences:
+      - >-
+        `Loop.gate_env` in `pair/loop.py` reads `gate_keys` from `main`'s
+        structure and their values from the `.env` at the main checkout's
+        root, and `gate` in `pair/pair.py` lays them over the loop's own
+        environment. A declared name `.env` does not set is absent, so its
+        test reports `?` and the landing holds as before.
+      - >-
+        `run_gate` replaces each declared value in the gate's output with its
+        name in angle brackets (`redact`) before the output becomes a
+        requirement or a pause reason a seat reads.
+      - >-
+        Two things stay open. Code on the branch runs with the declared keys,
+        so a declared key is one the developer trusts the branch's tests
+        with. And redaction covers only the gate's captured output: a test
+        that writes its key to a file in `worktrees/pair`, such as a log or
+        a cache, leaves it where the next seat can read it.
+      - >-
+        An Issue whose work is itself a live run, rather than a test the gate
+        runs, stays a `developer` Issue: the developer runs it, and the pair
+        records what it found.
+      - >-
+        `just gate` in the developer's own checkout is unchanged; the product
+        reads `.env` there as it always has.
+    falsifier: >-
+      A seat reads the value of a declared key, from the gate's output, the
+      worktree or its own environment.
+    rationale: |-
+      `seats-never-hold-keys` keeps the keys from the seats; this is the other
+      half, which lets the supervisor's gate hold the few the developer names,
+      so a test that needs a key can land without a seat ever holding it.

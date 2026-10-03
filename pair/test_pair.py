@@ -22,7 +22,7 @@ import tempfile
 import threading
 import time
 import unittest
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 from unittest import mock
@@ -31,11 +31,14 @@ import board
 import gate
 import touched
 from loop import (
+    GateFailure,
+    GateUnrunnable,
     Loop,
     State,
     append_event,
     event_log,
     gate_unrunnable,
+    redact,
     status,
     status_json,
     status_view,
@@ -51,6 +54,7 @@ from seats import (
     command,
     confinement,
     env_names,
+    env_values,
     is_refusal,
     unwritable,
     versioned_gpg_conf,
@@ -320,6 +324,8 @@ class Bench:
         """Each gate's verdict in turn, alone or with its output; a gate past the end passes."""
         self.gate_runs = 0
         self.gate_targets: list[list[str] | None] = []
+        self.gate_envs: list[dict[str, str]] = []
+        """The declared keys each gate was started with."""
         self.delivers: list[tuple[bool, str]] = []
         self.deliver_runs = 0
         self.stop_when_empty = False
@@ -367,9 +373,12 @@ class Bench:
 
             return make
 
-        def gate(_tree: Path, targets: Sequence[str] | None) -> tuple[bool, str]:
+        def gate(
+            _tree: Path, targets: Sequence[str] | None, env: Mapping[str, str]
+        ) -> tuple[bool, str]:
             self.gate_runs += 1
             self.gate_targets.append(None if targets is None else list(targets))
+            self.gate_envs.append(dict(env))
             if self.during_gate:
                 self.during_gate.pop(0)(self.repo)
             ok = self.gates.pop(0) if self.gates else True
@@ -1992,6 +2001,78 @@ class GateSelectionTest(unittest.TestCase):
         sh(b.repo, "worktree", "add", "-q", "--detach", str(b.loop.wt), "main")
         self.assertIsNone(b.loop.run_gate())
         self.assertEqual(b.gate_runs, 0)
+
+
+class GateKeysTest(unittest.TestCase):
+    """The landing gate is given the keys `main` declares, and its output hides them (DR-357)."""
+
+    SECRET = "s3cret-value-of-declared"
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+
+    def gate_on_branch(
+        self, *, declared: Sequence[str], branch_declares: Sequence[str] = ()
+    ) -> GateFailure | GateUnrunnable | None:
+        """Gate a branch under a `.env` holding `DECLARED` and `OTHER`, `declared` on `main`."""
+        b = self.b
+        keys = "".join(f"    - {name}\n" for name in declared)
+        b.structure(STRUCTURE + ("portfolio:\n  gate_keys:\n" + keys if keys else ""))
+        (b.repo / ".env").write_text(
+            f'# keys\nexport DECLARED="{self.SECRET}"\nOTHER=b\nEMPTY=\n'
+        )
+        wt = b.loop.wt
+        sh(b.repo, "worktree", "add", "-q", "--detach", str(wt), "main")
+        write("widgets/x.py", "1\n")(wt)
+        if branch_declares:
+            more = "".join(f"    - {name}\n" for name in branch_declares)
+            (wt / touched.STRUCTURE).write_text(STRUCTURE + "portfolio:\n  gate_keys:\n" + more)
+        sh(wt, "add", "widgets", str(touched.STRUCTURE))
+        sh(wt, "commit", "-q", "-m", "change")
+        return b.loop.run_gate()
+
+    def test_the_gate_is_given_the_declared_key_and_not_an_undeclared_one(self) -> None:
+        self.assertIsNone(self.gate_on_branch(declared=["DECLARED", "MISSING", "EMPTY"]))
+        self.assertEqual(self.b.gate_envs, [{"DECLARED": self.SECRET}])
+
+    def test_a_portfolio_that_declares_nothing_gives_the_gate_nothing(self) -> None:
+        self.gate_on_branch(declared=[])
+        self.assertEqual(self.b.gate_envs, [{}])
+
+    def test_a_key_declared_only_on_the_branch_is_not_given(self) -> None:
+        self.gate_on_branch(declared=["DECLARED"], branch_declares=["DECLARED", "OTHER"])
+        self.assertEqual(self.b.gate_envs, [{"DECLARED": self.SECRET}])
+
+    def test_a_declared_value_the_gate_prints_is_redacted(self) -> None:
+        self.b.gates = [(False, f"FAILED: key was {self.SECRET}\n")]
+        failure = self.gate_on_branch(declared=["DECLARED"])
+        assert failure is not None
+        self.assertNotIn(self.SECRET, failure)
+        self.assertIn("key was <DECLARED>", failure)
+
+    def test_a_declared_value_in_a_step_that_could_not_run_is_redacted(self) -> None:
+        self.b.gates = [(True, f"?  live: rejected key {self.SECRET}\n")]
+        reason = self.gate_on_branch(declared=["DECLARED"])
+        self.assertIsInstance(reason, GateUnrunnable)
+        assert reason is not None
+        self.assertNotIn(self.SECRET, reason)
+        self.assertIn("- live: rejected key <DECLARED>", reason)
+
+    def test_redact_replaces_a_longer_value_before_one_it_holds(self) -> None:
+        self.assertEqual(redact("abcd ab", {"A": "ab", "B": "abcd"}), "<B> <A>")
+
+    def test_the_real_gate_lays_the_keys_over_the_loops_environment(self) -> None:
+        from pair import gate as real_gate
+
+        done = subprocess.CompletedProcess([], 0, "", "")
+        with mock.patch("subprocess.run", return_value=done) as run:
+            real_gate(Path(), None, {})
+            real_gate(Path(), ["pair"], {"DECLARED": "x"})
+        self.assertEqual(run.call_args_list[0].kwargs["env"], dict(os.environ))
+        self.assertEqual(
+            run.call_args_list[1].kwargs["env"], {**os.environ, "DECLARED": "x"}
+        )
 
 
 class FlightCheckTest(unittest.TestCase):
@@ -4308,6 +4389,19 @@ class SeatCommandTest(unittest.TestCase):
         self.addCleanup(locked.chmod, 0o600)
         if not os.access(locked, os.R_OK):
             self.assertEqual(env_names(locked), set())
+
+    def test_env_values_reads_only_the_named_values_and_unquotes_them(self) -> None:
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(subprocess.run, ["rm", "-rf", str(tmp)], check=True)
+        text = tmp / ".env"
+        text.write_text(
+            "# A=no\nexport A = \"x y\"\nB='q'\nC=a=b\nD=\"\nE=unasked\nC=later\n"
+        )
+        self.assertEqual(
+            env_values(text, ["A", "B", "C", "D", "Z"]),
+            {"A": "x y", "B": "q", "C": "later", "D": '"'},
+        )
+        self.assertEqual(env_values(tmp / "absent", ["A"]), {})
 
 
 def snapshot(root: Path) -> dict[Path, tuple[int, int, int]]:

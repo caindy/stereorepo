@@ -45,7 +45,7 @@ import os
 import signal
 import subprocess
 import sys
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import IO
 
@@ -102,16 +102,27 @@ def json_quote(text: str) -> str:
     return '"' + text.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
-def gate(tree: Path, targets: Sequence[str] | None) -> tuple[bool, str]:
+def gate(
+    tree: Path, targets: Sequence[str] | None, env: Mapping[str, str]
+) -> tuple[bool, str]:
     """`just gate` in the worktree over `targets`, or over every Project for `None`.
 
     The loop names the Projects the branch touches and the Products built from
     them (`touched.select`), and not every Project: the full gate cost 2 to 2.5
     minutes an Issue, and the developer accepted that a break the path mapping
-    cannot see lands unchecked (stereorepo's DR-303).
+    cannot see lands unchecked (stereorepo's DR-303). The gate's process has
+    the loop's environment with `env`, the portfolio's declared keys, laid
+    over it (stereorepo's DR-357).
     """
     command = ["just", "gate", *(targets or [])]
-    done = subprocess.run(command, check=False, cwd=tree, capture_output=True, text=True)
+    done = subprocess.run(
+        command,
+        check=False,
+        cwd=tree,
+        capture_output=True,
+        text=True,
+        env={**os.environ, **env},
+    )
     return done.returncode == 0, done.stdout + done.stderr
 
 
