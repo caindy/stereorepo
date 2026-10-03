@@ -5,7 +5,15 @@ import pathlib
 import tempfile
 
 from checks.collect import Found, Passed, check
-from checks.files.justfile import FLAGS, IDENTIFIER, Contract, justfile_recipe_shape
+from checks.files.justfile import CONTRACT, FLAGS, IDENTIFIER, Contract, justfile_recipe_shape
+from lib.render.writers import CONDITIONAL_RECIPES, ConditionalRecipe, justfile
+
+ABSENT = ConditionalRecipe("work:artifact/absent", "absent", (
+    "# a recipe under an Artifact no portfolio asserts",
+    "absent *args:",
+    "    .meta/absent.py {{args}}",
+))
+"""A conditional recipe added to the table and nowhere else, as a new scaffold-only verb arrives."""
 
 CONFORMING = """# what landed
 landed n *args:
@@ -91,7 +99,7 @@ def verb_surface_probes() -> list[str]:
     the operator surface the contract governs even where its own shape would
     otherwise be refused. A surface holding no recipe the
     contract declares is reported as the missing recipe rather than passing
-    silently. A surface without `release`, one of `SCAFFOLD_RECIPES`, passes
+    silently. A surface without `release`, one of `CONDITIONAL_RECIPES`, passes
     as a portfolio's and is reported missing as the scaffold's.
     """
     contract: Contract = {"landed": (("n", IDENTIFIER), ("args", FLAGS))}
@@ -139,4 +147,36 @@ def verb_surface_probes() -> list[str]:
             problems.append(f"verb surface: {without}, as the scaffold's, was found as "
                             f"{list(outcome.problems)}, which does not say {missing!r}")
 
+    return problems
+
+
+@check("conditional recipe probes", pre=True)
+def conditional_recipe_probes() -> list[str]:
+    """A recipe added to `CONDITIONAL_RECIPES` alone is rendered and exempted under its Artifact.
+
+    `ABSENT`, appended to the table and declared in the contract, is the only
+    edit. `justfile()` omits it from a portfolio asserting no Artifact, and
+    that portfolio's rendered surface comes to `Passed` as a portfolio's,
+    though the contract declares it. With its Artifact asserted, the render
+    holds it.
+    """
+    problems = []
+    extended = (*CONDITIONAL_RECIPES, ABSENT)
+    header = ABSENT.lines[1]
+    portfolio = justfile(structure={"artifacts": []}, conditional=extended)
+    if header in portfolio.splitlines():
+        problems.append(f"conditional recipe: a portfolio asserting no Artifact holds {header!r}")
+
+    with tempfile.TemporaryDirectory() as directory:
+        path = pathlib.Path(directory) / "justfile"
+        path.write_text(portfolio, encoding="utf-8")
+        contract = {**CONTRACT, ABSENT.name: (("args", FLAGS),)}
+        outcome = justfile_recipe_shape(path=path, contract=contract, scaffold=False,
+                                        conditional=extended)
+    if not isinstance(outcome, Passed):
+        problems.append(f"conditional recipe: a portfolio's rendered surface came to {outcome!r}")
+
+    asserted = justfile(structure={"artifacts": [{"id": ABSENT.artifact}]}, conditional=extended)
+    if header not in asserted.splitlines():
+        problems.append(f"conditional recipe: {header!r} is missing under its asserted Artifact")
     return problems

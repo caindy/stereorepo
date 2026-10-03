@@ -15,6 +15,7 @@ import re
 from typing import NamedTuple
 
 from checks.collect import ROOT, TEMPLATE, CouldNotRun, Found, Passed, StepOutcome, check
+from lib.render.writers import CONDITIONAL_RECIPES, ConditionalRecipe
 
 Contract = dict[str, tuple[tuple[str, str], ...]]
 """A recipe name against the parameters it takes, each paired with the kind of value it carries."""
@@ -45,10 +46,6 @@ SUBCOMMAND = "subcommand"
 
 TOOL_ROOTS = (".meta/", "pair/")
 """Where a recipe's tool may live: the staging ground, or the scaffold-only pair loop."""
-
-SCAFFOLD_RECIPES = ("test-specialization", "adapt", "pair", "groom", "pair-status",
-                    "pair-accept", "pair-resume", "pair-watch", "release", "audit")
-"""Recipes rendered only in the scaffold, which a portfolio's surface does not hold."""
 
 IDENTIFIER = "identifier"
 """A scalar carrying one atomic identifier, such as an issue slug."""
@@ -196,6 +193,7 @@ def justfile_recipe_shape(
     path: pathlib.Path = JUSTFILE,
     contract: Contract = CONTRACT,
     scaffold: bool | None = None,
+    conditional: tuple[ConditionalRecipe, ...] = CONDITIONAL_RECIPES,
 ) -> StepOutcome:
     """Checks that root recipes meet the declared argument-passing contract.
 
@@ -210,13 +208,16 @@ def justfile_recipe_shape(
     unnamed one expanding to nothing rather than failing; every body invokes a
     tool under `.meta/`, or the pair loop under `pair/`; and every recipe
     carries the doc comment `just --list` prints as the index. A portfolio's
-    surface is not held to `SCAFFOLD_RECIPES`, which only the scaffold renders.
+    surface is not held to the conditional recipes, which the render writes only
+    under an Artifact a portfolio may lack.
 
     Args:
         path: The justfile to read.
         contract: The recipes the surface must hold, against their parameters.
         scaffold: Whether the surface is the scaffold's, which holds
-            `SCAFFOLD_RECIPES`; `None` asks whether `template/` exists.
+            every one of `conditional`; `None` asks whether `template/` exists.
+        conditional: The recipes the render writes only under an Artifact,
+            which a portfolio's surface is not held to.
 
     Returns:
         Passed | Found | CouldNotRun: The recipes checked, or one line per departure.
@@ -233,8 +234,8 @@ def justfile_recipe_shape(
     if scaffold is None:
         scaffold = TEMPLATE.is_dir()
     if not scaffold:
-        for scaffold_recipe in SCAFFOLD_RECIPES:
-            effective_contract.pop(scaffold_recipe, None)
+        for exempt in conditional:
+            effective_contract.pop(exempt.name, None)
 
     assignments = frozenset(match["name"] for line in text.splitlines()
                             if (match := ASSIGNMENT.match(line)))
