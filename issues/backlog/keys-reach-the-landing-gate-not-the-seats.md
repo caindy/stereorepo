@@ -1,3 +1,7 @@
+---
+difficulty: hard
+---
+
 # Give the landing gate a portfolio's keys, and keep them from the seats
 
 A product often has tests that need a key, such as an API token, which the
@@ -53,3 +57,14 @@ fitch-mvp found this. Its `live-generation-run` needs a Gemini key from its
 - Narrowing the seats' network allowlist, which is a separate decision from
   DR-302.
 - Secret managers or keychains: `.env` is the developer's convention.
+
+## Split
+
+This is two pieces of work, each of which stands alone:
+
+1. `seats-never-hold-keys`: the seats' sandbox denies reading `.env` files
+   and their environment carries none of the variables they hold.
+2. `landing-gate-reads-declared-keys`: a portfolio declares the variables
+   its gate may read, `run_gate` loads only those, and the decision record
+   states the rule. It waits on the first, so the record describes both
+   halves as built.
