@@ -520,12 +520,6 @@ concept_set:
       `Warrant` and `Qualifier` are that schema's terms and are not minted
       here.
 
-      The label collides with the channel verb `claim`, which takes an Issue by
-      assigning it to a Role's account, and with "the claim released" in what
-      `move stop` does. That is an ownership lock and not an assertion under
-      evaluation. `confusable_with` cannot hold it, the verb being no Concept, so
-      it is said here: a Claim is argued about, a claim is taken and released.
-
       What a history entry asserts, what an Article holds against an artifact,
       and what a Citation names in its target are each a Claim. Whether the rest
       of Toulmin's ontology is taken with it is a judgement for later,

@@ -48,11 +48,6 @@ sentence: one was [[evidence]] that can fail, the other Evidence that cannot.
   names, and a link; `just dereference` evaluates whether the target supports
   that claim.
 
-What is not a Claim is the channel verb `claim`, which takes an Issue by
-assigning it to a Role's account — and "the claim released" in what `move stop`
-does. That is an ownership lock. The two share a label and nothing else: a Claim
-is argued about, a claim is taken and released.
-
 ## Contrast with industry synonyms
 
 - **Assertion** is the programming-language sense — a runtime check that halts.
