@@ -16,7 +16,7 @@ Bringing an existing repository, one that already holds a product, its history a
 
 ## Steps
 
-1. **Plan the adoption.** From the stereorepo checkout, run `just adapt plan <repository>`. The plan lists only the paths the repository tracks, sorted into those it keeps, those it gains, those whose content it integrates and those that conflict, and it leaves out every path a portfolio does not have (DR-305). Read the plan before changing anything.
+1. **Plan the adoption.** The tooling this repository inherits needs Python 3.13 or later (DR-351), and `check.py` refuses an older interpreter. From the stereorepo checkout, run `just adapt plan <repository>`. The plan lists only the paths the repository tracks, sorted into those it keeps, those it gains, those whose content it integrates and those that conflict, and it leaves out every path a portfolio does not have (DR-305). Read the plan before changing anything.
 2. **Settle the product's own records.** For each decision log or roadmap the repository already keeps, decide which subjects it keeps and which move to Decision Records under `.meta/assertions/decisions/` or to the board in `issues/`. Do not assume they replace it: a log may record decisions about the domain that no Decision Record would.
 3. **Retire another version-control layer.** Where the repository uses a version-control layer over git, check that the layer holds nothing git lacks, such as unpublished changes or history kept only in its own store, before removing it. The pair loop reads only git.
 4. **Copy the managed items.** Run `<checkout>/.meta/bundle.py --root <repository> sync <checkout>` from a clean working tree. It copies every managed item the checkout tracks and leaves the repository's own files alone (DR-315). The repository's own `.gitignore` is merged, not replaced: stereorepo's lines go in one marked block at its end, and every line it already had stays outside that block, where later syncs leave it (DR-316). The repository has no `sync` recipe until this first copy brings one, and the checkout's own recipe cannot be pointed at it, because `--root` is an option of `bundle.py` and the recipe places its arguments after `sync`. Every later sync is `just sync <checkout>`, run in the repository, which hands the sync to the checkout's own `bundle.py`, so a fix to the sync applies on the first sync after it lands (DR-322).
@@ -35,3 +35,7 @@ _Produces: An adopted repository, with its own history and product, holding the 
 
 Read [`.meta/README.md`](.meta/README.md) in the adopted repository. Its load map
 routes to everything else, and is deliberately insufficient on its own.
+
+---
+
+**Where this came from.** [DR-351](.meta/assertions/decisions/DR-351.yaml)

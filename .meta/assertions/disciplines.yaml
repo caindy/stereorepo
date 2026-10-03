@@ -99,8 +99,10 @@ disciplines:
       - id: work:discipline-step/adoption/plan-the-adoption
         name: Plan the adoption
         statement: >-
-          From the stereorepo checkout, run `just adapt plan <repository>`. The plan
-          lists only the paths the repository tracks, sorted into those it keeps, those it gains,
+          The tooling this repository inherits needs Python 3.13 or later (DR-351),
+          and `check.py` refuses an older interpreter. From the stereorepo checkout,
+          run `just adapt plan <repository>`. The plan lists only the paths the
+          repository tracks, sorted into those it keeps, those it gains,
           those whose content it integrates and those that conflict, and it leaves out every path
           a portfolio does not have (DR-305). Read the plan before changing anything.
       - id: work:discipline-step/adoption/settle-the-products-own-records
