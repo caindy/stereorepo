@@ -4143,6 +4143,8 @@ class SeatCommandTest(unittest.TestCase):
         denied = argv.index("--disallowedTools") + 1
         self.assertEqual(argv[denied : denied + len(DISALLOWED)], DISALLOWED)
         self.assertIn("Bash(git push*)", DISALLOWED)
+        for rule in ("Bash(kill *)", "Bash(pkill*)", "Bash(killall*)"):
+            self.assertIn(rule, DISALLOWED)
 
 
 def snapshot(root: Path) -> dict[Path, tuple[int, int, int]]:

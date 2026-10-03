@@ -55,8 +55,16 @@ DISALLOWED = [
     "Bash(git worktree*)",
     "Bash(git mv *)",
     "Bash(git stash*)",
+    "Bash(kill *)",
+    "Bash(pkill*)",
+    "Bash(killall*)",
 ]
-"""The git commands the loop owns, refused even inside a compound command."""
+"""The git commands the loop owns, and the commands that signal processes by
+name or number, refused even inside a compound command.
+
+Claude Code's sandbox confines writes, not signals, so a sandboxed seat can
+signal any process the developer owns (DR-354).
+"""
 
 SETTLE = (
     "Your turn ends only when these background tasks have finished or been"

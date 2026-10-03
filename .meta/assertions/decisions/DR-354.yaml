@@ -1,0 +1,50 @@
+decisions:
+  - id: work:decision/354
+    name: "DR-354 · A seat may not signal processes by name or number, because the sandbox does not confine signals"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/pair
+    context: >-
+      On 2026-10-03 at 17:04, in the backlog stage of
+      `pair-seat-tests-flaky-under-load`, the primary seat started one
+      `yes > /dev/null` per CPU to reproduce the load the Issue describes, then
+      cleaned up with `pkill -u "$USER" -x yes`. Both commands ran inside
+      Claude Code's sandbox (DR-302). The signal reached every process the
+      developer owned: the desktop's applications, the pair loop and its
+      seats. Why `pkill` matched more than `yes` is not established. What is
+      established is that the sandbox confines writes and leaves signals
+      alone, so a seat can signal any of the developer's processes. The
+      question was how to stop a seat doing that again.
+    alternatives:
+      - name: Rely on the sandbox
+        chosen: false
+        reason: >-
+          It confines file writes and the network, not signals, so it let this
+          through.
+      - name: Tell the seats not to kill processes
+        chosen: false
+        reason: >-
+          An instruction a seat can overlook is no bound on what an unattended
+          seat can do on the developer's machine.
+      - name: Refuse the commands that signal by name or number
+        chosen: true
+        reason: >-
+          `DISALLOWED` already applies to each part of a compound command, so
+          `kill`, `pkill` and `killall` are refused wherever they appear in a
+          seat's shell command. A seat that needs to stop a process it started
+          can let a timeout end it, or stop it from the program that started
+          it.
+    consequences:
+      - >-
+        `DISALLOWED` in `pair/seats.py` refuses `kill`, `pkill` and `killall`,
+        and `SeatCommandTest` asserts it.
+      - >-
+        The bound is incomplete. A program a seat runs can still signal the
+        developer's processes, for example Python's `os.kill(-1, ...)`. Only a
+        sandbox that confines signals would close that.
+    falsifier: >-
+      A seat again stops a process it did not start, by a command
+      `DISALLOWED` does not refuse.
+    rationale: |-
+      The sandbox bounds what a seat can write; this bounds the commonest way
+      a seat can stop what it did not start.
