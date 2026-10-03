@@ -2,29 +2,19 @@
 difficulty: medium
 ---
 
-# Keep each turn's rationale and findings in the Issue file
+# Keep each turn's closing message in the Issue file
 
 A seat learns what the other did only from the diff of the working tree and
 the Issue file. What the other seat said at the end of its turn goes to
 `.pair/<seat>.log` and nowhere else. So a review that finds nothing to fix
-leaves no trace: the next seat cannot tell a thorough check from a glance, and
-must either re-derive it or take it on trust. The seats already write notes
-into Issue files unprompted, but as recaps of what they did, which the diff
-already shows.
+leaves no trace: the next seat cannot tell a thorough check from a glance.
 
-The next reader needs two things the diff cannot give: why a change was made
-the way it was, and what a review checked.
+The seats already end every turn with a closing message. The loop keeps it
+where the other seat will read it, and nothing about what the seats are told
+changes.
 
 ## What is wanted
 
-- **The seats end each turn in a known shape.** The stage prompts ask a seat
-  that changed the plan or the implementation to end its turn with its
-  rationale: why this approach, what it considered and rejected, and what it
-  is unsure of. They ask a seat reviewing the other's work to end with its
-  findings: what it checked and how (the test it ran, the file it read, the
-  case it tried), what it found wrong and why, and what it confirmed is
-  right. Neither is a recap of the diff. Reasoning that belongs in a Decision
-  Record or a docstring still goes there, as Journaling routes it.
 - **The supervisor keeps the notes.** After each turn, the loop appends that
   turn's closing message (`TurnResult.text`) to the Issue file under
   `## Pair notes`, labelled by seat, stage and turn, and commits it as part of
@@ -43,11 +33,12 @@ the way it was, and what a review checked.
 - **The other seat reads them in its diff**, since the Issue file changed. No
   message passes between the seats except through the file, and the notes
   land in `issues/done/` with the Issue.
-- **The words follow:** `pair/README.md` says what a turn is told and what the
-  loop keeps.
+- **The words follow:** `pair/README.md` says what the loop keeps.
 
 ## Out of scope
 
+- Any change to what the seats are told: the files under `pair/prompts/` and
+  the turn message `Loop.message` builds stay as they are.
 - Judging whether a review's findings are substantive; that belongs to the
   pair-versus-single-seat evaluation on the roadmap.
 
@@ -61,15 +52,19 @@ the way it was, and what a review checked.
   `**The plan.**` neither sends the Issue back nor finishes `todo/`, and a
   Flight whose check turns leave notes still reaches its desk check with its
   brief intact.
-- The stage prompts ask for rationale from a changing turn and findings from a
-  reviewing one.
-- The pair tests cover each of these, and `just gate` passes.
+- The pair tests cover each of these, and no file under `pair/prompts/`
+  changes.
 
-# Needs elaboration
+## The developer's decision (2026-10-02)
 
-The first implementation landed as `9f129a71` and was reverted: with its
-closing-turn instructions, a fresh seat's first turn was refused by the
-model's safeguards (`NOTE-seat-instructions-refused.md` at the root). Those
-instructions need new wording from the developer, checked on one fresh seat
-turn, before this runs again.
+The first implementation landed as `9f129a71` and was reverted (`6fd1ea9`):
+its new instructions to the seats about their closing messages made the
+model's safeguards refuse a fresh seat's first turn. Plainer wording was
+tried and refused the same way. So this Issue keeps only the supervisor's
+part, which tells the seats nothing new.
 
+`9f129a71`'s changes to `pair/board.py` may be reused: read them with
+`git show 9f129a71 -- pair/board.py`. Write the change to `pair/loop.py` and
+the tests afresh. Do not open `9f129a71`'s changes to `pair/loop.py`,
+`pair/prompts/` or `pair/test_pair.py`, which carry the refused wording, and
+do not quote or rewrite that wording.
