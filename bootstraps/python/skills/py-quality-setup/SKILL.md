@@ -37,7 +37,7 @@ wherever it was asked for: `just bootstrap python products/api` puts one at
 `products/api`. Anything under `.meta/` is repository tooling, whatever else is
 true of it.
 
-### Three things this skill must not do
+### Two things this skill must not do
 
 **Never write a `pyproject.toml` at the repository root.** A portfolio root has
 no manifest and wants none. `.meta/` is configured by `.meta/ruff.toml` and
@@ -65,14 +65,6 @@ uvx mypy@2.3.1 --config-file .meta/mypy.ini --strict --ignore-missing-imports .m
 uv run ruff check .
 uv run mypy .
 ```
-
-**Never grant `Bash(git commit *)`.** The permissions block below is upstream's,
-and that entry is wrong here: A19 says a commit that does not name its Actor is
-unattributable, and `git commit` names none. Commits go through
-`.meta/say/commit`, which appends the Actor Trailer. The same applies to `gh`'s
-writing verbs, which `.claude/settings.json` already denies in favour of
-`.meta/say/post` and `.meta/say/move`; do not add them back
-in `.claude/settings.local.json`.
 
 ### Verifying, by target
 
@@ -313,20 +305,12 @@ A.When using `pyrightconfig.json` for multi-package projects, REMOVE the `tool.b
          "Bash(git ls-files *)",
          "Bash(git checkout *)",
          "Bash(git branch *)",
-         "Bash(.meta/say/commit *)"
+         "Bash(git commit *)"
        ],
        "deny": []
      }
    }
    ```
-
-   `Bash(git commit *)` is upstream's entry and is **not** in the list above. A19
-   says a commit that does not name its Actor is unattributable, and `git commit`
-   names none; `.meta/say/commit` appends the Actor Trailer. Do not add `gh`'s
-   writing verbs either: `.claude/settings.json` denies them so that
-   everything reaching GitHub passes through `.meta/say/post` and `.meta/say/move`
-   and is signed, and a `local` file that allowed them back
-   would be reopening a boundary rather than granting a convenience.
 
    **Merge logic**: Read existing file, parse JSON, take union of `allow` lists, write back. Create `.claude/` directory if needed.
 
@@ -416,7 +400,7 @@ ignore_missing_imports = true
 
 - [ ] The target was identified from `assertions/structure.yaml` before anything ran
 - [ ] No `pyproject.toml` was created at the repository root
-- [ ] `.claude/settings.local.json` grants the quality tools and **not** `Bash(git commit *)` or any `gh` writing verb
+- [ ] `.claude/settings.local.json` grants the quality tools in the step-6 list
 - [ ] `~/.claude/hooks/lint-gate.py` points at this package's copy, and the Stop hook is configured in `~/.claude/settings.json`
 
 **Repository tooling (`.meta/`)**

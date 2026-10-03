@@ -73,8 +73,8 @@ concept_set:
       The semantic unit of maintainer knowledge. Where a Concept lands in the
       artifact hierarchy — whether as a schema gloss, a section, or a dedicated
       markdown file — is subordinate to the authoring agent's structural
-      judgement under the Diátaxis Compass. "Article" is strictly avoided to
-      protect the Charter's empirical clauses (stereorepo's Article 1, stereorepo's Article 15).
+      judgement under the Diátaxis Compass. "Article" is strictly avoided: it
+      already names one clause of the Charter.
   - id: work:concept/published-language
     pref_label: Published Language
     definition: A well-documented shared language that contexts translate into and out of.

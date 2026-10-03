@@ -20,9 +20,8 @@ storage-oriented terminology:
   boundaries.
 - **Wiki article:** Strongly avoided in stereorepo (`avoid: [wiki article]`). The
   term *Article* is strictly reserved for the empirical clauses of the
-  Charter (stereorepo's Article 1, stereorepo's Article 15). Conflating wiki
-  expositions with Charter Articles creates dangerous ambiguity between
-  explanatory documentation and checkable working agreements.
+  Charter. Conflating wiki expositions with Charter Articles creates dangerous
+  ambiguity between explanatory documentation and checkable working agreements.
 
 ## Diátaxis Subordination: Hierarchy and Placement
 

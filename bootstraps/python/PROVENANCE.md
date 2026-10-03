@@ -43,7 +43,7 @@ it could not be an overlay, and so why the byte-identical copy had to go
 
 | Skill | The hazard it now names |
 |---|---|
-| `py-quality-setup` | Holds the contract in full: the two targets, how to tell which, no root `pyproject.toml`, and every checker given its configuration by name. The permissions it writes no longer grant `Bash(git commit *)`, since A19 holds a commit that does not name its Actor to be unattributable |
+| `py-quality-setup` | Holds the contract in full: the two targets, how to tell which, no root `pyproject.toml`, and every checker given its configuration by name |
 | `py-code-health` | `# noqa: F401  # reason:` registration imports and `@check`-decorated steps are live, not dead; what `vulture` reports at 80 against what it reports at 60 |
 | `py-git-hooks` | `core.hooksPath` is set, so `pre-commit install` refuses and the remedy it prints is destructive; the lint gate routes by target, runs no formatter, and drops `basedpyright` |
 | `py-test-quality` | `.meta/` has no pytest suite; its behavioural tests are the probes, and `uv run gate mutants` admits no survivor rather than a 75% score |

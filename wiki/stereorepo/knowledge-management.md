@@ -69,8 +69,7 @@ structural judgement under Diátaxis:
 - **Subdirectory:** A folder grouping related concept pages for complex domain aggregates.
 
 The term *Article* is strictly avoided for wiki pages (`avoid: [wiki article]`)
-to prevent catastrophic confusion with the empirical clauses of the Charter
-(stereorepo's Article 1, stereorepo's Article 15).
+to prevent catastrophic confusion with the empirical clauses of the Charter.
 
 ## Core Invariants
 

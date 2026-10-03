@@ -118,7 +118,7 @@ _The named ways of working, each adhered to because it is not a program._
 | **Written Decisions** | A decision that lives only in a transcript has not been made. | — |
 | **Specialization** | Turning a fresh clone of stereorepo into a new portfolio repo. | bootstrap, init, scaffolding step |
 
-**Concept.** The semantic unit of maintainer knowledge. Where a Concept lands in the artifact hierarchy — whether as a schema gloss, a section, or a dedicated markdown file — is subordinate to the authoring agent's structural judgement under the Diátaxis Compass. "Article" is strictly avoided to protect the Charter's empirical clauses (stereorepo's Article 1, stereorepo's Article 15).
+**Concept.** The semantic unit of maintainer knowledge. Where a Concept lands in the artifact hierarchy — whether as a schema gloss, a section, or a dedicated markdown file — is subordinate to the authoring agent's structural judgement under the Diátaxis Compass. "Article" is strictly avoided: it already names one clause of the Charter.
 
 **Portfolio.** One repo, one Bounded Context, one Ubiquitous Language. The repo boundary and the language boundary are the same boundary, which is why a portfolio is a monorepo. A portfolio's repository is a clone of stereorepo, specialized or adopted, that keeps `.meta/`; no second word names the repository apart from the portfolio it holds (stereorepo's DR-319).
 
