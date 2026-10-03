@@ -208,10 +208,10 @@ And at which level it belongs — the Portfolio's, a Product's or a Project's. T
 
 _Produces: A record that answers "why is it like this" without anyone remembering._
 
-### Journaling
+### Routing
 
 Narrative goes to the artifact that owns it; the issue file holds what is left over.
-Most of what wants writing down is already owed somewhere. What a schema means belongs in the schema, why a decision was taken belongs in a decision record, a rule belongs in the Charter, a word belongs in the vocabulary. Journaling is that routing, and then the residue — which divides by tense. What is **finished** is the account of this change, the path taken through it and the approach that lost; it goes in the issue file, which lands in `issues/done/` with the change. What is **unfinished** is work noticed and not done; it is an issue nobody has taken up, so it goes in a new file in `issues/backlog/`.
+Most of what wants writing down is already owed somewhere. What a schema means belongs in the schema, why a decision was taken belongs in a decision record, a rule belongs in the Charter, a word belongs in the vocabulary. Routing is that, and then the residue — which divides by tense. What is **finished** is the account of this change, the path taken through it and the approach that lost; it goes in the issue file, which lands in `issues/done/` with the change. What is **unfinished** is work noticed and not done; it is an issue nobody has taken up, so it goes in a new file in `issues/backlog/`.
 Filing the second as the first is how it is lost. A finished issue file is read when someone asks why, and nobody looks in one for work still to do.
 A commit message is a **label**, not an account. Reasoning left there is reasoning hidden: it is reached by walking `git blame`, which is expensive, lossy under rebase and squash, and attempted only by a reader the artifacts have already failed. Left to itself an agent narrates an entire project through commit messages, because that is the one place it is always asked to write.
 

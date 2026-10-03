@@ -450,8 +450,8 @@ disciplines:
           Follow `.meta/templates/decision.md`, so the shape does not have to be re-argued.
     produces:
       - A record that answers "why is it like this" without anyone remembering.
-  - id: work:discipline/journaling
-    name: Journaling
+  - id: work:discipline/routing
+    name: Routing
     description: >-
       Narrative goes to the artifact that owns it; the issue file holds what is
       left over.
@@ -459,7 +459,7 @@ disciplines:
       Most of what wants writing down is already owed somewhere. What a schema
       means belongs in the schema, why a decision was taken belongs in a decision
       record, a rule belongs in the Charter, a word belongs in the vocabulary.
-      Journaling is that routing, and then the residue — which divides by tense.
+      Routing is that, and then the residue — which divides by tense.
       What is **finished** is the account of this change, the path taken through
       it and the approach that lost; it goes in the issue file, which lands in
       `issues/done/` with the change. What is **unfinished** is work noticed and
@@ -482,30 +482,30 @@ disciplines:
       And whether the residue is worth writing at all. Where the change explains
       itself and nothing was tried and abandoned, an entry for it is a changelog.
     steps:
-      - id: work:discipline-step/journaling/route-as-you-write
+      - id: work:discipline-step/routing/route-as-you-write
         name: Route as you write
         statement: >-
           Where an artifact owns the paragraph, it goes there.
-      - id: work:discipline-step/journaling/put-finished-residue-in-the-issue-file
+      - id: work:discipline-step/routing/put-finished-residue-in-the-issue-file
         name: Put finished residue in the issue file
         statement: >-
           Place finished residue in the issue file — what changed, what the ground looked like, and what
           would make this removable.
-      - id: work:discipline-step/journaling/put-unfinished-residue-in-the-backlog
+      - id: work:discipline-step/routing/put-unfinished-residue-in-the-backlog
         name: Put unfinished residue in the backlog
         statement: >-
           Write unfinished residue as a new file in `issues/backlog/`: it is an issue, not a paragraph,
           and it outlives the one it was noticed in.
-      - id: work:discipline-step/journaling/keep-commit-messages-to-what-changed
+      - id: work:discipline-step/routing/keep-commit-messages-to-what-changed
         name: Keep commit messages to what changed
         statement: >-
           A message that has begun explaining is holding something that belongs elsewhere.
-      - id: work:discipline-step/journaling/route-findings-in-same-change
+      - id: work:discipline-step/routing/route-findings-in-same-change
         name: Route findings in same change
         statement: >-
           Place every finding in the same change that records it: a rule goes to the Charter; a foreclosing
           decision goes to a decision record.
-      - id: work:discipline-step/journaling/supersede-by-writing-again
+      - id: work:discipline-step/routing/supersede-by-writing-again
         name: Supersede by writing again
         statement: Name what is replaced, and never rewrite.
     produces:

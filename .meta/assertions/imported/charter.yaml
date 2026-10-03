@@ -204,7 +204,7 @@ articles:
   - id: work:article/14
     name: Article 14
     statement: Reasoning that lives only in a commit message is not recorded.
-    enforces: work:discipline/journaling
+    enforces: work:discipline/routing
     checked_by: >-
       Nothing yet.
     example: >-

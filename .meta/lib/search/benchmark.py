@@ -31,7 +31,7 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
         ),
         (
             "why can't I put reasoning in a commit message",
-            ["work:article/14", "work:discipline/journaling"],
+            ["work:article/14", "work:discipline/routing"],
         ),
         (
             "how does a seat agree with the other seat",
@@ -59,7 +59,7 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
         ),
         (
             "where do things noticed but not done go",
-            ["work:discipline/journaling", "work:concept/journaling"],
+            ["work:discipline/routing", "work:concept/routing"],
         ),
         (
             "why is there a stakeholders directory",
@@ -75,7 +75,7 @@ def run_benchmark(index: bm25.SearchIndex) -> int:
         ),
         (
             "I finished a task and there is leftover work, what do I do with it",
-            ["work:discipline/journaling", "work:concept/journaling"],
+            ["work:discipline/routing", "work:concept/routing"],
         ),
         (
             "an old rule no longer applies, how is it retired",

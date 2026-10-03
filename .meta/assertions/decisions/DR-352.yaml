@@ -1,0 +1,63 @@
+decisions:
+  - id: work:decision/352
+    name: "DR-352 · The Journaling Discipline is renamed Routing"
+    status: ADOPTED
+    enacted_in:
+      - work:artifact/meta-assertions-imported-disciplines
+      - work:artifact/meta-assertions-imported-vocabulary
+      - work:artifact/meta-assertions-imported-charter
+      - work:artifact/meta-lib-search-benchmark
+      - work:artifact/meta-checks-probes-tools-search
+    context: >-
+      DR-313 has a term be the common word where that word would be guessed
+      right, and has inherited terms re-tested. *Journaling* fails the test:
+      the common word means keeping a journal or a log, while the Discipline
+      means sending narrative to the artifact that owns it, the finished
+      residue to the Issue file and the unfinished residue to the backlog,
+      and never to a commit message. A reader who guesses from the word
+      alone writes a log, which is the habit the Discipline exists to stop.
+      The Discipline's own steps already say *route* (`route-as-you-write`,
+      `route-findings-in-same-change`), and `AGENTS.md` says "Route prose
+      before writing".
+    alternatives:
+      - name: Keep *Journaling*
+        chosen: false
+        reason: >-
+          Its guessed meaning is the opposite of the practice: a journal
+          collects narrative in one place, and the Discipline disperses it to
+          its owners.
+      - name: Residue
+        chosen: false
+        reason: >-
+          Names only the second half of the practice, what is left over, and
+          not the routing that decides what is left over.
+      - name: Routing
+        chosen: true
+        reason: >-
+          The common word is guessed right: a thing is sent to where it
+          belongs. The Discipline's steps and `AGENTS.md` already use it, so
+          the rename makes the name agree with the text rather than adding a
+          word. It sits close to the Knowledge Management Discipline's
+          "pre-writing routing decision tree", which is the same act applied
+          to maintainer-facing prose, so the overlap is one of scope, not of
+          meaning.
+    consequences:
+      - >-
+        `work:discipline/journaling` becomes `work:discipline/routing`, its
+        step ids move from `work:discipline-step/journaling/` to
+        `work:discipline-step/routing/`, and `work:concept/journaling`
+        becomes `work:concept/routing` with *Journaling* on its `avoid` list.
+      - >-
+        The compiled instructions file is
+        `.meta/.apm/instructions/routing.instructions.md`.
+      - >-
+        Earlier Decision Records keep the old word and the old ids, as the
+        record of what they decided at the time.
+    falsifier: >-
+      Sessions read *Routing* as Knowledge Management's prose-routing alone,
+      and stop filing residue in the Issue file and leftover work in the
+      backlog.
+    rationale: |-
+      A Discipline's name is the first thing a session reads of it, and a
+      name that is guessed wrong teaches the wrong practice before the
+      description is reached.

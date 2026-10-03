@@ -107,7 +107,7 @@ _The named ways of working, each adhered to because it is not a program._
 |---|---|---|
 | **Literate Programming** | An artifact is an exposition addressed to a human reader; the machine-readable part is secondary. | — |
 | **Progressive Disclosure** | One small thing loads always; everything else loads on demand, routed by a load map that is deliberately insufficient. | — |
-| **Journaling** | Routing narrative to the artifact that owns it, and the residue to the issue file — never to a commit message. | — |
+| **Routing** | Sending narrative to the artifact that owns it, and the residue to the issue file — never to a commit message. | Journaling |
 | **Knowledge Management** | Organizing maintainer-facing exposition into an encyclopedic wiki partitioned by Bounded Context. | — |
 | **Dogfooding** | Using what is being built, on itself, before anyone else has to. | — |
 | **Modelling the Developer** | Keeping a Persona of the person the agent works with, in the repo and current, as external memory rather than private. | profiling |
@@ -156,7 +156,7 @@ _The named ways of working, each adhered to because it is not a program._
 
 **Bootstrap.** Where a Discipline becomes a command that can fail. A Bootstrap says how a Discipline is satisfied in one language; it never restates the Discipline, because the second copy is the one that drifts.
 
-**Journaling.** The routing practice, not a place. What it routes goes to the artifact that owns it, and the residue to the issue file. Leftover work, noticed and not done, is a new Issue in the backlog.
+**Routing.** A practice, not a place. What it sends goes to the artifact that owns it, and the residue to the issue file. Leftover work, noticed and not done, is a new Issue in the backlog.
 
 **Knowledge Management.** Prose addressed to a maintainer who arrives cold and seeks to understand an architecture or domain concept. Every concept in a Bounded Context's Ubiquitous Language has a corresponding wiki page adhering to MOS:LEAD conventions and closed-world wikilinks (stereorepo's DR-184, stereorepo's DR-185).
 

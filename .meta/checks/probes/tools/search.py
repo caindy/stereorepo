@@ -29,7 +29,7 @@ def search_probes() -> list[str]:
     The index built over `.meta/assertions/` and `wiki/` holds at least a
     hundred documents. Asked who moves an issue between stages, the top five
     hold the Concept supervisor or stage; asked for leftover work, they hold
-    the Discipline or the Concept journaling. The
+    the Discipline or the Concept routing. The
     eighteen-query benchmark passes at hit@5 of fifteen or better; its
     printing is silenced, because its return value is the verdict. And a
     result's dictionary carries `id`, `score` and `source_file`.
@@ -50,8 +50,8 @@ def search_probes() -> list[str]:
         problems.append("search: 'who moves an issue between stages' expected the Concept "
                         f"supervisor or stage in top 5, got {ranked}")
     leftover = [res.identifier for res in index.search("leftover work", top_k=5)]
-    if not {"work:discipline/journaling", "work:concept/journaling"} & set(leftover):
-        problems.append(f"search: 'leftover work' expected journaling in top 5, got {leftover}")
+    if not {"work:discipline/routing", "work:concept/routing"} & set(leftover):
+        problems.append(f"search: 'leftover work' expected routing in top 5, got {leftover}")
 
     with contextlib.redirect_stdout(io.StringIO()):
         failed = search.run_benchmark(index)

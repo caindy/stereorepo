@@ -113,7 +113,7 @@ _Retired when:_ A citation whose identifier already carries the claim it names, 
 
 ### A14. Reasoning that lives only in a commit message is not recorded.
 
-**Enforces** Journaling. **Checked by** Nothing yet.
+**Enforces** Routing. **Checked by** Nothing yet.
 
 _In practice:_ The commit subject is a label — "An Article is a reference" — and the argument for it is in the Issue file.
 

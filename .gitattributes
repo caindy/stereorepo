@@ -14,7 +14,6 @@
 /.meta/.apm/agents/the-developer.agent.md merge=union
 /.meta/.apm/hooks/gate.json merge=union
 /.meta/.apm/instructions/dogfooding.instructions.md merge=union
-/.meta/.apm/instructions/journaling.instructions.md merge=union
 /.meta/.apm/instructions/knowledge-management.instructions.md merge=union
 /.meta/.apm/instructions/literate-programming.instructions.md merge=union
 /.meta/.apm/instructions/modelling-the-developer.instructions.md merge=union
@@ -22,6 +21,7 @@
 /.meta/.apm/instructions/observed-failure.instructions.md merge=union
 /.meta/.apm/instructions/progressive-disclosure.instructions.md merge=union
 /.meta/.apm/instructions/ratchet.instructions.md merge=union
+/.meta/.apm/instructions/routing.instructions.md merge=union
 /.meta/.apm/instructions/seeded-artifacts.instructions.md merge=union
 /.meta/.apm/instructions/ubiquitous-language.instructions.md merge=union
 /.meta/.apm/instructions/written-decisions.instructions.md merge=union

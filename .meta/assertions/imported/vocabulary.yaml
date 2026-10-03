@@ -418,19 +418,20 @@ concept_set:
       load map that is deliberately insufficient.
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-disciplines
-  - id: work:concept/journaling
-    pref_label: Journaling
+  - id: work:concept/routing
+    pref_label: Routing
     definition: >-
-      Routing narrative to the artifact that owns it, and the residue to the
+      Sending narrative to the artifact that owns it, and the residue to the
       issue file — never to a commit message.
     in_scheme: work:scheme/stereorepo
     broader: work:concept/g-disciplines
     scope_note: >-
-      The routing practice, not a place. What it routes goes to the artifact that
-      owns it, and the residue to the issue file. Leftover work, noticed and not
+      A practice, not a place. What it sends goes to the artifact that owns
+      it, and the residue to the issue file. Leftover work, noticed and not
       done, is a new Issue in the backlog.
     alt_labels:
       - leftover work
+    avoid: [Journaling]
   - id: work:concept/knowledge-management
     pref_label: Knowledge Management
     definition: >-

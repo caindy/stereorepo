@@ -21,7 +21,7 @@ satisfied in Python and which step of the gate holds it there.
 
 The other Disciplines bind the Portfolio rather than a Project — Progressive
 Disclosure, Ubiquitous Language, Dogfooding, Modelling the Developer,
-Journaling — so a Bootstrap has nothing to implement for them.
+Routing — so a Bootstrap has nothing to implement for them.
 
 Four Articles bind the gate itself rather than being implemented by it: A5 —
 no gate step rewrites the tree; A6 — every step has three outcomes; A7 — a
@@ -70,7 +70,7 @@ The seed is `python_bootstrap`'s template with its memory architecture taken
 out, because that architecture is the Portfolio's `.meta/` here: its charter
 is `AGENTS.md`, its decision tracks are the record with `product` or
 `project` set, its bets are each entry's falsifier, and its journal is what
-Journaling routes. DR-094 is the account of what came and what stayed, and
+Routing sends to the Issue file. DR-094 is the account of what came and what stayed, and
 DR-095, DR-096, DR-097, DR-193 and DR-208 are its decisions about the standard, filed at the
 level they bind. The generator stays behind (DR-099): its `new` is [`render`](render),
 and its sync, never built, is kept there as the shape a portfolio's sync
