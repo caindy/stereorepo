@@ -1,6 +1,6 @@
 # Cite code by path and name, never by line number
 
-A citation such as `pair/seats.py:143` breaks whenever the file above that
+A citation of a file and a line number breaks whenever the file above that
 line changes. The `path and line claims` step in
 `.meta/checks/citations/claims.py` checks each one against the line it names,
 so every edit that moves lines can fail the gate on a file nobody touched. On
