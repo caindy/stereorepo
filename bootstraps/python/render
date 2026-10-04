@@ -2,12 +2,12 @@
 """Render the Python seed into a portfolio: copy it out, and name its package.
 
 A seed is data, and it is gated by rendering it and running the real gates on
-the result (A9). The seed builds as it sits, under the name `seed`, so that
-its own gate can run on it in place (DR-091, which holds for Python word for
-word); what a portfolio needs is the same tree under the package's real name.
-That substitution is all this does, and it is the one copy of how it is done —
-`.github/workflows/gate.yml` renders with it and runs `uv run gate` on what
-comes out, and Specialization's *Choose languages and bootstrap* step does the same by hand.
+the result (A9). The seed builds as it sits, under the name `seed` (DR-091,
+which holds for Python word for word); what a portfolio needs is the same tree
+under the package's real name. That substitution is all this does, and it is
+the one copy of how it is done — the `python-seed` Project's gate renders with
+it and runs `uv run --locked gate` on what comes out (DR-360), and
+Specialization's *Choose languages and bootstrap* step does the same by hand.
 
     bootstraps/python/render <destination> <package-name>
 

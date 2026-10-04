@@ -5,22 +5,21 @@ A seed is data, and it must not violate the rules it seeds.
 Nothing in a Project built from the seed implements this, because that
 Project holds no seed of its own and its gate has nothing to render. The seed
 is held to it here, in the portfolio, by the gate of `work:project/python-seed`,
-run on the seed where it sits (DR-356).
+run on a rendered copy of the seed (DR-356, DR-360).
 
 ## Rendered, then gated
 
 [`render`](render) copies the seed to a destination and names its package. The
-`python seed` job in `.github/workflows/gate.yml` renders it as a package
-called `acme` and runs `uv run gate` on the result — A9: not linted in place,
-gated by rendering it and running the real gates on what comes out. The job
-runs on the support floor rather than the interpreter developed on, so the
-floor is executed and not asserted (DR-095).
+gate of the `python-seed` Project renders it as a package called `acme` in a
+temporary directory and runs `uv run --locked gate` on the result — A9: not
+linted in place, gated by rendering it and running the real gates on what
+comes out (DR-360). It runs on the support floor rather than the interpreter
+developed on, so the floor is executed and not asserted (DR-095).
 
-The seed also builds and gates as it sits, under the name `seed`, which is what
-lets the Project be asserted with a gate that runs (DR-091). Both are true and
-the rendered one is the stronger claim, so the workflow runs that one. The
-lockfile is renamed with the rest, and `uv run --locked` in the destination
-is what proves it still matches.
+The seed also builds as it sits, under the name `seed`, which is what `render`
+copies (DR-091). The rendered copy is the stronger claim, so it is the one the
+gate runs. The lockfile is renamed with the rest, and `uv run --locked` in the
+destination is what proves it still matches.
 
 ## Where the seed cannot yet satisfy a rule, it says why, in the seed
 

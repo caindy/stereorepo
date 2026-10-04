@@ -1,0 +1,73 @@
+decisions:
+  - id: work:decision/360
+    name: "DR-360 · A seed Project's gate renders the seed as `acme` and gates the copy"
+    status: ADOPTED
+    applies:
+      - work:article/9
+    enacted_in:
+      - work:artifact/meta-assertions-structure
+      - work:artifact/bootstraps-python-render
+      - work:artifact/bootstraps-rust-render
+      - work:artifact/bootstraps-python-readme
+      - work:artifact/bootstraps-rust-readme
+    context: >-
+      A9 asks that a seed be gated by rendering it and running the real gates
+      on the result. DR-091 and DR-094 had a `rust seed` and a `python seed`
+      job in `.github/workflows/gate.yml` do that, and DR-095 had the Python
+      job run on the support floor. The workflow went with the pull-request
+      flow, and DR-356 recorded that nothing rendered a seed any more: only
+      the gates of `work:project/python-seed` and `work:project/rust-seed`
+      ran, on each seed where it sits, so a rename `render` missed or a
+      lockfile the rename left stale went unseen. The question was where a
+      rendered run belongs now that the pair loop, not a workflow, is what
+      gates a change.
+    alternatives:
+      - name: Say the in-place gate is all there is
+        chosen: false
+        reason: >-
+          It corrects the prose and gives up the check A9 asks for; a fault
+          that only a rendered copy shows would land.
+      - name: Gate the seed both in place and rendered
+        chosen: false
+        reason: >-
+          It doubles each seed's gate, mutation testing included, for faults
+          the rendered copy shows anyway, since the copy is the seed with
+          only its name changed.
+      - name: Make the seed Project's gate render the seed and gate the copy
+        chosen: true
+        reason: >-
+          The pair loop already runs a seed Project's gate when a change
+          touches the seed (DR-303), so the rendered run needs no new
+          mechanism, and the `gate:` field stays the one place that says what
+          gates the Project.
+    consequences:
+      - >-
+        Each seed Project's `gate:` in `.meta/assertions/structure.yaml`
+        renders the seed with `bootstraps/<lang>/render` as `acme` into a fresh
+        directory under `TMPDIR`, runs the seed's own gate there, and removes
+        the directory whatever the gate exits. The Python copy runs with
+        `UV_PYTHON=3.13` and `uv run --locked`, so the floor and the renamed
+        lockfile are both executed rather than asserted.
+      - >-
+        This amends DR-091 and DR-094, whose workflow jobs the seed Projects'
+        gates replace, and DR-095, whose floor is now run by that gate. It
+        amends DR-356's consequence that nothing renders a seed. DR-356's
+        rejected `render` step still stands: it concerned a Project built
+        from a seed, which holds no template; the seed Projects do.
+      - >-
+        The seed still builds as it sits, under the name `seed`, which is what
+        `render` copies; it is no longer where the gate runs.
+      - >-
+        The Rust copy has no `mutants.out` to iterate from, so `cargo mutants`
+        tests every mutant on each run, about a minute today.
+      - >-
+        A change to `bootstraps/<lang>/render` alone belongs to `meta` under
+        DR-303 and does not select the seed's gate; that is the risk DR-303
+        accepts.
+    falsifier: >-
+      A fault `render` introduces passes the rendered gate, or the rendered
+      run proves too slow for the loop to run on every change to a seed.
+    rationale: |-
+      The seed is data and the copy is the product. Gating the copy, in the
+      gate the loop already runs, checks what a portfolio receives rather than
+      the tree it is made from.

@@ -2,11 +2,11 @@
 """Render the Rust seed into a portfolio: copy it out, and name its crate.
 
 A seed is data, and it is gated by rendering it and running the real gates on
-the result (A9). The seed builds as it sits, under the name `seed`, so that its
-own gate can run on it in place; what a portfolio needs is the same tree under
-the crate's real name. That substitution is all this does, and it is the one
-copy of how it is done — `.github/workflows/gate.yml` renders with it and runs
-`cargo xtask gate` on what comes out, and Specialization's
+the result (A9). The seed builds as it sits, under the name `seed`; what a
+portfolio needs is the same tree under the crate's real name. That
+substitution is all this does, and it is the one copy of how it is done — the
+`rust-seed` Project's gate renders with it and runs `cargo xtask gate` on what
+comes out (DR-360), and Specialization's
 *Choose languages and bootstrap* step does the same by hand.
 
     bootstraps/rust/render <destination> <crate-name>

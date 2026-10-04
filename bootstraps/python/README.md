@@ -41,12 +41,13 @@ bootstraps/python/render <destination> <package-name>
 ```
 
 That copies the seed out and names its package. What arrives is the workspace,
-its pinned tools, its lockfile, and its gate; run `uv run gate` in the
-destination before the first commit, which is also what the workflow does to
-prove the seed is sound.
+its pinned tools, its lockfile, and its gate; run `uv run --locked gate` in
+the destination before the first commit, which is also what the
+`python-seed` Project's gate does, on a copy named `acme`, to prove the seed
+is sound (DR-360).
 
 The seed is a real workspace named `seed`, not a tree of placeholder tokens,
-so that its own gate can run on it where it sits (DR-091). The one placeholder
+so that it builds as it sits (DR-091). The one placeholder
 is the package's name, and `render` is the one copy of how it is substituted.
 
 ## Capabilities and the APM Package

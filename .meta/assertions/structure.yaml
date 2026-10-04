@@ -33,10 +33,18 @@ projects:
     name: bootstraps/rust/seed
     description: >-
       The seed workspace a Rust Project in a portfolio starts from: one library
-      crate, and the xtask that is its gate. Real and buildable as it sits, so
-      that the gate can run on it in place; a portfolio takes a rendered copy.
+      crate, and the xtask that is its gate. Real and buildable as it sits; a
+      portfolio takes a rendered copy, and so does the gate, which renders the
+      seed as `acme` into a temporary directory and runs there (DR-360).
     language: Rust
-    gate: cd bootstraps/rust/seed && cargo xtask gate
+    # `render` reports on standard error, which leaves standard output to the
+    # gate's step lines; the trap removes the copy whatever the gate exits.
+    # macOS `mktemp -d` ignores `TMPDIR` unless given a template, and a seat's
+    # sandbox can write only under `TMPDIR`.
+    gate: >-
+      t=$(mktemp -d "${TMPDIR:-/tmp}/seed.XXXXXX") && trap 'rm -rf "$t"' EXIT &&
+      bootstraps/rust/render "$t/acme" acme >&2 &&
+      cd "$t/acme" && cargo xtask gate
 
   # A third Project, in a third language, pulled in from `python_bootstrap`
   # (DR-094). The same shape as the Rust seed: a workspace whose gate is a
@@ -46,10 +54,16 @@ projects:
     description: >-
       The seed workspace a Python Project in a portfolio starts from: one
       package, and the gate that is a workspace member beside it. Real and
-      gated as it sits, so that the gate can run on it in place; a portfolio
-      takes a rendered copy.
+      buildable as it sits; a portfolio takes a rendered copy, and so does the
+      gate, which renders the seed as `acme` into a temporary directory and
+      runs there on the support floor (DR-095, DR-360).
     language: Python
-    gate: cd bootstraps/python/seed && uv run gate
+    # As the Rust seed's gate does; `--locked` proves the renamed lockfile
+    # still matches, and `UV_PYTHON` overrides the seed's `.python-version`.
+    gate: >-
+      t=$(mktemp -d "${TMPDIR:-/tmp}/seed.XXXXXX") && trap 'rm -rf "$t"' EXIT &&
+      bootstraps/python/render "$t/acme" acme >&2 &&
+      cd "$t/acme" && UV_PYTHON=3.13 uv run --locked gate
 
   # The pair loop, which carries Issues from the board to `main`. Scaffold-only:
   # a portfolio runs it from a stereorepo checkout, outside its own tree, so the
@@ -163,11 +177,11 @@ artifacts:
 
       That copies the seed out and names its crate. What arrives is the workspace,
       its pinned toolchain, and its gate; run `cargo xtask gate` in the destination
-      before the first commit, which is also what the workflow does to prove the
-      seed is sound.
+      before the first commit, which is also what the `rust-seed` Project's gate
+      does, on a copy named `acme`, to prove the seed is sound (DR-360).
 
       The seed is a real workspace named `seed`, not a tree of placeholder tokens,
-      so that its own gate can run on it where it sits (DR-091). The one placeholder
+      so that it builds as it sits (DR-091). The one placeholder
       is the crate's name, and `render` is the one copy of how it is substituted.
   - id: work:artifact/bootstraps-rust-literate-programming
     name: bootstraps/rust/literate-programming.md
@@ -212,12 +226,13 @@ artifacts:
       ```
 
       That copies the seed out and names its package. What arrives is the workspace,
-      its pinned tools, its lockfile, and its gate; run `uv run gate` in the
-      destination before the first commit, which is also what the workflow does to
-      prove the seed is sound.
+      its pinned tools, its lockfile, and its gate; run `uv run --locked gate` in
+      the destination before the first commit, which is also what the
+      `python-seed` Project's gate does, on a copy named `acme`, to prove the seed
+      is sound (DR-360).
 
       The seed is a real workspace named `seed`, not a tree of placeholder tokens,
-      so that its own gate can run on it where it sits (DR-091). The one placeholder
+      so that it builds as it sits (DR-091). The one placeholder
       is the package's name, and `render` is the one copy of how it is substituted.
 
       ## Capabilities and the APM Package

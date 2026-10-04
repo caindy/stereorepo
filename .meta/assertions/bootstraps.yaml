@@ -39,8 +39,9 @@ bootstraps:
         exposition: seeded-artifacts.md
         exemption_reason: >-
           A Project built from the seed holds no seed of its own, so its gate
-          has nothing to render. The seed itself is gated where it sits by the
-          gate of work:project/python-seed (stereorepo's DR-356).
+          has nothing to render. The seed itself is rendered and the copy
+          gated by the gate of work:project/python-seed (stereorepo's DR-356,
+          stereorepo's DR-360).
       - discipline: work:discipline/written-decisions
         status: exempt
         exposition: written-decisions.md
@@ -88,8 +89,9 @@ bootstraps:
         exposition: seeded-artifacts.md
         exemption_reason: >-
           A Project built from the seed holds no seed of its own, so its gate
-          has nothing to render. The seed itself is gated where it sits by the
-          gate of work:project/rust-seed (stereorepo's DR-356).
+          has nothing to render. The seed itself is rendered and the copy
+          gated by the gate of work:project/rust-seed (stereorepo's DR-356,
+          stereorepo's DR-360).
       - discipline: work:discipline/written-decisions
         status: exempt
         exposition: written-decisions.md

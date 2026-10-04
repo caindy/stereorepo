@@ -32,5 +32,6 @@ only thing the entry point reads. There is no `scripts/` directory and no
 orphan-script check, because there is nowhere for an orphan script to be —
 which is why `python_bootstrap`'s checker for them did not come.
 
-The Bootstrap's own [`render`](render) is consumed by the `python seed` job of
-the workflow, which runs it and then runs the gate on what it produced.
+The Bootstrap's own [`render`](render) is consumed by the `python-seed`
+Project's gate, which runs it and then runs the seed's gate on what it produced
+(DR-360).

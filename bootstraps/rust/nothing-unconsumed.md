@@ -28,5 +28,5 @@ exists in the crate but not in that table cannot be written, since the table is
 the only thing the binary reads. There is no orphan-script check because there
 is nowhere for an orphan script to be.
 
-The Bootstrap's own [`render`](render) is consumed by the `rust seed` job of the
-workflow, which runs it and then runs the gate on what it produced.
+The Bootstrap's own [`render`](render) is consumed by the `rust-seed` Project's
+gate, which runs it and then runs the seed's gate on what it produced (DR-360).

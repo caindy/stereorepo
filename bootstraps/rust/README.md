@@ -43,9 +43,9 @@ bootstraps/rust/render <destination> <crate-name>
 
 That copies the seed out and names its crate. What arrives is the workspace,
 its pinned toolchain, and its gate; run `cargo xtask gate` in the destination
-before the first commit, which is also what the workflow does to prove the
-seed is sound.
+before the first commit, which is also what the `rust-seed` Project's gate
+does, on a copy named `acme`, to prove the seed is sound (DR-360).
 
 The seed is a real workspace named `seed`, not a tree of placeholder tokens,
-so that its own gate can run on it where it sits (DR-091). The one placeholder
+so that it builds as it sits (DR-091). The one placeholder
 is the crate's name, and `render` is the one copy of how it is substituted.

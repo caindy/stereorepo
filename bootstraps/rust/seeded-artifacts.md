@@ -5,18 +5,19 @@ A seed is data, and it must not violate the rules it seeds.
 Nothing in a Project built from the seed implements this, because that
 Project holds no seed of its own and its gate has nothing to render. The seed
 is held to it here, in the portfolio, by the gate of `work:project/rust-seed`,
-run on the seed where it sits (DR-356).
+run on a rendered copy of the seed (DR-356, DR-360).
 
 ## Rendered, then gated
 
 [`render`](render) copies the seed to a destination and names its crate. The
-`rust seed` job in `.github/workflows/gate.yml` renders it as a crate called `acme`
-and runs `cargo xtask gate` on the result — A9: not linted in place, gated by
-rendering it and running the real gates on what comes out.
+gate of the `rust-seed` Project renders it as a crate called `acme` in a
+temporary directory and runs `cargo xtask gate` on the result — A9: not linted
+in place, gated by rendering it and running the real gates on what comes out
+(DR-360).
 
-The seed also builds and gates as it sits, under the name `seed`, which is what
-lets the Project be asserted with a gate that runs (DR-091). Both are true and
-the rendered one is the stronger claim, so the workflow runs that one.
+The seed also builds as it sits, under the name `seed`, which is what `render`
+copies (DR-091). The rendered copy is the stronger claim, so it is the one the
+gate runs.
 
 ## Where the seed cannot yet satisfy a rule, it says why, in the seed
 
