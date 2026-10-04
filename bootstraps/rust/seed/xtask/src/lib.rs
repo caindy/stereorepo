@@ -136,11 +136,16 @@ pub fn run(root: &Path, steps: &[&Step]) -> ExitCode {
 }
 
 /// Executes a cargo subcommand as a gate step subprocess.
+///
+/// The child's standard output goes to the gate's standard error, so the
+/// gate's standard output carries only step reports (Article 21), and a long
+/// run's progress, `cargo mutants` above all, stays visible while it runs.
 fn cargo(root: &Path, args: &[&str], env: &[(&str, &str)], scope: &str) -> Outcome {
     let status = Command::new("cargo")
         .args(args)
         .envs(env.iter().copied())
         .current_dir(root)
+        .stdout(std::io::stderr())
         .status();
     match status {
         Err(error) => Outcome::CouldNotRun(format!("cargo did not start: {error}")),

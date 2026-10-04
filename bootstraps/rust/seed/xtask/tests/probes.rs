@@ -5,9 +5,9 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use std::process::ExitCode;
+use std::process::{Command, ExitCode};
 
-use xtask::{Outcome, Step, evidence, evidence_against, fmt, lints, orphans, run};
+use xtask::{Outcome, Step, evidence, evidence_against, fmt, lints, orphans, run, test};
 
 /// A throwaway package under the target directory, so probes leave nothing
 /// behind that the orphan check would then find. Its manifest carries an empty
@@ -309,4 +309,42 @@ fn a_run_fails_when_any_step_finds_something() {
         ok,
         "one step's finding is not another's"
     );
+}
+
+/// The probe runs its own test binary again, as a child that runs the `test`
+/// step, because the cargo child writes to file descriptor 1 directly and
+/// libtest's capture never sees it. The child's libtest prints its own
+/// `running 1 test` framing first, so standard output can only be held to
+/// ending with the report.
+#[test]
+fn a_cargo_steps_output_stays_off_the_reports() {
+    if let Some(root) = std::env::var_os("XTASK_PROBE_ROOT") {
+        let code = run(Path::new(&root), &[&("test", test)]);
+        let ok = format!("{code:?}") == format!("{:?}", ExitCode::SUCCESS);
+        std::process::exit(i32::from(!ok));
+    }
+    let tree = Tree::new("loud");
+    tree.write(
+        "src/lib.rs",
+        "#![doc = include_str!(\"../README.md\")]\n\n#[cfg(test)]\nmod tests {\n    #[test]\n    fn printed_on_the_childs_stdout() {}\n}\n",
+    );
+    let out = Command::new(std::env::current_exe().unwrap())
+        .args([
+            "--exact",
+            "a_cargo_steps_output_stays_off_the_reports",
+            "--nocapture",
+        ])
+        .env("XTASK_PROBE_ROOT", &tree.0)
+        .output()
+        .unwrap();
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stdout}{stderr}");
+    assert!(
+        stdout.ends_with("ok test — every test and every doctest\n"),
+        "{stdout}"
+    );
+    assert!(!stdout.contains("printed_on_the_childs_stdout"), "{stdout}");
+    assert!(!stdout.contains("test result:"), "{stdout}");
+    assert!(stderr.contains("printed_on_the_childs_stdout"), "{stderr}");
 }
