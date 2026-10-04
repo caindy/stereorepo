@@ -7,9 +7,11 @@ what the gate reports on standard output with what the Bootstrap asks: every
 step named in the `held_by` list of an implemented Discipline, each reported in one of
 Article 21's shapes (stereorepo's DR-092). Each gap is printed as the text of
 an Issue for `issues/backlog/`, and the audit exits non-zero when there is
-one. It compares step names and report shape only; whether a step passes, or
-does what the Bootstrap's step does, is the gate's business and the
-developer's.
+one. A gate that exits non-zero before reporting any step has failed to run,
+not left steps out: the audit says so on standard error, prints no Issue, and
+exits 2 (stereorepo's DR-359). It compares step names and report shape only;
+whether a step passes, or does what the Bootstrap's step does, is the gate's
+business and the developer's.
 
 With `--repository <path>`, the Project and its gate are read from that
 repository's `.meta/assertions/structure.yaml` and the gate runs from that
@@ -201,8 +203,10 @@ def audit(project: dict[str, Any], bootstrap: dict[str, Any], out: IO[str] = sys
           root: pathlib.Path = gate.ROOT) -> int:
     """Runs a Project's gate from a repository's root and prints each gap as an Issue.
 
-    The gate's standard error passes through, and its exit code is not read: a
-    failing step is still a reported one.
+    The gate's standard error passes through. Its exit code is read only when
+    it reported no step: a failing step is still a reported one, but a gate
+    that exits non-zero with no step reported failed to run, and comparing its
+    silence with the Bootstrap would ask for steps it may already have.
 
     Args:
         project: A Project record carrying the `gate` command.
@@ -211,11 +215,20 @@ def audit(project: dict[str, Any], bootstrap: dict[str, Any], out: IO[str] = sys
         root: The root of the repository asserting the Project, where its gate runs.
 
     Returns:
-        int: 1 if there is a gap, otherwise 0.
+        int: 2 if the gate exited non-zero before reporting a step, which is
+            said on standard error with no Issue printed; 1 if there is a gap;
+            otherwise 0.
     """
     run = subprocess.run(project["gate"], shell=True, cwd=root, text=True,
                          stdout=subprocess.PIPE, check=False)
-    found = gaps(project, bootstrap, run.stdout.splitlines())
+    lines = run.stdout.splitlines()
+    if run.returncode != 0 and not reported(lines)[0]:
+        standard = bootstrap.get("name") or gate.short(bootstrap["id"])
+        print(f"audit: {gate.short(project['id'])}'s gate exited {run.returncode} before "
+              f"reporting a step, so it could not be compared with {standard}",
+              file=sys.stderr)
+        return 2
+    found = gaps(project, bootstrap, lines)
     out.write("\n".join(issue(gap) for gap in found))
     return 1 if found else 0
 
@@ -246,7 +259,8 @@ def main(argv: list[str], projects: dict[str, dict[str, Any]] | None = None,
         out: Where the Issues are printed; standard output when omitted.
 
     Returns:
-        int: 0 with no gap, 1 with one; an unknown name, a target with no
+        int: 0 with no gap, 1 with one, 2 when the gate exited non-zero
+            before reporting a step; an unknown name, a target with no
             `structure.yaml`, or a Project with no gate exits through
             `sys.exit` with a message.
     """

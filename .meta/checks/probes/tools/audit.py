@@ -1,6 +1,7 @@
 """`.meta/audit.py` run against stub gates and the Python standard (stereorepo's DR-353).
 """
 
+import contextlib
 import io
 import pathlib
 import shlex
@@ -18,20 +19,29 @@ FULL = ("ok lints — 3 files", "ok ruff", "x  types (2)", "     a.py:1 error",
 """A stub gate reporting every step the Python standard's `held_by` lists name, one of them
 failing with its problem lines and one unable to run: every step is reported all the same."""
 
+CRASHED = 2
+"""The audit's exit when the gate exited non-zero before reporting a step."""
+
 CASES = (
-    ("every step", FULL, 0, ()),
-    ("no mutants", tuple(line for line in FULL if line != "ok mutants"), 1,
+    ("every step", FULL, 0, 0, ()),
+    ("no mutants", tuple(line for line in FULL if line != "ok mutants"), 0, 1,
      ("python-stub-gate-mutants", "Observed Failure")),
-    ("no orphans", tuple(line for line in FULL if line != "ok orphans"), 1,
+    ("no orphans", tuple(line for line in FULL if line != "ok orphans"), 0, 1,
      ("python-stub-gate-orphans", "Literate Programming, Nothing Unconsumed")),
-    ("a stray line", (*FULL, "running mutants..."), 1,
+    ("a stray line", (*FULL, "running mutants..."), 0, 1,
      ("python-stub-gate-report-shape", "    running mutants...")),
-    ("nothing", (), 1, ("python-stub-gate-reports-nothing",)),
-    ("twelve stray lines", (*FULL, *(f"noise {n}" for n in range(12))), 1,
+    ("nothing", (), 0, 1, ("python-stub-gate-reports-nothing",)),
+    ("twelve stray lines", (*FULL, *(f"noise {n}" for n in range(12))), 0, 1,
      ("python-stub-gate-report-shape", "    noise 9", "… and 2 more")),
+    ("a crash", (), 3, CRASHED, ("audit: python-stub", "exited 3")),
+    ("a stray line, then a crash", ("sccache: refused",), 3, CRASHED,
+     ("audit: python-stub", "exited 3")),
+    ("every step, exiting non-zero", FULL, 1, 0, ()),
 )
-"""Each case: its name, the lines the stub gate prints, the exit the audit must give, and the
-substrings its printed Issues must carry. A case expecting a gap expects exactly one."""
+"""Each case: its name, the lines the stub gate prints, the status the gate exits with, the
+exit the audit must give, and the substrings it must print. A case expecting a gap expects
+exactly one Issue carrying them; a case expecting `CRASHED` expects no Issue and the
+substrings on standard error."""
 
 UNKNOWN = (
     ("an unknown Project", ["audit.py", "no-such-project", "python"], None,
@@ -58,25 +68,31 @@ ISSUE = "<!-- issues/backlog/"
 """What heads each Issue the audit prints, so counting it counts the gaps."""
 
 
-def _stub(lines: tuple[str, ...]) -> dict[str, str]:
-    """A Project record whose gate prints `lines`, one to a line, and nothing else."""
-    command = "printf '%s\\n' " + " ".join(shlex.quote(line) for line in lines)
-    return {"id": "work:project/python-stub", "gate": command if lines else "true"}
+def _stub(lines: tuple[str, ...], status: int) -> dict[str, str]:
+    """A Project record whose gate prints `lines`, one to a line, and exits with `status`.
+
+    With no lines the gate runs no `printf`, which given no argument would still
+    print one empty line.
+    """
+    printed = "printf '%s\\n' " + " ".join(shlex.quote(line) for line in lines) + "; "
+    return {"id": "work:project/python-stub",
+            "gate": (printed if lines else "") + f"exit {status}"}
 
 
-def _repository(root: pathlib.Path, project: str | None, lines: tuple[str, ...] = ()) -> None:
+def _repository(root: pathlib.Path, project: str | None, lines: tuple[str, ...] = (),
+                status: int = 0) -> None:
     """Makes `root` a repository asserting `project`, whose gate prints `lines` from a file.
 
-    The gate is `cat report.txt`, and `report.txt` exists only in `root`, so the
-    gate reports `lines` only when it runs from `root`. With no `project`,
-    `root` gets no `structure.yaml`.
+    The gate is `cat report.txt; exit <status>`, and `report.txt` exists only in
+    `root`, so the gate reports `lines` only when it runs from `root`. With no
+    `project`, `root` gets no `structure.yaml`.
     """
     (root / "report.txt").write_text("".join(f"{line}\n" for line in lines))
     if project is None:
         return
     assertions = root / ".meta" / "assertions"
     assertions.mkdir(parents=True)
-    structure = {"projects": [{"id": project, "gate": "cat report.txt"}]}
+    structure = {"projects": [{"id": project, "gate": f"cat report.txt; exit {status}"}]}
     (assertions / "structure.yaml").write_text(yaml.safe_dump(structure))
 
 
@@ -95,27 +111,33 @@ def _elsewhere(audit: Any, root: pathlib.Path, project: str) -> tuple[int | str,
     return got, said.getvalue()
 
 
-def _judged(name: str, got: int | str, text: str, code: int,
+def _judged(name: str, run: tuple[int | str, str, str], code: int,
             wanted: tuple[str, ...]) -> list[str]:
     """What is wrong with one case's run: its exit, how many Issues it printed, and what they say.
 
     Args:
         name: The case's name, as each problem names it.
-        got: What the audit returned, or the message it exited with.
-        text: What it printed.
+        run: What the audit returned, or the message it exited with; what it
+            printed; and what it printed on standard error.
         code: The exit the case expects.
-        wanted: The substrings its Issues must carry; a case naming any expects one Issue.
+        wanted: The substrings it must print: on standard error, with no Issue,
+            when `code` is `CRASHED`; otherwise in its Issues, of which a case
+            naming any expects one.
 
     Returns:
         list[str]: One line per departure, none when the run is as the case expects.
     """
+    got, text, error = run
     problems = []
     if got != code:
-        problems.append(f"audit: {name}: gave {got!r}, not {code}\n{text}")
-    if wanted and text.count(ISSUE) != 1:
-        problems.append(f"audit: {name}: printed {text.count(ISSUE)} Issues, not 1\n{text}")
-    problems += [f"audit: {name}: printed no {part!r}\n{text}"
-                 for part in wanted if part not in text]
+        problems.append(f"audit: {name}: gave {got!r}, not {code}\n{text}{error}")
+    issues = 0 if code == CRASHED else 1 if wanted else None
+    if issues is not None and text.count(ISSUE) != issues:
+        problems.append(
+            f"audit: {name}: printed {text.count(ISSUE)} Issues, not {issues}\n{text}")
+    where = error if code == CRASHED else text
+    problems += [f"audit: {name}: printed no {part!r}\n{where}"
+                 for part in wanted if part not in where]
     return problems
 
 
@@ -128,7 +150,11 @@ def audit_probes() -> list[str]:
     the Python standard is the record `bootstraps.yaml` holds. A step reported
     failing, or as unable to run, is reported; a step left out is one gap that
     names every Discipline it held; a line in no shape, and a gate that prints
-    nothing, are each a gap. A Project or Bootstrap name that is not asserted
+    nothing and exits 0, are each a gap. A gate that exits non-zero having
+    reported no step failed to run: the audit says so on standard error with
+    the gate's exit code, prints no Issue and gives `CRASHED`, while a gate
+    that reported its steps and exits non-zero is compared as usual
+    (stereorepo's DR-359). A Project or Bootstrap name that is not asserted
     ends `main` with a message naming the ones that are, and so does a Project
     asserting no gate.
 
@@ -146,15 +172,18 @@ def audit_probes() -> list[str]:
     python = next(b for b in records if b["id"] == "work:bootstrap/python")
 
     problems = []
-    for name, lines, code, wanted in CASES:
-        said = io.StringIO()
-        got = audit.audit(_stub(lines), python, out=said)
-        problems += _judged(name, got, said.getvalue(), code, wanted)
-        with tempfile.TemporaryDirectory() as tmp:
+    for name, lines, status, code, wanted in CASES:
+        said, heard = io.StringIO(), io.StringIO()
+        with contextlib.redirect_stderr(heard):
+            got = audit.audit(_stub(lines, status), python, out=said)
+        problems += _judged(name, (got, said.getvalue(), heard.getvalue()), code, wanted)
+        heard = io.StringIO()
+        with tempfile.TemporaryDirectory() as tmp, contextlib.redirect_stderr(heard):
             root = pathlib.Path(tmp).resolve()
-            _repository(root, "work:project/python-stub", lines)
+            _repository(root, "work:project/python-stub", lines, status)
             got, text = _elsewhere(audit, root, "python-stub")
-        problems += _judged(f"{name}, in another repository", got, text, code, wanted)
+        problems += _judged(f"{name}, in another repository", (got, text, heard.getvalue()),
+                            code, wanted)
 
     for name, argv, projects, wanted in UNKNOWN:
         try:

@@ -217,6 +217,7 @@ and what question it answered; only the entry is sufficient to apply it.
 | [DR-356](assertions/decisions/DR-356.yaml) | A Bootstrap exempts a Discipline whose subject its Projects do not hold | Adopted |
 | [DR-357](assertions/decisions/DR-357.yaml) | Keys reach the supervisor's landing gate, by the names `main` declares, and never a seat | Adopted |
 | [DR-358](assertions/decisions/DR-358.yaml) | `just audit --repository` audits a Project another repository asserts, running its gate from that repository's root | Adopted |
+| [DR-359](assertions/decisions/DR-359.yaml) | `just audit` reads a gate that exits non-zero before reporting a step as having failed to run, prints no Issue, and exits 2 | Adopted |
 
 ## Holes
 
@@ -256,7 +257,7 @@ and the query a reader in a file actually has.
 | [`.meta/assertions/imported/vocabulary.yaml`](assertions/imported/vocabulary.yaml) | [DR-182](assertions/decisions/DR-182.yaml), [DR-185](assertions/decisions/DR-185.yaml), [DR-195](assertions/decisions/DR-195.yaml), [DR-200](assertions/decisions/DR-200.yaml), [DR-228](assertions/decisions/DR-228.yaml), [DR-298](assertions/decisions/DR-298.yaml), [DR-319](assertions/decisions/DR-319.yaml), [DR-338](assertions/decisions/DR-338.yaml), [DR-340](assertions/decisions/DR-340.yaml), [DR-352](assertions/decisions/DR-352.yaml) |
 | [`.meta/assertions/structure.yaml`](assertions/structure.yaml) | [DR-210](assertions/decisions/DR-210.yaml), [DR-217](assertions/decisions/DR-217.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-223](assertions/decisions/DR-223.yaml), [DR-344](assertions/decisions/DR-344.yaml), [DR-345](assertions/decisions/DR-345.yaml) |
 | [`.meta/assertions/vocabulary.yaml`](assertions/vocabulary.yaml) | [DR-035](assertions/decisions/DR-035.yaml), [DR-313](assertions/decisions/DR-313.yaml) |
-| [`.meta/audit.py`](audit.py) | [DR-353](assertions/decisions/DR-353.yaml), [DR-358](assertions/decisions/DR-358.yaml) |
+| [`.meta/audit.py`](audit.py) | [DR-353](assertions/decisions/DR-353.yaml), [DR-358](assertions/decisions/DR-358.yaml), [DR-359](assertions/decisions/DR-359.yaml) |
 | [`.meta/baselines/file_sizes.baseline.yaml`](baselines/file_sizes.baseline.yaml) | [DR-314](assertions/decisions/DR-314.yaml) |
 | [`.meta/bootstrap.py`](bootstrap.py) | [DR-206](assertions/decisions/DR-206.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-312](assertions/decisions/DR-312.yaml) |
 | [`.meta/bundle.py`](bundle.py) | [DR-315](assertions/decisions/DR-315.yaml), [DR-316](assertions/decisions/DR-316.yaml), [DR-317](assertions/decisions/DR-317.yaml), [DR-322](assertions/decisions/DR-322.yaml) |
@@ -297,7 +298,7 @@ and the query a reader in a file actually has.
 | [`.meta/checks/probes/ruleset.py`](checks/probes/ruleset.py) | [DR-263](assertions/decisions/DR-263.yaml) |
 | [`.meta/checks/probes/tools/__init__.py`](checks/probes/tools/__init__.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-150](assertions/decisions/DR-150.yaml), [DR-177](assertions/decisions/DR-177.yaml), [DR-179](assertions/decisions/DR-179.yaml), [DR-192](assertions/decisions/DR-192.yaml), [DR-204](assertions/decisions/DR-204.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-208](assertions/decisions/DR-208.yaml), [DR-209](assertions/decisions/DR-209.yaml), [DR-210](assertions/decisions/DR-210.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-332](assertions/decisions/DR-332.yaml), [DR-336](assertions/decisions/DR-336.yaml), [DR-341](assertions/decisions/DR-341.yaml), [DR-342](assertions/decisions/DR-342.yaml), [DR-345](assertions/decisions/DR-345.yaml) |
 | [`.meta/checks/probes/tools/apm_compile.py`](checks/probes/tools/apm_compile.py) | [DR-208](assertions/decisions/DR-208.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-345](assertions/decisions/DR-345.yaml) |
-| [`.meta/checks/probes/tools/audit.py`](checks/probes/tools/audit.py) | [DR-353](assertions/decisions/DR-353.yaml), [DR-358](assertions/decisions/DR-358.yaml) |
+| [`.meta/checks/probes/tools/audit.py`](checks/probes/tools/audit.py) | [DR-353](assertions/decisions/DR-353.yaml), [DR-358](assertions/decisions/DR-358.yaml), [DR-359](assertions/decisions/DR-359.yaml) |
 | [`.meta/checks/probes/tools/comments.py`](checks/probes/tools/comments.py) | [DR-171](assertions/decisions/DR-171.yaml), [DR-207](assertions/decisions/DR-207.yaml), [DR-210](assertions/decisions/DR-210.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-223](assertions/decisions/DR-223.yaml), [DR-225](assertions/decisions/DR-225.yaml), [DR-305](assertions/decisions/DR-305.yaml), [DR-314](assertions/decisions/DR-314.yaml), [DR-345](assertions/decisions/DR-345.yaml) |
 | [`.meta/checks/probes/tools/dereference.py`](checks/probes/tools/dereference.py) | [DR-134](assertions/decisions/DR-134.yaml), [DR-192](assertions/decisions/DR-192.yaml), [DR-218](assertions/decisions/DR-218.yaml), [DR-332](assertions/decisions/DR-332.yaml), [DR-336](assertions/decisions/DR-336.yaml), [DR-345](assertions/decisions/DR-345.yaml) |
 | [`.meta/checks/probes/tools/lockstep.py`](checks/probes/tools/lockstep.py) | [DR-305](assertions/decisions/DR-305.yaml) |

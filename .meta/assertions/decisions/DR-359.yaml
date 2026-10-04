@@ -1,0 +1,57 @@
+decisions:
+  - id: work:decision/359
+    name: "DR-359 · `just audit` reads a gate that exits non-zero before reporting a step as having failed to run, prints no Issue, and exits 2"
+    status: ADOPTED
+    applies:
+      - work:article/21
+    enacted_in:
+      - work:artifact/meta-audit
+      - work:artifact/meta-checks-probes-tools-audit
+    context: >-
+      DR-353 had the audit ignore the gate's exit code, so that a failing
+      step still counts as reported, and made a gate that reports no step one
+      gap. A gate that crashes before printing anything also reports no step:
+      the Rust seed's gate under a seat's sandbox, where the `sccache` named
+      by `RUSTC_WRAPPER` is refused, exits 2 silently. The audit then asked
+      for steps the gate already has. The question was how the audit tells a
+      crashed gate from a gate that reports nothing.
+    alternatives:
+      - name: Keep ignoring the exit code
+        chosen: false
+        reason: >-
+          It prints an Issue the developer would cut and commit, asking for
+          work that does not need doing.
+      - name: Fail the audit on any non-zero gate exit
+        chosen: false
+        reason: >-
+          A gate exits non-zero when a step fails, and DR-353 holds that a
+          failing step is still a reported one; the audit would stop
+          comparing exactly the gates that report most.
+      - name: Read the exit code only when no step was reported
+        chosen: true
+        reason: >-
+          With a step reported, the output is evidence enough to compare;
+          with none and a non-zero exit, there is nothing to compare, and the
+          exit code is the only fact left.
+    consequences:
+      - >-
+        A gate that exits non-zero having printed no line in Article 21's
+        step shapes gets no Issue, not even the report-shape gap for any
+        stray lines. The audit writes one `audit:` line to standard error
+        naming the Project, the gate's exit code and the Bootstrap, and
+        exits 2. This narrows DR-353's consequence that a gate reporting no
+        step is one gap to a gate that also exits 0.
+      - >-
+        The audit's exits are 0 with no gap, 1 with one, and 2 when the gate
+        failed to run. argparse also exits 2 on a usage error; both mean no
+        comparison was made.
+      - >-
+        A gate that reported at least one step is compared as before,
+        whatever its exit code.
+    falsifier: >-
+      The audit prints an Issue for a gate that exited non-zero and reported
+      no step, or stops comparing a gate that reported its steps and exited
+      non-zero.
+    rationale: |-
+      A crashed gate says nothing about which steps it has, so the audit
+      says that it crashed rather than guessing.
