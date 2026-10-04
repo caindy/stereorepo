@@ -4936,6 +4936,14 @@ class ClaudeSeatTest(unittest.TestCase):
         self.assertNotIn("ANTHROPIC_API_KEY", envs[0])
         self.assertEqual(envs[0]["OTHER"], "y")
 
+    def test_a_seat_starts_without_the_rustc_wrapper_its_sandbox_refuses(self) -> None:
+        seen = self.tmp / "seen"
+        with mock.patch.dict(os.environ, {"RUSTC_WRAPPER": "sccache"}):
+            seat = self.seat([], [{"env": "RUSTC_WRAPPER", "to": str(seen)}, result("ok")])
+        turn = seat.send("go")
+        self.assertTrue(turn.ok, turn.error)
+        self.assertEqual(seen.read_text(), "")
+
     def test_the_seat_reads_its_git_config_from_a_file_outside_the_worktree(self) -> None:
         seen = self.tmp / "seen"
         seat = self.seat([], [{"env": "GIT_CONFIG_GLOBAL", "to": str(seen)}, result("ok")])

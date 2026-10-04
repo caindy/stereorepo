@@ -504,6 +504,19 @@ them is one the seats cannot bring up to date.
 """
 
 
+UNSET_FOR_SEATS = frozenset({"ANTHROPIC_API_KEY", "RUSTC_WRAPPER"})
+"""Names dropped from every seat's environment, whatever the key files say.
+
+Without `ANTHROPIC_API_KEY`, the seat's Claude Code runs on the developer's
+login rather than billing the key. With `RUSTC_WRAPPER` set to sccache, as
+the developer's shell may set it, every `cargo` build in the seat fails,
+because the sandbox refuses sccache ("Operation not permitted"); without
+it, `cargo` runs `rustc` itself. The seat's shell takes the name only from
+this process environment: Claude Code's shell snapshot holds functions,
+aliases and options, not that export (checked 2026-10-03).
+"""
+
+
 def unwritable(cwd: Path) -> list[Path]:
     """Every path a seat working in the worktree `cwd` cannot write at or under."""
     return [*confinement(cwd).deny, *(cwd / p for p in SANDBOX_DENIED)]
@@ -607,7 +620,7 @@ class ClaudeSeat:
         self.log_dir = log_dir
         confined = confinement(cwd)
         argv = command(system_prompt, confined, model=model, resume=resume, program=program)
-        withheld = {"ANTHROPIC_API_KEY", *confined.withheld}
+        withheld = UNSET_FOR_SEATS | confined.withheld
         env = {k: v for k, v in os.environ.items() if k not in withheld}
         env.update(confined.env)
         log_dir.mkdir(parents=True, exist_ok=True)
