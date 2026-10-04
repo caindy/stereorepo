@@ -845,6 +845,108 @@ def orphans(root: Path) -> Outcome:
     )
 
 
+def wheel(root: Path) -> Outcome:
+    """Verifies that each member's wheel ships the source packages it has.
+
+    Hatch builds a member's wheel from the directories that its manifest's
+    `[tool.hatch.build.targets.wheel] packages` names. `test` cannot see a
+    wrong entry, because collecting `src` as doctest modules puts `src` on
+    the import path whatever the wheel holds. So this step reads the
+    manifest against the tree instead of building the wheel.
+
+    Args:
+        root: Workspace root directory path.
+
+    Returns:
+        Outcome: Outcome reporting wheel entries that are missing or not
+            packages, and source packages that no entry names.
+    """
+    problems: list[str] = []
+    entries = 0
+    manifests = 0
+    for package in packages(root):
+        named = wheel_entries(package / "pyproject.toml")
+        if named is None:
+            continue
+        manifests += 1
+        entries += len(named)
+        problems += unpackaged(root, package, named)
+    if problems:
+        return Found(tuple(problems))
+    return Passed(
+        f"{entries} wheel packages under {manifests} manifests, "
+        "each present and importable, none left out"
+    )
+
+
+def wheel_entries(manifest: Path) -> list[str] | None:
+    """Reads the directories a manifest tells hatch to put in the wheel.
+
+    A manifest that does not parse is read as having no wheel table, because
+    `lints` runs first and already reports it.
+
+    Args:
+        manifest: Path to a member's pyproject.toml file.
+
+    Returns:
+        list[str] | None: Each string entry of the wheel's `packages`, or None
+            when the manifest does not parse or names no wheel packages.
+
+    >>> import tempfile
+    >>> with tempfile.TemporaryDirectory() as place:
+    ...     manifest = Path(place) / "pyproject.toml"
+    ...     _ = manifest.write_text("[project]\\nname = 'x'\\n")
+    ...     wheel_entries(manifest) is None
+    True
+    """
+    try:
+        data = tomllib.loads(manifest.read_text(encoding="utf-8"))
+    except tomllib.TOMLDecodeError:
+        return None
+    table: object = data
+    for key in ("tool", "hatch", "build", "targets", "wheel", "packages"):
+        if not isinstance(table, dict):
+            return None
+        table = table.get(key)
+    if not isinstance(table, list):
+        return None
+    return [entry for entry in table if isinstance(entry, str)]
+
+
+def unpackaged(root: Path, package: Path, named: list[str]) -> list[str]:
+    """Compares one member's wheel entries with the packages under its `src`.
+
+    Args:
+        root: Workspace root directory path.
+        package: The member package's directory.
+        named: The member's wheel `packages` entries, relative to `package`.
+
+    Returns:
+        list[str]: One problem for each entry that is not a directory or has
+            no `__init__.py`, and for each package under `src` that no entry
+            names.
+    """
+    where = relative(root, package / "pyproject.toml")
+    problems: list[str] = []
+    for entry in named:
+        directory = package / entry
+        if not directory.is_dir():
+            problems.append(
+                f"{where}: the wheel packages `{entry}`, which is not a directory"
+            )
+        elif not (directory / "__init__.py").is_file():
+            problems.append(
+                f"{where}: the wheel packages `{entry}`, which has no `__init__.py`"
+            )
+    shipped = {(package / entry).resolve() for entry in named}
+    problems += [
+        f"{where}: the wheel leaves out `{relative(package, init.parent)}`"
+        for init in sorted((package / "src").glob("*/__init__.py"))
+        if init.parent.resolve() not in shipped
+    ]
+    return problems
+
+
 def evidence(root: Path) -> Outcome:
     """Verifies that every history log entry names a test collected by pytest.
 
@@ -964,6 +1066,7 @@ def without_comments(text: str) -> str:
 STEPS: tuple[Step, ...] = (
     ("lints", lints),
     ("comments", comments),
+    ("wheel", wheel),
     ("ruff", ruff),
     ("types", types),
     ("doc", doc),

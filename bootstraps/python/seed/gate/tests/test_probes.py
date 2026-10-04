@@ -25,6 +25,7 @@ from gate import (
     select,
     tool,
     unselected,
+    wheel,
 )
 
 # Assembled, so that the scanner does not read the probe's own data as a
@@ -96,6 +97,51 @@ def test_a_markdown_file_nothing_names_is_an_orphan(tree: Tree) -> None:
         '"""The probe package. History: `stray.md`."""\n',
     )
     assert passed(orphans(tree.root)).startswith("2 markdown files")
+
+
+def wheel_packages(*entries: str) -> str:
+    listed = ", ".join(f'"{entry}"' for entry in entries)
+    return (
+        f"{PACKAGE_MANIFEST}\n[tool.hatch.build.targets.wheel]\npackages = [{listed}]\n"
+    )
+
+
+def test_a_wheel_naming_a_package_that_is_not_there_is_found(tree: Tree) -> None:
+    tree.write("packages/probe/pyproject.toml", wheel_packages("src/seed"))
+    problems = found(wheel(tree.root))
+    assert problems == (
+        "packages/probe/pyproject.toml: the wheel packages `src/seed`, "
+        "which is not a directory",
+        "packages/probe/pyproject.toml: the wheel leaves out `src/probe`",
+    )
+
+    tree.write("packages/probe/pyproject.toml", wheel_packages("src/probe"))
+    assert (
+        passed(wheel(tree.root))
+        == "1 wheel packages under 1 manifests, each present and importable, "
+        "none left out"
+    )
+
+
+def test_a_wheel_package_without_an_init_is_found(tree: Tree) -> None:
+    tree.write("packages/probe/pyproject.toml", wheel_packages("src/probe"))
+    (tree.root / "packages/probe/src/probe/__init__.py").unlink()
+    tree.write("packages/probe/src/probe/core.py", '"""Not a package yet."""\n')
+    assert found(wheel(tree.root)) == (
+        "packages/probe/pyproject.toml: the wheel packages `src/probe`, "
+        "which has no `__init__.py`",
+    )
+
+    tree.write("packages/probe/src/probe/__init__.py", '"""The probe package."""\n')
+    assert passed(wheel(tree.root)).startswith("1 wheel packages")
+
+
+def test_a_member_without_a_wheel_table_passes(tree: Tree) -> None:
+    assert (
+        passed(wheel(tree.root))
+        == "0 wheel packages under 0 manifests, each present and importable, "
+        "none left out"
+    )
 
 
 def test_a_history_entry_names_a_test_that_exists(tree: Tree) -> None:

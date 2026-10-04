@@ -15,7 +15,7 @@ from checks.probes.harness import load_module
 
 FULL = ("ok lints — 3 files", "ok ruff", "x  types (2)", "     a.py:1 error",
         "     b.py:2 error", "?  doc: no tool", "ok test", "ok orphans", "ok evidence",
-        "ok mutants", "ok render")
+        "ok wheel", "ok mutants", "ok render")
 """A stub gate reporting every step the Python standard's `held_by` lists name, one of them
 failing with its problem lines and one unable to run: every step is reported all the same."""
 

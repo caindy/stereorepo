@@ -1,0 +1,64 @@
+decisions:
+  - id: work:decision/361
+    name: "DR-361 · The Python seed's gate checks each wheel's `packages` against the tree, without building the wheel"
+    status: ADOPTED
+    applies:
+      - work:article/8
+    enacted_in:
+      - work:artifact/bootstraps-python-gate
+      - work:artifact/bootstraps-python-readme
+      - work:artifact/meta-checks-probes-tools-audit
+    context: >-
+      With the `packages = ["src/seed"]` rename dropped from `render`, the
+      rendered copy's manifest told hatch to package `src/seed`, which no
+      longer existed. The seed's gate still reported `ok` for `test`,
+      `types` and `mutants`, and only `evidence` reported `?`, because its
+      `pytest --collect-only` could not import the package. `test` passes
+      because collecting `src` as doctest modules, under pytest's default
+      `prepend` import mode, puts `src` on the import path whatever the wheel
+      holds. `types` reads files by path and `mutants` puts its own copy of
+      `src` on the path. A portfolio built from that render would ship a
+      wheel without its package. The question was how the gate should make
+      this a failure rather than a step that could not run.
+    alternatives:
+      - name: Build the wheel and import from it
+        chosen: false
+        reason: >-
+          A build fetches hatchling into an isolated environment. That is
+          slow, and it needs network access that a seat's sandbox does not
+          give.
+      - name: Run `test` with `--import-mode=importlib`
+        chosen: false
+        reason: >-
+          It would change what every portfolio's tests import, which is
+          wider than this fault. It also catches only a missing package, not
+          one the wheel leaves out while the tests still import it.
+      - name: A pure `wheel` step that reads each member's manifest against the tree
+        chosen: true
+        reason: >-
+          It finds both faults (an entry that is not a package, and a package
+          under `src/` that no entry names) with no tool and no network. A
+          probe can watch it fail.
+    consequences:
+      - >-
+        `wheel` runs after `comments` and before `ruff`. It reports each
+        `[tool.hatch.build.targets.wheel] packages` entry that is not a
+        directory or has no `__init__.py`, and each `src/*/__init__.py`
+        package that no entry names. A member with no such table is not
+        checked. A manifest that does not parse is left to `lints`.
+      - >-
+        `wheel` holds Nothing Unconsumed in the Python Bootstrap, because a
+        source package the wheel does not ship is code nothing consumes.
+        `.meta/audit.py` therefore asks every audited Python Project for a
+        `wheel` step, and an adopted Project without one gets an Issue.
+      - >-
+        The check believes hatch's `packages` setting is the only thing that
+        decides what the wheel holds. Hatch settings such as `only-include`,
+        `force-include` and `sources` are not read.
+    falsifier: >-
+      A seed or rendered copy whose wheel lacks a package it has, or names a
+      package that is not there, passes `wheel`.
+    rationale: |-
+      What is shipped is the wheel, and the tests do not exercise the wheel.
+      Reading the one setting that decides what the wheel holds checks what a
+      portfolio receives, at the cost of a manifest read.

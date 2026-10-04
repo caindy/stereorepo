@@ -34,6 +34,7 @@ bootstraps:
         held_by:
           - orphans
           - evidence
+          - wheel
       - discipline: work:discipline/seeded-artifacts
         status: exempt
         exposition: seeded-artifacts.md

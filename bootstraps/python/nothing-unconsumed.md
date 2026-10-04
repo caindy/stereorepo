@@ -8,6 +8,17 @@ An artifact prevents drift only if something consumes it, and the question after
 The rule set holds it. An unused import, variable or argument is an error
 under `ruff`, and a `noqa` whose rule no longer fires is one too.
 
+**`uv run gate wheel`** — what consumes a member's source package is its
+wheel, and the wheel holds the directories that the manifest's
+`[tool.hatch.build.targets.wheel] packages` names. The step checks those
+entries against the tree. It reports an entry that is not a directory or
+has no `__init__.py`, and a package under `src/` that no entry names, which
+the wheel would leave out. `test` cannot see either fault, because
+collecting `src` as doctest modules puts `src` on the import path whatever
+the wheel holds. The step reads the manifest rather than building the wheel,
+because a build fetches hatchling, which is slow and needs the network
+(DR-361).
+
 ## Prose
 
 **`uv run gate orphans`** — every markdown file under a package is named by a
