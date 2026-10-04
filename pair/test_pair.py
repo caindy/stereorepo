@@ -37,6 +37,8 @@ from loop import (
     State,
     append_event,
     event_log,
+    gate_line,
+    gate_record,
     gate_unrunnable,
     redact,
     status,
@@ -533,8 +535,13 @@ class LoopTest(unittest.TestCase):
         self.assertTrue(b.on_main("b.txt"))
         self.assertTrue(b.on_main("c.txt"))
         self.assertEqual(sh(b.repo, "log", "-1", "--format=%s", "main~1"), "add c.txt")
-        changed = sh(b.repo, "diff", "--name-only", "main~1", "main").splitlines()
-        self.assertEqual(sorted(changed), ["a.txt", "issues/done/fix-typo.md"])
+        changed = sh(
+            b.repo, "diff", "--name-only", "--no-renames", "main~1", "main"
+        ).splitlines()
+        self.assertEqual(
+            sorted(changed),
+            ["a.txt", "issues/done/fix-typo.md", "issues/underway/fix-typo.md"],
+        )
         self.assertEqual(b.gate_runs, 3)
 
     def test_two_quiet_turns_agree(self) -> None:
@@ -710,6 +717,86 @@ class LoopTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertEqual(len(b.sent), sent)
         self.assertEqual(b.gate_runs, 3)
+
+    def gated_lines(self, body: str) -> list[str]:
+        return [line for line in body.splitlines() if line.startswith("Gated by the supervisor")]
+
+    def test_a_passing_gate_that_closes_in_progress_is_logged_and_kept_in_the_issue(
+        self,
+    ) -> None:
+        b = self.b
+        self.implemented("x")
+        b.gates = [(True, "ok proj/tests — 3\nok proj — 1 steps across 1 project\n")]
+        self.assertEqual(b.loop.run(once=True), "landed")
+        [event] = b.events("gated")
+        self.assertEqual((event["slug"], event["stage"]), ("x", "in-progress"))
+        self.assertEqual((event["outcome"], event["steps"]), ("passed", 1))
+        body = sh(b.repo, "show", "main:issues/done/x.md")
+        self.assertEqual(self.gated_lines(body), [gate_line(event)])
+        self.assertTrue(gate_line(event).endswith("; 1 step passed."))
+
+    def test_a_failing_gate_that_closes_in_progress_is_logged_and_kept_in_the_issue(
+        self,
+    ) -> None:
+        b = self.b
+        self.implemented("x")
+        b.gates = [(False, "x  proj/tests (1)\n     boom\nx  proj (1)\n"), True]
+        b.script(("primary", write("a.txt", "2")), ("secondary", quiet))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        failed, passed = b.events("gated")
+        self.assertEqual(
+            (failed["outcome"], failed["failed"], passed["outcome"]),
+            ("failed", ["proj/tests"], "passed"),
+        )
+        body = sh(b.repo, "show", "main:issues/done/x.md")
+        self.assertEqual(self.gated_lines(body), [gate_line(failed), gate_line(passed)])
+        self.assertIn(gate_line(failed), b.sent[6][1])
+
+    def test_a_gate_step_that_could_not_run_is_logged_kept_and_shown_in_the_status(
+        self,
+    ) -> None:
+        b = self.b
+        self.implemented("x")
+        b.gates = [UNRUNNABLE]
+        self.assertEqual(b.loop.run(once=True), "paused")
+        [event] = b.events("gated")
+        self.assertEqual(event["outcome"], "could-not-run")
+        self.assertEqual(event["could_not_run"], {"proj/neo4j tests": "no Docker daemon"})
+        body = b.issue_in_worktree("x").body
+        self.assertEqual(self.gated_lines(body), [gate_line(event)])
+        self.assertEqual(sh(b.loop.wt, "status", "--porcelain"), "")
+        [underway] = status_view(b.repo)["underway"]
+        self.assertEqual(
+            underway["gate"],
+            {"stage": "in-progress", "outcome": "could-not-run", "at": event["at"]},
+        )
+        self.assertIn("last gate: in-progress, could-not-run at", status(b.repo))
+
+    def test_a_landing_gate_is_logged_as_landing_and_adds_no_line(self) -> None:
+        b = self.b
+
+        def commits(repo: Path) -> None:
+            write("b.txt", "main\n")(repo)
+            sh(repo, "add", "b.txt")
+            sh(repo, "commit", "-q", "-m", "add b.txt")
+
+        self.implemented("x")
+        b.during_gate = [commits]
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual([e["stage"] for e in b.events("gated")], ["in-progress", "landing"])
+        body = sh(b.repo, "show", "main:issues/done/x.md")
+        self.assertEqual(len(self.gated_lines(body)), 1)
+
+    def test_a_branch_that_changes_nothing_logs_no_gate(self) -> None:
+        b = self.b
+        sh(b.repo, "worktree", "add", "-q", "--detach", str(b.loop.wt), "main")
+        self.assertIsNone(b.loop.run_gate("x", "in-progress"))
+        self.assertEqual((b.gate_runs, b.events("gated")), (0, []))
+
+    def test_an_issue_underway_with_no_gate_yet_shows_none(self) -> None:
+        b = self.b
+        b.loop.save(State(slug="x", stage="todo"))
+        self.assertIsNone(status_view(b.repo)["underway"][0]["gate"])
 
     def test_a_gate_failing_only_on_a_page_the_seats_cannot_write_pauses(
         self,
@@ -1641,6 +1728,69 @@ class GateUnrunnableTest(unittest.TestCase):
         self.assertIsNone(gate_unrunnable("ok a — 1\nok b — 2\nok portfolio — 3 steps\n"))
 
 
+class GateRecordTest(unittest.TestCase):
+    """`gate_record` counts and names only the steps `.meta/gate` forwarded."""
+
+    def test_a_pass_counts_each_project_step_and_not_the_closing_line(self) -> None:
+        out = "ok a/x — 3\nok a/y\nok portfolio — 2 steps across 1 project\n"
+        record = gate_record(out, "passed", None)
+        self.assertEqual(record["steps"], 2)
+        self.assertEqual(record["failed"], [])
+        self.assertEqual(record["could_not_run"], {})
+
+    def test_a_failure_names_the_step_and_not_the_closing_block(self) -> None:
+        out = "ok a/x\nx  a/y (2)\n     one\n     two\nx  portfolio (1)\n     a: y\n"
+        record = gate_record(out, "failed", ["a"])
+        self.assertEqual(record["steps"], 2)
+        self.assertEqual(record["failed"], ["a/y"])
+        self.assertEqual(record["targets"], ["a"])
+
+    def test_a_step_that_could_not_run_is_named_with_why_and_the_summary_is_not(
+        self,
+    ) -> None:
+        out = (
+            "ok a/x\n"
+            "?  a/neo4j: no Docker daemon\n"
+            "?  b: no gate asserted\n"
+            "?  steps that could not run (1) — zero where a person runs the gate\n"
+            "  neo4j: no Docker daemon\n"
+        )
+        record = gate_record(out, "could-not-run", None)
+        self.assertEqual(record["steps"], 3)
+        self.assertEqual(
+            record["could_not_run"], {"a/neo4j": "no Docker daemon", "b": "no gate asserted"}
+        )
+
+    def test_a_line_a_project_wrote_to_stderr_is_not_a_step(self) -> None:
+        out = "ok something\nx  noise (1)\n?  note: just a remark\nok a/x\n"
+        record = gate_record(out, "passed", None)
+        self.assertEqual(record["steps"], 1)
+        self.assertEqual(record["failed"], [])
+        self.assertEqual(record["could_not_run"], {})
+
+    def test_the_line_names_the_time_the_targets_and_what_was_found(self) -> None:
+        row = {
+            "at": "2026-10-03T11:58:07",
+            **gate_record("x  a/y (1)\n?  b/z: no `docker`\n", "failed", ["a", "b"]),
+        }
+        self.assertEqual(
+            gate_line(row),
+            "Gated by the supervisor at 11:58: `a`, `b`; 2 steps; "
+            "failed: `a/y`; could not run: `b/z` (no docker).",
+        )
+        row = {"at": "2026-10-03T09:01:00", **gate_record("ok a/x\n", "passed", None)}
+        self.assertEqual(
+            gate_line(row), "Gated by the supervisor at 09:01: the whole gate; 1 step passed."
+        )
+
+    def test_a_note_after_the_line_stays_under_the_same_pair_notes(self) -> None:
+        line = "Gated by the supervisor at 09:01: the whole gate; 1 step passed."
+        text = board.with_note("# X\n", "primary, in-progress turn 1", "Done.")
+        text = board.with_note(f"{text}\n{line}\n", "secondary, in-progress turn 2", "Ok.")
+        self.assertEqual(board.sections(text, "Pair notes"), 1)
+        self.assertIn(f">\n> Done.\n\n{line}\n\n> **secondary", text)
+
+
 class UnwritablePagesTest(unittest.TestCase):
     """`unwritable_pages` answers only when every failure is a page the seats cannot write."""
 
@@ -1992,14 +2142,14 @@ class GateSelectionTest(unittest.TestCase):
         (wt / "wiki").mkdir(exist_ok=True)
         sh(wt, "mv", "bootstraps/rust/seed/notes.md", "wiki/notes.md")
         sh(wt, "commit", "-q", "-m", "move notes")
-        self.assertIsNone(b.loop.run_gate())
+        self.assertIsNone(b.loop.run_gate("x", "in-progress"))
         self.assertEqual(b.gate_targets, [["meta", "rust-seed", "pair"]])
 
     def test_a_branch_that_changes_nothing_passes_without_a_gate(self) -> None:
         b = self.b
         b.structure()
         sh(b.repo, "worktree", "add", "-q", "--detach", str(b.loop.wt), "main")
-        self.assertIsNone(b.loop.run_gate())
+        self.assertIsNone(b.loop.run_gate("x", "in-progress"))
         self.assertEqual(b.gate_runs, 0)
 
 
@@ -2030,7 +2180,7 @@ class GateKeysTest(unittest.TestCase):
             (wt / touched.STRUCTURE).write_text(STRUCTURE + "portfolio:\n  gate_keys:\n" + more)
         sh(wt, "add", "widgets", str(touched.STRUCTURE))
         sh(wt, "commit", "-q", "-m", "change")
-        return b.loop.run_gate()
+        return b.loop.run_gate("x", "in-progress")
 
     def test_the_gate_is_given_the_declared_key_and_not_an_undeclared_one(self) -> None:
         self.assertIsNone(self.gate_on_branch(declared=["DECLARED", "MISSING", "EMPTY"]))
@@ -3324,7 +3474,13 @@ class EventLogTest(unittest.TestCase):
         self.assertEqual(b.loop.run(once=True), "landed")
         self.assertEqual(
             self.kinds(),
-            [("pair", "started", "x"), *[("pair", "moved", "x")] * 3, ("pair", "landed", "x")],
+            [
+                ("pair", "started", "x"),
+                *[("pair", "moved", "x")] * 2,
+                ("pair", "gated", "x"),
+                ("pair", "moved", "x"),
+                ("pair", "landed", "x"),
+            ],
         )
         self.assertEqual(
             [(e["from"], e["to"]) for e in self.events("moved")],
@@ -3432,6 +3588,7 @@ class EventLogTest(unittest.TestCase):
             self.kinds(),
             [
                 ("groom", "started", "grooming"),
+                ("groom", "gated", "grooming"),
                 ("groom", "groomed", "grooming"),
                 ("groom", "empty", None),
             ],

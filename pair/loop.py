@@ -92,6 +92,10 @@ after its step, and its detail lines are indented, so neither matches.
 """
 FAILED_STEP = re.compile(r"^x  (?P<step>\S.*) \((?P<count>\d+)\)$")
 """A gate step that found something, in the shape `.meta/gate` reads it in (its `X`)."""
+OK_STEP = re.compile(r"^ok (?P<step>\S.*?)(?: — (?P<scope>.*))?$")
+"""A gate step that passed, in the shape `.meta/gate` reads it in (its `OK`)."""
+NO_GATE = "no gate asserted"
+"""Why `.meta/gate` could not run a Project with no gate, the one step it does not prefix."""
 FINDING = re.compile(r"^     (?P<finding>.+)$")
 """One finding under a failed step, in the shape `.meta/gate` reads it in (its `PROBLEM`)."""
 RENDERED = "rendered prose"
@@ -307,6 +311,69 @@ def gate_unwritable(
     )
     unrun = gate_unrunnable(out)
     return GateUnrunnable(f"{reason}\n\n{unrun}" if unrun else reason)
+
+
+def gate_record(
+    out: str, outcome: str, targets: Sequence[str] | None
+) -> dict[str, Any]:
+    """The fields of a `gated` event for a gate run that printed `out`.
+
+    `outcome` is `passed`, `failed` or `could-not-run`, as `run_gate` judged
+    the run. `steps` counts only the steps `.meta/gate` forwarded, each of
+    which it prefixes with its Project (`meta/rendered prose`), and the
+    `?  <project>: no gate asserted` it writes itself. Every other line
+    in `out` is left out: the closing line, whose label is the targets or
+    `portfolio`, and whatever a Project's gate wrote to stderr, which reaches
+    `out` unparsed and may hold a line of the same shape.
+    """
+    steps = 0
+    failed: list[str] = []
+    could_not_run: dict[str, str] = {}
+    for line in out.splitlines():
+        if m := FAILED_STEP.match(line):
+            if "/" in m["step"]:
+                steps += 1
+                failed.append(m["step"])
+        elif m := COULD_NOT.match(line):
+            if "/" in m["step"] or m["why"] == NO_GATE:
+                steps += 1
+                could_not_run[m["step"]] = m["why"]
+        elif (m := OK_STEP.match(line)) and "/" in m["step"]:
+            steps += 1
+    return {
+        "targets": None if targets is None else list(targets),
+        "outcome": outcome,
+        "steps": steps,
+        "failed": failed,
+        "could_not_run": could_not_run,
+    }
+
+
+def gate_line(row: Mapping[str, Any]) -> str:
+    """The line the gate that closes `in-progress/` leaves in the Issue file, from its event `row`.
+
+    Backticks are taken out of each reason, so no reason can open a code
+    span the `no line citations` step reads as a citation.
+    """
+    targets = row["targets"]
+    what = "the whole gate" if targets is None else ", ".join(f"`{t}`" for t in targets)
+    found = []
+    if row["failed"]:
+        found.append("failed: " + ", ".join(f"`{step}`" for step in row["failed"]))
+    if row["could_not_run"]:
+        found.append(
+            "could not run: "
+            + ", ".join(
+                f"`{step}` ({why.replace('`', '')})"
+                for step, why in row["could_not_run"].items()
+            )
+        )
+    steps = f"{row['steps']} step{'' if row['steps'] == 1 else 's'}"
+    if row["outcome"] == "passed":
+        result = f"{steps} passed"
+    else:
+        result = f"{steps}; {'; '.join(found) or row['outcome']}"
+    return f"Gated by the supervisor at {row['at'][11:16]}: {what}; {result}."
 
 
 def home(stage: str) -> str:
@@ -1226,7 +1293,7 @@ class Loop:
                 return "the backlog is not groomed yet:\n" + "\n".join(
                     f"- {fault}" for fault in faults
                 )
-            return self.run_gate()
+            return self.run_gate(st.slug, GROOMING)
         if st.stage == "backlog":
             if issue.difficulty is None:
                 return (
@@ -1255,7 +1322,10 @@ class Loop:
                 return "nothing outside issues/ has changed on this branch yet."
             if self.rebase(st) is None:
                 return "paused"
-            return self.run_gate()
+            result, row = self.gate_run(st.slug, st.stage)
+            if row is not None:
+                self.keep_gate(st, row)
+            return result
         return None
 
     def flight_checked(self, st: State, issue: board.Issue) -> str | None:
@@ -1284,7 +1354,7 @@ class Loop:
             missing = self.owed_children(st, issue, was, gaps)
             if missing:
                 return missing
-            return self.run_gate()
+            return self.run_gate(st.slug, FLIGHT_CHECK)
         briefs = board.sections(issue.body, BRIEF)
         if not gaps and briefs <= (board.sections(was.body, BRIEF) if was else 0):
             return (
@@ -1293,7 +1363,7 @@ class Loop:
                 f"`parent: {st.slug}` in its front matter, or add a "
                 f"`## {BRIEF}` section to {issue.path}."
             )
-        return self.run_gate()
+        return self.run_gate(st.slug, FLIGHT_CHECK)
 
     def owed_children(
         self, st: State, issue: board.Issue, was: board.Issue, gaps: list[str]
@@ -1385,8 +1455,19 @@ class Loop:
 
     # --- landing ---------------------------------------------------------------
 
-    def run_gate(self) -> GateFailure | GateUnrunnable | None:
-        """Gate what the branch changes against `main`, or None when it passes.
+    def run_gate(self, slug: str, stage: str) -> GateFailure | GateUnrunnable | None:
+        """`gate_run` with its event left out: what the gate leaves unmet, or None."""
+        return self.gate_run(slug, stage)[0]
+
+    def gate_run(
+        self, slug: str, stage: str
+    ) -> tuple[GateFailure | GateUnrunnable | None, dict[str, Any] | None]:
+        """Gate what the branch changes against `main`: what that leaves unmet, and its event.
+
+        The first is None when the gate passes. The second is the `gated`
+        event logged for the run, with `slug`, `stage` (the stage being
+        closed, or `landing`) and `gate_record`'s fields, or None when
+        nothing ran.
 
         A gate that passes with a step that could not run is a
         `GateUnrunnable`, not a pass. So is a gate that fails only on pages the
@@ -1407,16 +1488,55 @@ class Loop:
             self.wt, "diff", "--name-only", "--no-renames", f"{self.main}...HEAD"
         ).splitlines()
         if not changed:
-            return None
+            return None, None
         targets = touched.select(self.wt, changed)
         env = self.gate_env()
+        at = time.strftime("%Y-%m-%dT%H:%M:%S")
         ok, out = self.gate(self.wt, targets, env)
         out = redact(out, env)
-        if ok:
-            return gate_unrunnable(out)
-        return gate_unwritable(
-            out, self.wt, unwritable(self.wt), self.tree
-        ) or gate_fails(out, targets)
+        result = (
+            gate_unrunnable(out)
+            if ok
+            else gate_unwritable(out, self.wt, unwritable(self.wt), self.tree)
+            or gate_fails(out, targets)
+        )
+        outcome = (
+            "passed"
+            if result is None
+            else "could-not-run"
+            if isinstance(result, GateUnrunnable)
+            else "failed"
+        )
+        row = {"at": at, "stage": stage, **gate_record(out, outcome, targets)}
+        self.event("gated", slug, **row)
+        return result, row
+
+    def keep_gate(self, st: State, row: Mapping[str, Any]) -> None:
+        """Append `gate_line` for the gate's event `row` to the Issue file, and commit it.
+
+        The supervisor's gate runs outside the seats' sandbox, so the line
+        records what the seats could not check themselves, for a desk check
+        or a Flight's brief to show. Moving `st.head` keeps the commit from
+        counting as the developer's or a seat's change, and leaving `st.seen`
+        lets both seats see the line in their next diff. A blank line before
+        it keeps it out of the `## Pair notes` quote it usually follows.
+        """
+        issue = board.read(self.wt, st.slug)
+        if issue is None:
+            return
+        path = self.wt / issue.path
+        path.write_text(path.read_text().rstrip("\n") + f"\n\n{gate_line(row)}\n")
+        git(self.wt, "add", "--", issue.path)
+        git(
+            self.wt,
+            "commit",
+            "-q",
+            "-m",
+            f"{st.slug}: gated in {st.stage}",
+            "-m",
+            "Seat: loop",
+        )
+        st.head = git(self.wt, "rev-parse", "HEAD")
 
     def gate_env(self) -> dict[str, str]:
         """The declared keys the landing gate is started with, by name.
@@ -1524,7 +1644,7 @@ class Loop:
             if moved is None:
                 return "paused"
             if (moved or force_gate) and self.touches_code():
-                failure = self.run_gate()
+                failure = self.run_gate(st.slug, "landing")
                 if isinstance(failure, GateUnrunnable):
                     return self.pause(st, failure, retry="merge")
                 if failure is not None:
@@ -1948,7 +2068,8 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
       check, and the loop or grooming pass if paused for any other reason.
       A desk check is recorded as a pause; it is listed once.
     - `underway`: each loop with a state, `{kind, slug, stage, turn,
-      next_role, approvals}`.
+      next_role, approvals, gate}`, where `gate` is `{stage, outcome, at}`
+      of the last `gated` event that loop logged for that slug, or null.
     - `order`: `board.running_tree`, each node `{slug, mark, flight, out,
       parts}`, where `out` holds a Flight's children already out of the
       backlog with their stage.
@@ -1988,6 +2109,7 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
             "parts": [entry(part) for part in node.parts],
         }
 
+    gates = last_gates(repo)
     rows: list[dict[str, Any]] = []
     for kind in ("pair", "groom"):
         turns = runtime_dir(repo, kind) / "turns.jsonl"
@@ -2003,6 +2125,7 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
                 "turn": st.get("turn", 0),
                 "next_role": st.get("next_role", "?"),
                 "approvals": st.get("approvals", []),
+                "gate": gates.get((kind, st.get("slug"))),
             }
             for kind, st in states.items()
         ],
@@ -2016,6 +2139,36 @@ def status_view(repo: Path, main: str = "main") -> dict[str, Any]:
         ],
         "turns": sorted(rows, key=lambda row: row.get("at", ""))[-4:],
     }
+
+
+def last_gates(repo: Path) -> dict[tuple[str, str], dict[str, Any]]:
+    """The last `gated` event in the event log for each loop and slug, as `{stage, outcome, at}`.
+
+    `status_view` runs on every event, since `append_event` publishes, so the
+    log is read once here for every loop underway. A line that does not parse,
+    such as one cut short by a crash, is skipped.
+    """
+    path = event_log(repo)
+    if not path.is_file():
+        return {}
+    gates: dict[tuple[str, str], dict[str, Any]] = {}
+    for line in path.read_text().splitlines():
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if isinstance(event, dict) and event.get("kind") == "gated":
+            gates[(event.get("loop"), event.get("slug"))] = {
+                key: event.get(key) for key in ("stage", "outcome", "at")
+            }
+    return gates
+
+
+def last_gate_lines(gate: Mapping[str, Any] | None) -> list[str]:
+    """The line `status` prints under a loop underway for its last gate, or none before one."""
+    if not gate:
+        return []
+    return [f"  last gate: {gate['stage']}, {gate['outcome']} at {str(gate['at'])[11:16]}"]
 
 
 def waiting_on_developer(
@@ -2091,6 +2244,7 @@ def status(repo: Path, main: str = "main") -> str:  # noqa: C901  # reason: one 
             f"next {st['next_role']}, "
             f"accepted by {', '.join(st['approvals']) or 'nobody yet'}"
         )
+        lines += last_gate_lines(st["gate"])
     if not view["underway"]:
         lines.append("nothing underway")
 

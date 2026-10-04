@@ -111,6 +111,14 @@ repeated or side-by-side comparisons (`prompts/primary.md`,
    again before any seat takes a turn. This holds for the gate at the end of
    a stage and for the gate while landing.
 
+   Every gate the loop runs logs a `gated` event (see [the event
+   log](#the-event-log)). The gate that closes `in-progress/` also appends a
+   line to the end of the Issue file and commits it, whatever the outcome,
+   such as "Gated by the supervisor at 11:58: `meta`; 96 steps passed."
+   (`Loop.keep_gate`). The seats' sandbox cannot run every step, so a desk
+   check or a Flight's brief then shows what the supervisor checked beside
+   what the seats could.
+
    A gate that fails only on `rendered prose` pages the seats cannot write
    pauses the same way. Such pages sit under `.claude/skills/`, which Claude
    Code's sandbox denies the seats (`SANDBOX_DENIED` in `pair/seats.py`), or
@@ -272,7 +280,7 @@ path the landing changes pause it at once.
 | groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | run one Flight | `just pair --flight <slug>` |
-| watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway, the running order with each Flight's parts and what holds each item back, and the counts per stage; `just pair-status --json` prints the same state as one JSON object, keyed `waiting`, `underway`, `order`, `to_groom`, `counts`, `sessions` and `turns`, whose fields `status_view` in `loop.py` describes, and which the loop also publishes for a cockpit (see [The published status](#the-published-status)); `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
+| watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway with its last gate, the running order with each Flight's parts and what holds each item back, and the counts per stage; `just pair-status --json` prints the same state as one JSON object, keyed `waiting`, `underway`, `order`, `to_groom`, `counts`, `sessions` and `turns`, whose fields `status_view` in `loop.py` describes, and which the loop also publishes for a cockpit (see [The published status](#the-published-status)); `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
 | wait for the loop | `just pair-watch --until landed`, `--until developer` (a desk check, a pause or a send-back) or `--until flight <slug>` (that Flight reaches `desk-check/`); see [The event log](#the-event-log) |
 | steer an Issue or a pass underway | edit files in `worktrees/pair`, or `worktrees/groom` for a pass, between turns; the next seat sees the change |
 | take over a seat | Ctrl-C (the current turn finishes first), then `cd worktrees/pair && claude --resume <id>` (`worktrees/groom` for a pass) with the id `just pair-status` prints; `just pair` or `just groom` again afterwards |
@@ -337,6 +345,7 @@ Every event carries `at` (local time, as in `turns.jsonl`), `kind`, `loop`
 | `groomed` | a grooming pass lands | `sha` |
 | `sent-back` | an Issue lands back in `backlog/` with `Needs elaboration` | `reason`, null when a seat wrote the section |
 | `desk-check` | a `developer` Issue waits for its desk check, or a Flight has landed in `desk-check/` | `stage` |
+| `gated` | the supervisor runs the gate, outside the seats' sandbox, on closing `in-progress`, a Flight check or a grooming pass, or on landing after a rebase moved the branch; a branch that changes nothing runs no gate and logs none | `stage` (`in-progress`, `flight-check`, `grooming` or `landing`), `targets` (null for the whole gate), `outcome` (`passed`, `failed` or `could-not-run`), `steps`, `failed` (step names), `could_not_run` (step name to why); closing `in-progress` also appends a `Gated by the supervisor at …` line to the Issue file |
 | `paused` | the loop pauses for any other reason | `reason`, `retry` |
 | `seat-refused` | the model refuses a seat's message, and the seat restarts with a fresh session | `role`, `error` |
 | `seat-model` | a seat's next turn is in a stage that names another model than its session's, and the seat starts a fresh session on it | `role`, `from`, `to` (null for the CLI's default) |
