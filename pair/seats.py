@@ -514,6 +514,11 @@ because the sandbox refuses sccache ("Operation not permitted"); without
 it, `cargo` runs `rustc` itself. The seat's shell takes the name only from
 this process environment: Claude Code's shell snapshot holds functions,
 aliases and options, not that export (checked 2026-10-03).
+
+A `just pair` run imports `pair/` once, when it starts, so a name added here
+reaches only the seats of a run started after the change lands; a run already
+going keeps passing the name through. The Issue
+`pair-loop-runs-the-code-it-started-with` covers that general problem.
 """
 
 
