@@ -24,3 +24,11 @@ line number, citing DR-355. Then
 All the copies of the skill (`.meta/.apm/skills/technical-writing/SKILL.md`,
 `.claude/skills/technical-writing/SKILL.md`) state the rule, and
 `just render` leaves the tree unchanged.
+
+## Finished by hand (2026-10-05)
+
+The developer's session added the rule to the "Every citation dereferenced"
+invariant in the `technical-writing` artifact in
+`.meta/assertions/imported/structure.yaml`, ran `just render` outside the
+sandbox, and committed both rendered copies. Both state the rule, a second
+`just render` leaves the tree unchanged, and `just gate meta` passes.
