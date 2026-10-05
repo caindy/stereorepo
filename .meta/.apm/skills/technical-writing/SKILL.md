@@ -15,20 +15,20 @@ description: >-
 
 # /technical-writing
 
-The `/technical-writing` skill operationalizes the character of `work:role/technical-writer` (`work:personality/technical-writer`) and enacts stereorepo's DR-194, stereorepo's DR-196, and stereorepo's DR-198.
+The `/technical-writing` skill operationalizes the character of `work:role/technical-writer` and enacts stereorepo's DR-337, stereorepo's DR-196, and stereorepo's DR-339.
 
-## Two Communication and Authoring Regimes (stereorepo's DR-198)
+## Two Communication and Authoring Regimes (stereorepo's DR-339)
 
 1. **Conversational Communication Register:** In dialogue and turn responses, speak in the Technical Writer register (`work:role/technical-writer`): *Spelled out and self-contained. Every citation dereferenced. Assume a reader who was not in the conversation, holds none of its shorthand, and arrives by search some years later. Length is not the cost here; ambiguity is.* This breaks the failure mode of abstruse, cryptic shorthand.
 2. **Durable Artifact Authoring Regime:** When authoring or editing durable files in the repository (code docstrings, Decision Records, wiki pages, companion logs), the structure, tone, and density are governed by the **Diátaxis quadrant** being authored. Conversational expansiveness must not be imported into item docstrings: Reference docstrings must remain dry, crisp, and contract-focused, with zero reviewer litigation.
 
-This standard combines Diátaxis documentation architecture, Google developer style sentences, and stereorepo's Literate Programming (stereorepo's DR-171, stereorepo's DR-175) and Knowledge Management (stereorepo's DR-184, stereorepo's DR-185, stereorepo's DR-187, stereorepo's DR-196) disciplines.
+This standard combines Diátaxis documentation architecture, Google developer style sentences, and stereorepo's Literate Programming (stereorepo's DR-171, stereorepo's DR-334) and Knowledge Management (stereorepo's DR-184, stereorepo's DR-185, stereorepo's DR-187, stereorepo's DR-196) disciplines.
 
 ## Five Overarching Invariants
 
-1. **Every citation dereferenced (stereorepo's DR-134, stereorepo's DR-192):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`stereorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search via the `/search` skill, which carries the invocation (stereorepo's DR-103).
-2. **Use the Ubiquitous Language (stereorepo's DR-190):** The codebase and LinkML ontologies are the word list. Write `Issue` (not ticket/story), `seat` (not coder/reviewer), `developer` (not user/owner), `Role`, `Persona`.
-3. **The Reader's Test (stereorepo's DR-175):** Can a reader use this item from its docstring alone without reading commit histories or Issue files?
+1. **Every citation dereferenced (stereorepo's DR-332, stereorepo's DR-336):** Never leave a bare or unverified claim. A statement attributing a rule or behavior must cite its authority (`stereorepo's DR-nnn`, `Article n`, `[[concept]]`). Check source assertions directly or search via the `/search` skill, which carries the invocation (stereorepo's DR-103).
+2. **Use the Ubiquitous Language (stereorepo's DR-335):** The codebase and LinkML ontologies are the word list. Write `Issue` (not ticket/story), `seat` (not coder/reviewer), `developer` (not user/owner), `Role`, `Persona`.
+3. **The Reader's Test (stereorepo's DR-334):** Can a reader use this item from its docstring alone without reading commit histories or Issue files?
 4. **No Reviewer Litigation in Code (stereorepo's DR-171):** Docstrings state usage contracts, parameters, and invariants. They do not argue against past reviewers. The 'why' and trade-offs belong in Decision Records (`DR-nnn.yaml`) or module docstrings. Incident narratives belong in `<module>.history.md`.
 5. **The Residue Principle (stereorepo's DR-196):** Issue files and commit messages are not documentation containers. What fits into any of the four Diátaxis quadrants belongs in a durable repository artifact. What remains is residue, and only residue belongs in the Issue file.
 
@@ -48,15 +48,15 @@ Select exactly one mode before writing:
 Before typing prose for a change, execute this routing tree to select the container:
 
 1. **Task, recipe, or repeatable procedure:** `justfile` recipe or stereorepo's `SPECIALIZE.md` (**How-To**).
-2. **Public function, class, schema, or API fact:** item docstring or LinkML schema (**Reference**, stereorepo's DR-171, stereorepo's DR-175).
+2. **Public function, class, schema, or API fact:** item docstring or LinkML schema (**Reference**, stereorepo's DR-171, stereorepo's DR-334).
 3. **Settled architectural choice between alternatives:** Decision Record in `.meta/assertions/decisions/DR-nnn.yaml` (**Explanation**).
 4. **Bug, incident, or regression history:** `<module>.history.md` with Evidence (**Explanation**).
-5. **Enduring domain concept or subsystem overview:** `wiki/<context>/<concept>.md` via `/wikisplain` (`python3 .meta/wikisplain.py`) (**Explanation**, stereorepo's DR-184, stereorepo's DR-190).
+5. **Enduring domain concept or subsystem overview:** `wiki/<context>/<concept>.md` via `/wikisplain` (`python3 .meta/wikisplain.py`) (**Explanation**, stereorepo's DR-184, stereorepo's DR-335).
 6. **Unrouted residue:** The Issue file holds what changed, the path taken and the approach that lost; work noticed and not done is a new Issue in `issues/backlog/`. Never summarize diffs.
 
 ## Container Subordination
 
-The atomic semantic unit of domain knowledge is the Concept (stereorepo's DR-195). Subordinate storage placement to the reader's posture:
+The atomic semantic unit of domain knowledge is the Concept (stereorepo's DR-338). Subordinate storage placement to the reader's posture:
 - **Schema Gloss:** `vocabulary.yaml` when machine checks and search aliases suffice.
 - **Section / Subsection:** `##` or `###` within an existing document when tightly bound to an aggregate.
 - **Dedicated Wiki Page:** `wiki/<context>/<concept>.md` when the concept has independent depth, invariants, or broad relevance.
@@ -69,7 +69,7 @@ Strictly avoid 'wiki article' (`avoid: [wiki article]`) to protect Charter Artic
 These exceptions govern every comment in a source file, at every scope — file header, module level, class body, and function or method body alike. A surprise inside internal code is a defect in the code, not a gap in its narration: rename the symbol, extract the helper, or narrow the type until the implementation reads as its own explanation. Four kinds of comment survive a prune, and no others:
 
 1. **Legal notices.** Copyright, licensing, and attribution headers a license obliges the file to carry.
-2. **Public API contracts.** Item docstrings written as dry Diátaxis Reference contracts, with no reviewer litigation (stereorepo's DR-175, stereorepo's DR-194). An item is a module, class, function, method, or module-level binding, and a binding's docstring is the string literal directly below its assignment.
+2. **Public API contracts.** Item docstrings written as dry Diátaxis Reference contracts, with no reviewer litigation (stereorepo's DR-334, stereorepo's DR-337). An item is a module, class, function, method, or module-level binding, and a binding's docstring is the string literal directly below its assignment.
 3. **Immutable external boundary constraints.** A rule a foreign platform, third-party library, operating system, or wire protocol forces on the code and that you cannot reshape from inside this repository, cited with a dereferenced issue, RFC, or specification reference (stereorepo's Article 12). A constraint you own is not this exception: mechanize it instead.
 4. **Tool formatting directives.** Markers a formatter or generator reads, such as `# fmt: skip` or `// prettier-ignore`.
 
@@ -81,9 +81,9 @@ A comment annotating a module-level constant is not a fifth exception. Say what 
 
 A comment worth deleting is rarely a comment worth losing. Before removing non-trivial commentary, send what it knows down the routing tree in **Pre-Writing Routing: Where to Write** above:
 
-- **Defect narrative, incident, or regression history:** `<module>.history.md`, each account naming Evidence that can fail — the check or probe symbol under `.meta/checks/probes/` that fails if the defect returns (stereorepo's DR-171, stereorepo's DR-209).
+- **Defect narrative, incident, or regression history:** `<module>.history.md`, each account naming Evidence that can fail — the check or probe symbol under `.meta/checks/probes/` that fails if the defect returns (stereorepo's DR-171, stereorepo's DR-342).
 - **Architectural rationale, or an alternative weighed and rejected:** a Decision Record in `.meta/assertions/decisions/DR-nnn.yaml`, or an enduring concept page under `wiki/<context>/` (stereorepo's DR-184, stereorepo's DR-196).
-- **An operational instruction — how to run, rebuild, or verify something:** a `justfile` recipe, self-documented by its own comment (stereorepo's DR-106).
+- **An operational instruction — how to run, rebuild, or verify something:** a `justfile` recipe, self-documented by its own comment (stereorepo's DR-329).
 - **Nothing a reader needs:** delete it. Narration of self-evident steps and commented-out dead code have no destination, and git holds the corpse.
 
 Write the destination before you delete the line. A prune that skips this step is the one that loses the knowledge.
@@ -108,7 +108,7 @@ Treat every lint and type suppression the diff adds or touches — `# noqa`, `# 
 - **A surviving suppression is narrow:** the specific rule or error code, never bare. It earns its keep only as an immutable external boundary constraint (exception 3 of The Four Permissible Comment Exceptions above) — a rule a foreign platform, library, or checker forces on the code — with a dereferenced upstream issue or specification saying why the checker is wrong here.
 - **A blanket suppression at file or module scope** hides findings nobody has seen yet, including ones the next change adds under it. Narrow it to the line.
 
-Run this audit before a turn ends, over what the branch changed (stereorepo's DR-198).
+Run this audit before a turn ends, over what the branch changed (stereorepo's DR-339).
 
 ## Google Developer Style Sentences
 
