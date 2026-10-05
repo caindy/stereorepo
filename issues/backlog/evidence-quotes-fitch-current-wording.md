@@ -1,7 +1,3 @@
----
-waits_on: [fitch-mvp:inverse-pairs-follow-the-record]
----
-
 # Quote fitch-mvp's current description of Evidence
 
 stereorepo's Evidence concept quotes the `Evidence` class of fitch-mvp's
@@ -23,9 +19,8 @@ lends a credence, which is how a data stream earns a measured posterior":
 - `.meta/vocabulary.md`, which is rendered from it;
 - `wiki/stereorepo/evidence.md`, lines 15 and 17.
 
-fitch-mvp cannot correct them, because a sync overwrites its copies. The
-`waits_on` entry holds this Issue until the developer removes it, once that
-Issue has landed in fitch-mvp (DR-301).
+fitch-mvp cannot correct them, because a sync overwrites its copies. That
+Issue landed in fitch-mvp as `72c5bb7` on 5 October 2026.
 
 ## Wanted
 
