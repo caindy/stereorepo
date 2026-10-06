@@ -10,6 +10,7 @@ import pytest
 
 from gate import (
     SELECT_FLOOR,
+    STEPS,
     CouldNotRun,
     Found,
     Passed,
@@ -21,6 +22,7 @@ from gate import (
     lints,
     orphans,
     rendered,
+    ruff,
     run,
     select,
     tool,
@@ -371,6 +373,23 @@ def test_a_word_selects_one_step_at_most() -> None:
     assert [label for label, _ in select("evidence")] == ["evidence"]
     assert select("everything") == []
     assert rendered(Passed("s"), "l") == "ok l — s\n"
+
+
+def test_the_gate_does_not_check_formatting(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert not {"fmt", "format"} & {label for label, _ in STEPS}
+    calls: list[tuple[Path, str, list[str]]] = []
+
+    def recorder(cwd: Path, module: str, args: list[str], scope: str) -> Passed:
+        calls.append((cwd, module, args))
+        return Passed(scope)
+
+    monkeypatch.setattr("gate.tool", recorder)
+    ruff(Path("workspace"))
+    [(cwd, module, args)] = calls
+    assert cwd == Path("workspace")
+    assert module == "ruff"
+    assert args[0] == "check"
+    assert "format" not in args
 
 
 def test_commented_out_code_is_found(tree: Tree) -> None:

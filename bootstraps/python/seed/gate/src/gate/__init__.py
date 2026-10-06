@@ -211,6 +211,11 @@ def each_package(root: Path, step: Callable[[Path], Outcome], scope: str) -> Out
 def ruff(root: Path) -> Outcome:
     """Runs ruff check across the workspace directory.
 
+    The step lints and does not check formatting: `ruff format --check` is
+    absent on purpose. DR-193 retired it, because a formatter's vertical
+    cascades inflate what an agent reads and its whitespace rewrites cause
+    rebase churn between concurrent branches.
+
     Args:
         root: Workspace root directory path.
 
