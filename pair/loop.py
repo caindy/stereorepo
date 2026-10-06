@@ -16,7 +16,9 @@ whether the gate passes) and decides what happens next:
 After each turn the loop also keeps the seat's closing message in the issue
 file, quoted under `## Pair notes` (`Loop.keep_note`), where the other seat
 reads it in its diff. The note is not the seat's change, so it never makes a
-turn count as one.
+turn count as one. The section is the loop's: before judging a turn, `settle`
+puts back whatever the seat wrote, edited or deleted there
+(`Loop.restore_notes`), so a seat's own note never counts as a change either.
 
 The loop takes the next issue in running order as it stands, a ripe Flight
 first, and starts it by moving its file from `issues/backlog/` to
@@ -79,6 +81,8 @@ FLIGHT_CHECK = "flight-check"
 BRIEF = "Desk-check brief"
 NOTES = "Desk-check notes"
 CHILDREN = "Desk-check children"
+NOTE_STOPS = ("Needs elaboration", "The plan", BRIEF, NOTES, CHILDREN)
+"""The bold leads that end a `Pair notes` section: the names the loop reads."""
 DIFF_LIMIT = 40_000
 GATE_TAIL = 6_000
 GATE = "gate"
@@ -953,10 +957,10 @@ class Loop:
                 )
                 if result is None:
                     return "paused"
-                quiet = self.settle(st, role)
+                quiet, restored = self.settle(st, role)
                 self.keep_note(st, role, result)
                 st.in_turn = None
-                self.record(st, role, result, quiet)
+                self.record(st, role, result, quiet, notes_restored=restored)
                 outcome = self.decide(st, role, quiet)
                 if outcome:
                     return outcome
@@ -1152,8 +1156,12 @@ class Loop:
         self.save(st)
         return True
 
-    def settle(self, st: State, role: str) -> bool:
-        """Put the issue file back, commit leftovers, and say if the turn was quiet."""
+    def settle(self, st: State, role: str) -> tuple[bool, bool]:
+        """Put the issue file back, commit leftovers, and say if the turn was quiet.
+
+        The second value says whether the seat's edits to the Pair notes were
+        put back (`restore_notes`).
+        """
         where = board.locations(self.wt, st.slug)
         at = home(st.stage)
         if st.stage != GROOMING and where != [at]:
@@ -1170,6 +1178,9 @@ class Loop:
             self.say(
                 f"moved {st.slug}.md back to {at}/ after the {role} seat moved it"
             )
+        restored = st.stage != GROOMING and self.restore_notes(st, at)
+        if restored:
+            self.say(f"put back the {role} seat's edits to the Pair notes")
         head, dirty = board.head_and_dirty(self.wt)
         if dirty:
             git(self.wt, "add", "-A")
@@ -1190,7 +1201,30 @@ class Loop:
         if not quiet and role not in st.seats_used:
             st.seats_used.append(role)
         st.head = st.seen[role] = head
-        return quiet
+        return quiet, restored
+
+    def restore_notes(self, st: State, at: str) -> bool:
+        """Put the issue file's `Pair notes` back as they stood at `st.head`.
+
+        The sections are the loop's (`keep_note`, `keep_gate`), so a seat's
+        own note, or its tidying of earlier ones, never counts as a change
+        and never resets the approvals. A file that had no notes at
+        `st.head` loses any the seat added. A turn that lost its file
+        restores nothing, and `decide` sends it back. Says whether the file
+        changed.
+        """
+        rel = f"{board.ISSUES}/{at}/{st.slug}.md"
+        path = self.wt / rel
+        if not path.exists():
+            return False
+        shown = git_run(self.wt, "show", f"{st.head}:{rel}")
+        before = shown.stdout if shown.returncode == 0 else ""
+        after = path.read_text()
+        restored = board.restore_notes(before, after, NOTE_STOPS)
+        if restored == after:
+            return False
+        path.write_text(restored)
+        return True
 
     def keep_note(self, st: State, role: str, result: TurnResult) -> None:
         """Append the turn's closing message to the issue file and commit it.
@@ -1222,7 +1256,15 @@ class Loop:
         )
         st.head = st.seen[role] = git(self.wt, "rev-parse", "HEAD")
 
-    def record(self, st: State, role: str, result: TurnResult, quiet: bool) -> None:
+    def record(
+        self,
+        st: State,
+        role: str,
+        result: TurnResult,
+        quiet: bool,
+        *,
+        notes_restored: bool = False,
+    ) -> None:
         usage = result.usage
         row = {
             "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -1231,6 +1273,7 @@ class Loop:
             "turn": st.turn + 1,
             "role": role,
             "quiet": quiet,
+            "notes_restored": notes_restored,
             "session": result.session_id,
             "seconds": round(result.seconds, 1),
             "input": usage.get("input_tokens"),

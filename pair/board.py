@@ -231,6 +231,86 @@ def with_note(text: str, label: str, note: str) -> str:
     return text.rstrip("\n") + f"\n\n{opening}{quote}\n"
 
 
+def _note_spans(lines: list[str], stops: Collection[str]) -> list[tuple[int, int]]:
+    """The `[start, end)` line ranges of each `Pair notes` section in `lines`.
+
+    A section opens at a heading or bold lead named `Pair notes`, at any
+    level, and ends before the next heading, the next bold lead named in
+    `stops`, or the end. Any other bold lead stays inside it, so a seat that
+    copies a note's label has not opened a section of its own. A quoted line
+    never matches `_HEADING`, since its `>` comes first.
+    """
+    notes, ends = PAIR_NOTES.lower(), {stop.lower() for stop in stops}
+    spans: list[tuple[int, int]] = []
+    start = None
+    for i, line in enumerate(lines):
+        head = _HEADING.match(line.strip())
+        if not head:
+            continue
+        name = head["name"].strip().lower()
+        if start is not None and (line.strip().startswith("#") or name in ends | {notes}):
+            spans.append((start, i))
+            start = None
+        if name == notes:
+            start = i
+    if start is not None:
+        spans.append((start, len(lines)))
+    return spans
+
+
+def _core(lines: list[str]) -> list[str]:
+    """`lines` without its trailing blank lines."""
+    end = len(lines)
+    while end and not lines[end - 1].strip():
+        end -= 1
+    return lines[:end]
+
+
+def restore_notes(before: str, after: str, stops: Collection[str]) -> str:
+    """`after`, an Issue file, with its `Pair notes` sections as they are in `before`.
+
+    The sections belong to the loop (`with_note`, `gate_line`), so whatever a
+    seat wrote, edited or deleted in them goes back to how it stood at the
+    start of the turn, and everything outside them stays as the seat left it.
+    The n-th section in `after` takes the lines of the n-th in `before`; a
+    section beyond `before`'s count is dropped, and one `before` has that
+    `after` lacks goes back at the end. The blank lines that end a section
+    are part of it too, so blank lines a seat added there are no change:
+    a section that something follows in both files keeps `before`'s, and
+    when the last section ends both files, the file ends as `before` did.
+    Otherwise, where a section moved to or from the end of the file, it
+    keeps `after`'s, so the restored text keeps its spacing. When nothing
+    differs, `after` comes back unchanged, so a caller can compare the two.
+    """
+    old, new = before.splitlines(), after.splitlines()
+    old_spans = _note_spans(old, stops)
+    kept = [_core(old[a:b]) for a, b in old_spans]
+    spans = _note_spans(new, stops)
+    out: list[str] = []
+    at = 0
+    for n, (a, b) in enumerate(spans):
+        out += new[at:a]
+        at = b
+        if n < len(kept) and b < len(new) and old_spans[n][1] < len(old):
+            out += old[slice(*old_spans[n])]
+        elif n < len(kept):
+            span = new[a:b]
+            out += kept[n] + span[len(_core(span)) :]
+        elif b == len(new):
+            out = _core(out)
+    out += new[at:]
+    for missing in kept[len(spans) :]:
+        out = [*_core(out), "", *missing]
+    text = "\n".join(out) + ("\n" if after.endswith("\n") else "")
+    if (
+        len(spans) == len(kept) > 0
+        and spans[-1][1] == len(new)
+        and old_spans[-1][1] == len(old)
+    ):
+        text = text.rstrip() + before[len(before.rstrip()) :]
+    return after if text == after else text
+
+
 def bullets(text: str) -> list[str]:
     """The top-level bullet items of a Markdown block, stripped of their markers
     and of backticks."""
