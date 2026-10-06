@@ -4,6 +4,10 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# Finder's metadata, written into any folder opened on macOS. A worktree that
+# holds one has uncommitted changes, and the pair loop will not start over them.
+.DS_Store
+
 # Tokens live outside the tree. Nothing here should ever hold one.
 .env
 
