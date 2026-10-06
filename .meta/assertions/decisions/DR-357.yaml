@@ -57,6 +57,14 @@ decisions:
         runs, stays a `developer` Issue: the developer runs it, and the pair
         records what it found.
       - >-
+        A tracked template such as `.env.example` is not a key file: the
+        seats may read it while its bytes on disk match the blob `HEAD` and
+        the index hold for it, as `committed` in `pair/seats.py` checks, so
+        that every check that reads the tracked tree can read it. A key that
+        has been committed is out of scope, since denying the copy on disk
+        would not protect it. A tracked file with changes on disk or in the
+        index, and a tracked symlink, stay denied.
+      - >-
         `just gate` in the developer's own checkout is unchanged; the product
         reads `.env` there as it always has.
     falsifier: >-

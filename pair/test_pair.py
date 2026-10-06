@@ -4778,6 +4778,76 @@ class ConfinementTest(unittest.TestCase):
         )
         self.assertTrue(all(r.startswith("Read(//") for r in settings["permissions"]["deny"]))
 
+    def track_env_example(self) -> None:
+        """Commit a `.env.example` in the checkout and the worktree; leave a `.env` untracked."""
+        (self.repo / ".env.example").write_text("export TEMPLATE_ONLY=\n")
+        sh(self.repo, "add", ".env.example")
+        sh(self.repo, "commit", "-qm", "template")
+        sh(self.wt, "checkout", "main", "--", ".env.example")
+        sh(self.wt, "commit", "-qm", "template")
+        for root in [self.repo, self.wt]:
+            (root / ".env").write_text("export SOME_KEY=x\n")
+
+    def test_a_tracked_env_file_that_matches_its_commit_is_readable(self) -> None:
+        self.track_env_example()
+        confined = confinement(self.wt)
+        self.assertEqual(confined.unreadable, sorted([self.repo / ".env", self.wt / ".env"]))
+        self.assertEqual(confined.withheld, {"SOME_KEY"})
+        argv = command("p", confined)
+        settings = json.loads(argv[argv.index("--settings") + 1])
+        denied = [
+            *settings["sandbox"]["filesystem"]["denyRead"],
+            *settings["permissions"]["deny"],
+        ]
+        self.assertFalse([d for d in denied if ".env.example" in d], denied)
+
+    def test_a_tracked_env_file_changed_on_disk_is_denied(self) -> None:
+        """`EDITED_KEY` is not `SOME_KEY`, which the untracked `.env` files withhold anyway."""
+        self.track_env_example()
+        example = self.wt / ".env.example"
+        example.write_text("EDITED_KEY=x\n")
+        confined = confinement(self.wt)
+        self.assertIn(example, confined.unreadable)
+        self.assertIn("EDITED_KEY", confined.withheld)
+        sh(self.wt, "add", ".env.example")
+        self.assertIn(example, confinement(self.wt).unreadable)
+        sh(self.wt, "checkout", "HEAD", "--", ".env.example")
+        self.assertNotIn(example, confinement(self.wt).unreadable)
+        example.write_text("EDITED_KEY=x\n")
+        sh(self.wt, "update-index", "--skip-worktree", ".env.example")
+        confined = confinement(self.wt)
+        self.assertIn(example, confined.unreadable)
+        self.assertIn("EDITED_KEY", confined.withheld)
+
+    def test_a_tracked_env_file_a_clean_filter_rewrites_is_denied(self) -> None:
+        """The history holds what the filter wrote, as git-crypt's ciphertext, not the disk's bytes.
+
+        `git diff` reports such a file unchanged, so only hashing it with
+        `--no-filters` tells the two apart.
+        """
+        sh(self.repo, "config", "filter.rot.clean", "tr a-z n-za-m")
+        sh(self.repo, "config", "filter.rot.smudge", "cat")
+        (self.wt / ".gitattributes").write_text(".env.production filter=rot\n")
+        secret = self.wt / ".env.production"
+        secret.write_text("SEALED_KEY=plain\n")
+        sh(self.wt, "add", ".gitattributes", ".env.production")
+        sh(self.wt, "commit", "-qm", "sealed")
+        self.assertEqual(sh(self.wt, "status", "--porcelain").strip(), "")
+        confined = confinement(self.wt)
+        self.assertIn(secret, confined.unreadable)
+        self.assertEqual(confined.withheld, {"SEALED_KEY"})
+
+    def test_a_tracked_env_symlink_is_denied_with_its_target(self) -> None:
+        target = self.tmp / "secrets"
+        target.write_text("LINKED=y\n")
+        (self.wt / ".env.link").symlink_to(target)
+        sh(self.wt, "add", ".env.link")
+        sh(self.wt, "commit", "-qm", "link")
+        confined = confinement(self.wt)
+        self.assertIn(self.wt / ".env.link", confined.unreadable)
+        self.assertIn(target, confined.unreadable)
+        self.assertEqual(confined.withheld, {"LINKED"})
+
     def test_with_no_key_files_nothing_is_withheld(self) -> None:
         confined = confinement(self.wt)
         self.assertEqual(confined.unreadable, [])

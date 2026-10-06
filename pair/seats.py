@@ -354,17 +354,58 @@ def env_lines(path: Path) -> list[tuple[str, str]]:
     return pairs
 
 
+def committed(root: Path, path: Path) -> bool:
+    """Whether the file `path`, at the root of the checkout `root`, holds only what `HEAD` holds.
+
+    That is when `path` is a regular file, not a symlink, and its raw bytes
+    on disk, the blob the index holds for it, and the blob `HEAD` holds at
+    its name are one and the same. The bytes are hashed without git's
+    filters, because `git diff` reports no change for a file marked
+    `--skip-worktree` or `--assume-unchanged`, or for one a clean filter
+    encrypts, while the disk holds keys the history does not. A git command
+    that fails, or that git cannot be started for, answers False.
+    """
+    if path.is_symlink() or not path.is_file():
+        return False
+
+    def out(*argv: str) -> str | None:
+        try:
+            run = subprocess.run(
+                ["git", *argv], cwd=root, capture_output=True, text=True, check=False
+            )
+        except OSError:
+            return None
+        return run.stdout.strip() if run.returncode == 0 else None
+
+    staged = out("--literal-pathspecs", "ls-files", "-s", "--", path.name)
+    if not staged or "\n" in staged:
+        return False
+    mode, blob, stage = staged.split("\t", 1)[0].split()
+    if mode not in {"100644", "100755"} or stage != "0":
+        return False
+    head = out("rev-parse", "--verify", "--quiet", f"HEAD:{path.name}")
+    disk = out("hash-object", "--no-filters", "--", path.name)
+    return blob == head == disk
+
+
 def key_files(roots: list[Path]) -> list[Path]:
     """Every `.env` and `.env.*` file at the root of each of `roots`, sorted.
 
+    A file that holds only what its root's `HEAD` holds (see `committed`) is
+    left out, such as a tracked `.env.example` template: its contents are
+    already in the history, so denying the copy on disk protects nothing,
+    and every check that reads the tracked tree needs it. A tracked file
+    with changes on disk or in the index stays listed.
+
     A symlink is listed both as itself and as the file it resolves to, since
     whether Claude Code's `Read` rules match a link by its target is not
-    established.
+    established. A tracked symlink stays listed, because what it resolves to
+    is not in the history.
     """
     found: set[Path] = set()
     for root in roots:
         for path in [root / ".env", *root.glob(".env.*")]:
-            if path.is_file():
+            if path.is_file() and not committed(root, path):
                 found |= {path, path.resolve()}
     return sorted(found)
 
@@ -416,8 +457,10 @@ def confinement(cwd: Path) -> Confinement:
     out over the network, in its transcript, or in a commit. So
     `unreadable` names every key file (see `key_files`) at the root of the
     main checkout and of every worktree, as `git worktree list` reports
-    them, and `withheld` every name those files set. They are found when the
-    seat starts: a key file written later is denied from the next start.
+    them, and `withheld` every name those files set. A tracked file that
+    matches its commit is not a key file, and `key_files` says why. They are
+    found when the seat starts: a key file written later, or keys written
+    into a tracked file later, are denied from the next start.
     """
 
     def out(*argv: str) -> str:
