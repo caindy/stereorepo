@@ -18,6 +18,11 @@ stays wherever this file is, outside that repository's tree (see README.md):
 With `--flight`, `run` works only that Flight and the Issues below it, and
 stops when the Flight reaches its desk check.
 
+Before `run` takes up its next Issue, it re-executes itself with the same
+arguments if its own code, the `.py` files and `prompts/` beside this file,
+has changed on disk since it started, so an Issue that lands a change to the
+loop takes effect on the Issue after it.
+
 `--STAGE-model` names the model both seats run in one stage of an Issue
 (`backlog`, `flight-check`, `todo` or `in-progress`), in place of `--model`.
 
@@ -41,10 +46,12 @@ from __future__ import annotations
 
 import argparse
 import fcntl
+import hashlib
 import os
 import signal
 import subprocess
 import sys
+import time
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import IO
@@ -80,6 +87,14 @@ gives a usage error.
 
 LOCKED = 11
 """The exit code when another process holds the lock the command needs."""
+
+CTRL_C_ECHO = 0.5
+"""Seconds after a Ctrl-C within which another SIGINT is the same Ctrl-C.
+
+`uv run` passes on the SIGINT a Ctrl-C sends its process group, so the loop
+receives one Ctrl-C at least twice, and once more for each restart
+(`reexec`), each of which leaves one more `uv` above it.
+"""
 
 
 def repo_root() -> Path:
@@ -159,6 +174,60 @@ def deliver(tree: Path) -> tuple[bool, str] | None:
         ["just", "deliver"], check=False, cwd=tree, capture_output=True, text=True
     )
     return done.returncode == 0, done.stdout + done.stderr
+
+
+def code_fingerprint(here: Path) -> str:
+    """A digest of the loop's code in `here`: each `*.py` beside it and each file in `prompts/`."""
+    digest = hashlib.sha256()
+    files = sorted([*here.glob("*.py"), *(p for p in (here / "prompts").glob("*") if p.is_file())])
+    for path in files:
+        digest.update(str(path.relative_to(here)).encode() + b"\0")
+        digest.update(path.read_bytes() + b"\0")
+    return digest.hexdigest()
+
+
+def reexec() -> None:
+    """Replace this process with a fresh `pair.py` on the same arguments; never returns.
+
+    It goes through `uv run --script`, so a changed dependency header takes
+    effect too. This pid lives on as the `uv` above the new `pair.py`, so a
+    watcher that read it from `run.lock` keeps following the loop, and no
+    `finally` runs, so no `ended` is logged. The exec closes `run.lock`, which
+    the new process takes again in `hold_lock`.
+    """
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os.execvp(
+        "uv", ["uv", "run", "--quiet", "--script", str(HERE / "pair.py"), *sys.argv[1:]]
+    )
+
+
+def stopper(
+    loop: Loop, clock: Callable[[], float] = time.monotonic
+) -> Callable[[int, object], None]:
+    """The SIGINT handler: a Ctrl-C stops the loop after its turn, and a second abandons it.
+
+    A SIGINT within `CTRL_C_ECHO` seconds of the last one counted is a copy
+    of that Ctrl-C passed on by `uv`, and does nothing. That holds for the
+    abandoning Ctrl-C too, so its copies do not interrupt the `finally`
+    blocks its `KeyboardInterrupt` unwinds through.
+    """
+    last: float | None = None
+
+    def stop(_sig: int, _frame: object) -> None:
+        nonlocal last
+        now = clock()
+        if last is not None and now - last < CTRL_C_ECHO:
+            return
+        last = now
+        if loop.stop_requested:
+            raise KeyboardInterrupt
+        loop.stop_requested = True
+        print(
+            "\nstopping after the current turn (Ctrl-C again to abandon it)", flush=True
+        )
+
+    return stop
 
 
 def hold_lock(repo: Path, name: str = "run.lock") -> IO[str] | None:
@@ -284,6 +353,7 @@ def main() -> int:
     if args.command == "watch":
         return watch(repo, args.until, out=lambda line: print(line, flush=True))
 
+    started = code_fingerprint(HERE)
     kind = "groom" if args.command == "groom" else "pair"
     system = {
         role: (PROMPTS / f"{role}.md").read_text() for role in ("primary", "secondary")
@@ -307,6 +377,8 @@ def main() -> int:
             stage: getattr(args, f"{stage.replace('-', '_')}_model", None)
             for stage in STAGE_MODELS
         },
+        code_changed=lambda: code_fingerprint(HERE) != started,
+        restart=reexec if args.command == "run" else None,
     )
 
     desk = getattr(args, "slug", None)
@@ -322,15 +394,7 @@ def main() -> int:
         print(f"another {doing} is running in this repository")
         return LOCKED
 
-    def stop(_sig: int, _frame: object) -> None:
-        if loop.stop_requested:
-            raise KeyboardInterrupt
-        loop.stop_requested = True
-        print(
-            "\nstopping after the current turn (Ctrl-C again to abandon it)", flush=True
-        )
-
-    signal.signal(signal.SIGINT, stop)
+    signal.signal(signal.SIGINT, stopper(loop))
     work = {
         "run": lambda: loop.run(once=args.once, flight=args.flight),
         "groom": lambda: loop.groom(rerank=args.rerank),

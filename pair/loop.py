@@ -411,6 +411,8 @@ class Loop:
         kind: str = "pair",
         model: str | None = None,
         stage_models: Mapping[str, str | None] | None = None,
+        code_changed: Callable[[], bool] | None = None,
+        restart: Callable[[], None] | None = None,
     ) -> None:
         self.repo = repo
         self.kind = kind
@@ -429,6 +431,10 @@ class Loop:
         self.round_cap = round_cap
         self.model = model
         self.stage_models = dict(stage_models or {})
+        self.code_changed = code_changed
+        """Whether the loop's own code on disk differs from the code this process runs."""
+        self.restart = restart
+        """Re-execute the process on the code on disk; `run` returns if it does."""
         self.seat_command = "claude"
         self.stop_requested = False
         self.seats: dict[str, Seat] = {}
@@ -482,7 +488,7 @@ class Loop:
 
     # --- entry points ----------------------------------------------------------
 
-    def run(self, once: bool = False, flight: str | None = None) -> str:  # noqa: C901  # reason: each way the outer loop picks, starts or stops an Issue is one branch of its one cycle
+    def run(self, once: bool = False, flight: str | None = None) -> str:  # noqa: C901, PLR0912  # reason: each way the outer loop picks, starts, stops or restarts between Issues is one branch of its one cycle
         """Work issues until the backlog empties or the developer is needed.
 
         It never grooms. A grooming pass may run alongside it in its own
@@ -495,6 +501,10 @@ class Loop:
         With `flight`, only that Flight and the Issues below it are worked,
         read again from `main` before each pick so that children written during
         the run join it. The run ends when the Flight lands in `desk-check/`.
+
+        Between Issues, a loop whose own code changed on disk logs `restarted`
+        and calls `restart`, which in production replaces the process and in
+        a test returns, when the run answers the last Issue's outcome.
         """
         self.ensure_worktree()
         self.reap()
@@ -545,7 +555,20 @@ class Loop:
                     f"`just pair-accept {flight}` or `just pair-resume {flight}`"
                 )
                 return "desk-check"
+            if self.restart is not None and self.stale():
+                self.event("restarted")
+                self.say("pair code changed; restarting")
+                self.restart()
+                return outcome
             st = None
+
+    def stale(self) -> bool:
+        """Whether the loop's code changed on disk while no stop is asked, so `run` restarts."""
+        return (
+            self.code_changed is not None
+            and not self.stop_requested
+            and self.code_changed()
+        )
 
     def adopt(self) -> State | None:
         """An unstarted state for the issue in `underway/` on `main`, if there is one.

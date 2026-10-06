@@ -351,6 +351,7 @@ Every event carries `at` (local time, as in `turns.jsonl`), `kind`, `loop`
 | `seat-model` | a seat's next turn is in a stage that names another model than its session's, and the seat starts a fresh session on it | `role`, `from`, `to` (null for the CLI's default) |
 | `stopped` | the loop stops after a Ctrl-C | `reason`, `retry` |
 | `empty` | nothing is ripe, or there is nothing to groom; no `slug` | `message` |
+| `restarted` | between Issues, the loop working Issues finds its own code (`pair/*.py` and `pair/prompts/`) changed on disk and re-executes itself in place on the same arguments, so the pid in `run.lock` when it started lives on as the `uv` above the new loop; no `slug` | none |
 | `ended` | the supervisor process ends; no `slug` | `outcome`, as `pair:` prints it, or `abandoned` (a second Ctrl-C) or `crashed` |
 
 `just pair-watch --until <condition>` prints each event appended after it
@@ -360,7 +361,13 @@ is `desk-check` or `paused`), or `flight <slug>` (a `desk-check` event for
 that Flight). It watches the supervisors whose pid is in `run.lock` or
 `groom.lock` when it starts. It exits 12 once each of them has logged
 `ended` or died without a match, and 13 at once if none is running. A watcher
-therefore never outlives the loop it watches. Answering a Flight's desk check
+therefore never outlives the loop it watches. A restart logs no `ended` and
+leaves the watched pid alive, so a watcher follows the loop across it; the restarted loop
+takes `run.lock` again, or exits 11 if another loop took it in between.
+`uv run` passes a Ctrl-C on to the loop as more than one SIGINT, so the loop
+counts every SIGINT within half a second of the last Ctrl-C it counted as
+that same Ctrl-C.
+Answering a Flight's desk check
 with `just pair-accept <slug>` or `just pair-resume <slug>` holds no lock and
 logs nothing.
 

@@ -2701,6 +2701,101 @@ class FlightRunTest(unittest.TestCase):
         self.assertIn("waits on the desk check of big-a", says[-1])
 
 
+class RestartTest(unittest.TestCase):
+    """`run` re-executes itself between Issues once its own code has changed on disk."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+        b = self.b
+        b.issue("backlog", "first", "First", difficulty="easy")
+        b.issue("backlog", "second", "Second", difficulty="easy")
+        (b.repo / board.ORDER).write_text("first\nsecond\n")
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+        self.changes: list[bool] = []
+        """Each answer of `code_changed` in turn; past the end the code is unchanged."""
+        self.restarts = 0
+
+        def changed() -> bool:
+            return self.changes.pop(0) if self.changes else False
+
+        def restart() -> None:
+            self.restarts += 1
+
+        b.loop.code_changed, b.loop.restart = changed, restart
+
+    def test_a_changed_loop_restarts_before_the_next_issue(self) -> None:
+        b = self.b
+        self.changes = [True]
+        b.script(*easy_turns("first"))
+        self.assertEqual(b.loop.run(), "landed")
+        self.assertEqual(self.restarts, 1)
+        self.assertTrue(b.on_main("issues/done/first.md"))
+        self.assertTrue(b.on_main("issues/backlog/second.md"))
+        self.assertTrue(all("second" not in text for _, text in b.sent))
+        self.assertEqual(
+            [e["kind"] for e in b.events()][-2:], ["landed", "restarted"]
+        )
+        self.assertEqual(b.events("ended"), [])
+
+    def test_an_unchanged_loop_works_on_in_the_same_process(self) -> None:
+        b = self.b
+        b.script(*easy_turns("first"), *easy_turns("second"))
+        self.assertEqual(b.loop.run(), "empty")
+        self.assertEqual(self.restarts, 0)
+        self.assertTrue(b.on_main("issues/done/second.md"))
+        self.assertEqual(b.events("restarted"), [])
+
+    def test_a_run_that_ends_anyway_does_not_restart(self) -> None:
+        b = self.b
+        self.changes = [True, True]
+        b.script(*easy_turns("first"))
+        self.assertEqual(b.loop.run(once=True), "landed")
+        b.stop_when_empty = True
+        b.script(*easy_turns("second"))
+        self.assertEqual(b.loop.run(), "empty")
+        self.assertEqual(self.restarts, 0)
+        self.assertTrue(b.on_main("issues/done/second.md"))
+        self.assertEqual(b.events("restarted"), [])
+
+    def test_the_fingerprint_follows_the_code_and_the_prompts(self) -> None:
+        from pair import code_fingerprint
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        here = Path(tmp.name)
+        (here / "prompts").mkdir()
+        (here / "loop.py").write_text("a")
+        (here / "prompts" / "primary.md").write_text("a")
+        (here / "README.md").write_text("a")
+        start = code_fingerprint(here)
+        (here / "README.md").write_text("b")
+        self.assertEqual(code_fingerprint(here), start)
+        for path in (here / "loop.py", here / "prompts" / "primary.md"):
+            with self.subTest(path=path.name):
+                path.write_text("b")
+                self.assertNotEqual(code_fingerprint(here), start)
+                path.write_text("a")
+                self.assertEqual(code_fingerprint(here), start)
+
+    def test_one_ctrl_c_passed_on_by_uv_stops_and_does_not_abandon(self) -> None:
+        from pair import CTRL_C_ECHO, stopper
+
+        now = [100.0]
+        stop = stopper(self.b.loop, clock=lambda: now[0])
+        with contextlib.redirect_stdout(io.StringIO()):
+            stop(signal.SIGINT, None)
+            self.assertTrue(self.b.loop.stop_requested)
+            now[0] += CTRL_C_ECHO / 2
+            stop(signal.SIGINT, None)
+            now[0] += CTRL_C_ECHO
+            with self.assertRaises(KeyboardInterrupt):
+                stop(signal.SIGINT, None)
+            now[0] += CTRL_C_ECHO / 2
+            stop(signal.SIGINT, None)
+
+
 class GroomingTest(unittest.TestCase):
     def setUp(self) -> None:
         self.b = Bench()
@@ -3690,6 +3785,12 @@ class WatchTest(unittest.TestCase):
         self.later(self.emit("landed", slug="x"), self.emit("ended", outcome="empty"))
         self.assertEqual(self.watch("flight", "big"), ENDED_FIRST)
         self.assertEqual(len(self.out), 3)
+
+    def test_a_restarted_supervisor_is_still_watched(self) -> None:
+        self.supervisor()
+        self.later(self.emit("restarted"), self.emit("landed", slug="y"))
+        self.assertEqual(self.watch("landed"), 0)
+        self.assertEqual([line.split()[2] for line in self.out], ["restarted", "landed"])
 
     def test_a_killed_supervisor_fails_the_watch(self) -> None:
         proc = self.supervisor("groom.lock")
