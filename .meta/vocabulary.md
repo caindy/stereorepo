@@ -195,7 +195,7 @@ What a history entry asserts, what an Article holds against an artifact, and wha
 
 **Evidence.** That sentence is the opening of the `Evidence` class in `schema/epistemology.yaml` in caindy/fitch-mvp, quoted whole and unaltered, for the reason Claim's is.
 
-The same class continues: "Toulmin's Grounds (Data) by default, reached from a warrant through `grounds`; also Backing when it lends a credence, which is how a data stream earns a track record. The two are positions in an argument, not kinds of evidence." `Grounds`, `Backing` and `Warrant` are that schema's terms, and the slot the quotation names is its slot, not one here; none of them is minted here.
+The same class continues: "Toulmin's Grounds (Data) by default, reached from a warrant through `grounds`; also Backing when it is a credence's source, which is how a data stream gets a measured posterior." The two are positions in an argument, not kinds of evidence. `Grounds`, `Backing` and `Warrant` are that schema's terms, and the slot the quotation names is its slot, not one here; none of them is minted here.
 
 A Citation can be Evidence and is not the same thing: a citation names an upstream authority, and one that cannot go stale is what stereorepo's DR-171 refused, which is why the collision is recorded rather than the word avoided.
 

@@ -12,11 +12,11 @@ data streams" (stereorepo's DR-228).
 That sentence is quoted whole and unaltered from the `Evidence` class of
 `schema/epistemology.yaml` in caindy/fitch-mvp, for the reason [[claim]]'s is.
 The schema places it in Toulmin's ontology: "Toulmin's Grounds (Data) by
-default … also Backing when it lends a credence."
+default … also Backing when it is a credence's source."
 
-That schema adds that evidence is "also Backing when it lends a credence",
-and that Grounds and Backing "are positions in an argument, not kinds of
-evidence". The same artifact can occupy either position; what it is called
+That schema adds that evidence is "also Backing when it is a credence's
+source". Grounds and Backing are positions in an argument, not kinds of
+evidence. The same artifact can occupy either position; what it is called
 depends on the argument it stands in, not on what it is made of.
 
 `Grounds` and `Backing` are that schema's words for those positions and are
