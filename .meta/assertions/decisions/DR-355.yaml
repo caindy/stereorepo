@@ -23,7 +23,7 @@ decisions:
           The check is right about each citation and still fails the edit
           that moved the line rather than the prose that cited it, so whoever
           changes a file pays for every citation of it anywhere.
-      - name: Rewrite line citations out of every Issue file, as pair notes are
+      - name: Rewrite line citations out of every Issue file, as pair notes were
         chosen: false
         reason: >-
           It keeps a form that goes stale silently: a citation no check reads
@@ -50,9 +50,9 @@ decisions:
         outside the seats' sandbox
         (`technical-writing-skill-no-line-citations`).
       - >-
-        `board.with_note` in `pair/board.py` still rewrites a pair note's line
-        citations out of the refused form, so a seat's closing message cannot
-        fail the next seat's gate.
+        The citation steps do not read the quoted lines of an Issue's
+        `Pair notes` (`without_notes` in `.meta/checks/citations/loaders.py`),
+        so a pair note may cite a line without failing the next seat's gate.
     falsifier: >-
       A citation by path and name goes stale as often as line citations did,
       or a reader cannot find the thing a citation names without its line.

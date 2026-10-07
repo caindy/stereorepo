@@ -195,12 +195,6 @@ def last_of(body: str, names: tuple[str, ...]) -> str | None:
 PAIR_NOTES = "Pair notes"
 """The section of an Issue file where the loop keeps each turn's note."""
 
-# A path and a line cited as one code span. This is a copy of `PATH_LINE` in
-# `.meta/checks/citations/claims.py`, the `no line citations` step, which
-# the pair package cannot import. An edit to either belongs in both.
-_LINE_CITATION = re.compile(r"`(?P<path>[^`\s:]*[./][^`\s:]*):(?P<line>\d+)`")
-
-
 def with_note(text: str, label: str, note: str) -> str:
     """`text`, an Issue file, with `note` quoted under `label` at its end.
 
@@ -210,14 +204,12 @@ def with_note(text: str, label: str, note: str) -> str:
     bold lead when that is `Pair notes`, and under a new `## Pair notes`
     heading otherwise, so it never reads as part of a section above it.
 
-    A note records a turn and makes no claim that a reader should follow to a
-    line. The seat's gate ran before the note was written and never saw it,
-    so each `path:line` code span in the note is rewritten as the path in a
-    code span followed by `line` and the number. The `no line citations`
-    step then has nothing in the note to refuse, and the note cannot fail
-    the next seat's turn.
+    The note is quoted as the seat wrote it. The seat's gate ran before the
+    note was written and never saw it, and the citation steps do not read
+    the quoted lines of `Pair notes` (`without_notes` in
+    `.meta/checks/citations/loaders.py`), so a citation the gate refuses
+    elsewhere cannot fail the next seat's turn from a note.
     """
-    note = _LINE_CITATION.sub(r"`\g<path>` line \g<line>", note)
     quote = "\n".join(
         f"> {line}".rstrip()
         for line in [f"**{label}**", "", *note.strip().splitlines()]

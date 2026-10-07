@@ -53,14 +53,12 @@ stage and the turn, and commits it on its own (`Loop.keep_note`). The other
 seat reads the note in its next diff. A seat learns nothing else of what the
 other said, and the notes land in `issues/done/` with the Issue. Every line is
 quoted with `> `, so a note never adds a heading the loop reads, such as
-`Needs elaboration` or `The plan`. A code span citing a path and a line comes
-out as the path followed by `line` and the number (`board.with_note`): the
-seat's gate never saw its note, so a line citation in it would otherwise fail
-the `no line citations` step on the next seat's turn. The citation steps do
-not read the quoted lines of an Issue's `Pair notes` at all
-(`without_notes` in `.meta/checks/citations/loaders.py`), so a note that
-quotes a refused decision id or `Class.slot` citation, as one explaining
-the fix to it does, cannot fail them either. The note is not the
+`Needs elaboration` or `The plan`. The note is otherwise kept as the seat
+wrote it. The seat's gate never saw its note, and the citation steps do not
+read the quoted lines of an Issue's `Pair notes` (`without_notes` in
+`.meta/checks/citations/loaders.py`), so a note that quotes a refused line
+citation, decision id or `Class.slot` citation, as one explaining the fix
+to it does, cannot fail the next seat's turn. The note is not the
 seat's change: a turn whose only change is its note is quiet. The section is
 the loop's, too: before it judges a turn, the loop puts the `Pair notes` back
 as they stood when the turn began (`Loop.restore_notes`), so neither a note a

@@ -13,7 +13,7 @@ import pathlib
 import tempfile
 from typing import Any
 
-from checks.citations import loaders, slots
+from checks.citations import PATH_LINE, loaders, slots
 from checks.citations.prose import flat
 from checks.collect import ROOT, CouldNotRun, Found, Index, check
 
@@ -368,16 +368,17 @@ def pair_notes_probes() -> list[str]:
 
     A seat that fixes a refused citation quotes it when its note explains the
     fix, and the note must not fail the next turn. `loaders.without_notes`
-    blanks those lines, and a decision id and a `Class.slot` citation left in
-    the body, in an unquoted line under the notes, after a bold lead that ends
-    them, or in a quote outside them are still read. The citations are spelled
-    from variables, because written out they would be citations of this file.
+    blanks those lines, and a decision id, a `Class.slot` citation and a
+    path-and-line code span left in the body, in an unquoted line under the
+    notes, after a bold lead that ends them, or in a quote outside them are
+    still read. The citations are spelled from variables, because written out
+    they would be citations of this file.
 
     Returns:
         list[str]: Findings naming cases whose outcome did not match expectations.
     """
-    number, slot = 999, "nonsense_xyz"
-    cites = f"DR-{number} and Article.{slot}"
+    number, slot, tick = 999, "nonsense_xyz", "`"
+    cites = f"DR-{number} and Article.{slot} and {tick}x/y.py:{number}{tick}"
     indices = slots.SlotIndices(
         class_slots={"Article": {"statement"}}, all_slots={"statement"}, former_slots={}
     )
@@ -396,9 +397,10 @@ def pair_notes_probes() -> list[str]:
         read = loaders.without_notes(text)
         ids = loaders.DR.findall(read)
         found = slots.check_prose_spans([flat(read)], "issue.md", indices, set())
-        if len(ids) != expected or len(found) != expected:
-            problems.append(f"{name}: expected {expected} of each, got ids {ids!r} "
-                            f"and slot findings {found!r}")
+        lines = PATH_LINE.findall(read)
+        if {len(ids), len(found), len(lines)} != {expected}:
+            problems.append(f"{name}: expected {expected} of each, got ids {ids!r}, "
+                            f"slot findings {found!r} and line citations {lines!r}")
     issues = ROOT / "issues"
     for path, expected in ((issues / "todo" / "x.md", True), (issues / "README.md", False),
                            (issues / "todo" / "x.yaml", False),
