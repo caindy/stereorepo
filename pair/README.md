@@ -46,48 +46,55 @@ running, so a gate a seat runs in the background belongs to the turn that
 started it. A seat whose turn would end with such a task running is asked,
 once, to wait for it or stop it. After every turn the loop commits whatever
 the seat left uncommitted, with a `Seat:` trailer. It then keeps the turn's
-closing message in the Issue file: it appends the message under a
-`## Pair notes` heading, labelled with the seat, the stage and the turn, and
-commits it on its own (`Loop.keep_note`). The other seat reads the note in
-its next diff. A seat learns nothing else of what the other said, and the
-notes land in `issues/done/` with the Issue. Every line is quoted with `> `,
-so a note never adds a heading the loop reads, such as `Needs elaboration` or
-`The plan`. A code span citing a path and a line comes out as the path
-followed by `line` and the number (`board.with_note`): the seat's gate never
-saw its note, so a line citation in it would otherwise fail the
-`no line citations` step on the next seat's turn. The note is not the seat's
-change: a turn whose only change is its note is quiet. The section is the
-loop's, too: before it judges a turn, the loop puts the `Pair notes` back as
-they stood when the turn began (`Loop.restore_notes`), so a note a seat writes
-there itself, or its tidying of earlier notes, is dropped and never counts as
-a change. Everything outside the section, a seat's `# Needs elaboration` after
-the notes included, stays as the seat left it. The turn's row in
-`turns.jsonl` says `"notes_restored": true` when that put anything back. A
-grooming pass, a turn that lost its Issue file, and an empty message keep no
-note. An implementing seat runs only the gate of each Project its change touches: `just gate meta` always, and
-`just gate pair` when it changes `pair/`, for example
-(`prompts/stage-in-progress.md`). The loop's own gate runs before the Issue
-lands (see the table below), and a failure goes back to the seats with its
-output and the targets gated. It gates the Projects whose directories the
-branch changes against `main`, a path under none of them counting as `meta`'s
-(or, when a Project is named `.`, as that root Project's, unless the board,
-`.meta/` or `.meta/bundle.yaml` places it), and every Project of each Product
-built from one of them (`touched.py`, stereorepo's DR-303). A change to what a
-portfolio receives, an item `.meta/bundle.yaml` marks `managed` or the source
-of one it marks `template`, also gates the Project `specialization` where the
-structure declares it, which specializes a portfolio and runs that
-portfolio's gate (stereorepo's DR-321). When that is every
-Project it is the whole `just gate`, and a branch with no change passes
+note in the Issue file: the note the seat itself added to the `Pair notes`
+this turn, when it added one, and the turn's closing message otherwise. It
+appends the note under a `## Pair notes` heading, labelled with the seat, the
+stage and the turn, and commits it on its own (`Loop.keep_note`). The other
+seat reads the note in its next diff. A seat learns nothing else of what the
+other said, and the notes land in `issues/done/` with the Issue. Every line is
+quoted with `> `, so a note never adds a heading the loop reads, such as
+`Needs elaboration` or `The plan`. A code span citing a path and a line comes
+out as the path followed by `line` and the number (`board.with_note`): the
+seat's gate never saw its note, so a line citation in it would otherwise fail
+the `no line citations` step on the next seat's turn. The note is not the
+seat's change: a turn whose only change is its note is quiet. The section is
+the loop's, too: before it judges a turn, the loop puts the `Pair notes` back
+as they stood when the turn began (`Loop.restore_notes`), so neither a note a
+seat writes there itself nor its tidying of earlier notes counts as a change.
+What the seat added, lines after the last line a section had or a section of
+its own, then comes back as the turn's note, quoted and labelled like any
+other, with one level of `> ` and any copied label taken off
+(`board.added_note`); its edits to earlier notes stay put back. A section runs
+to the next heading of its level or above, so a subheading in a seat's note
+stays part of the note. Everything outside the section, a seat's
+`# Needs elaboration` after the notes included, stays as the seat left it. The turn's
+row in `turns.jsonl` says `"notes_restored": true` when the loop put anything
+back, and `"note_from"` is `"seat"` or `"message"` for where the kept note
+came from, or `null` when it kept none. A grooming pass, a turn that lost its
+Issue file, and a turn with neither a note of its own nor a closing message
+keep no note. An implementing seat runs only the gate of each Project its
+change touches: `just gate meta` always, and `just gate pair` when it changes
+`pair/`, for example (`prompts/stage-in-progress.md`). The loop's own gate
+runs before the Issue lands (see the table below), and a failure goes back to
+the seats with its output and the targets gated. It gates the Projects whose
+directories the branch changes against `main`, a path under none of them
+counting as `meta`'s (or, when a Project is named `.`, as that root Project's,
+unless the board, `.meta/` or `.meta/bundle.yaml` places it), and every
+Project of each Product built from one of them (`touched.py`, stereorepo's
+DR-303). A change to what a portfolio receives, an item `.meta/bundle.yaml`
+marks `managed` or the source of one it marks `template`, also gates the
+Project `specialization` where the structure declares it, which specializes a
+portfolio and runs that portfolio's gate (stereorepo's DR-321). When that is
+every Project it is the whole `just gate`, and a branch with no change passes
 without one. A break that the directories do not show, through a shared tool
 or a generated file, lands unchecked: the decision accepts that risk for the
 minutes the whole gate cost on every landing. No seat runs the whole
-`just gate` in any stage, even when an Issue names it
-(`prompts/primary.md`, `prompts/secondary.md`), and grooming states how an
-Issue will be known done in behaviour and tests, never as a gate
-(`prompts/stage-backlog.md`, `prompts/stage-grooming.md`). A seat working
-on speed measures once before its change and once after, and runs no
-repeated or side-by-side comparisons (`prompts/primary.md`,
-`prompts/secondary.md`).
+`just gate` in any stage, even when an Issue names it (`prompts/primary.md`,
+`prompts/secondary.md`), and grooming states how an Issue will be known done
+in behaviour and tests, never as a gate (`prompts/stage-backlog.md`,
+`prompts/stage-grooming.md`). A seat working on speed measures once before its
+change and once after, and runs no repeated or side-by-side comparisons
+(`prompts/primary.md`, `prompts/secondary.md`).
 
 1. **Acceptance.** A turn that changes nothing is a quiet turn: that seat
    accepts the state it found. A turn that changes something makes its author

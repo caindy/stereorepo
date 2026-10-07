@@ -13,6 +13,7 @@ import threading
 from collections import OrderedDict
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -192,7 +193,7 @@ def last_of(body: str, names: tuple[str, ...]) -> str | None:
 
 
 PAIR_NOTES = "Pair notes"
-"""The section of an Issue file where the loop keeps each turn's closing message."""
+"""The section of an Issue file where the loop keeps each turn's note."""
 
 # A path and a line cited as one code span. This is a copy of `PATH_LINE` in
 # `.meta/checks/citations/claims.py`, the `no line citations` step, which
@@ -235,24 +236,28 @@ def _note_spans(lines: list[str], stops: Collection[str]) -> list[tuple[int, int
     """The `[start, end)` line ranges of each `Pair notes` section in `lines`.
 
     A section opens at a heading or bold lead named `Pair notes`, at any
-    level, and ends before the next heading, the next bold lead named in
-    `stops`, or the end. Any other bold lead stays inside it, so a seat that
-    copies a note's label has not opened a section of its own. A quoted line
-    never matches `_HEADING`, since its `>` comes first.
+    level, and ends before the next heading of its level or above, the next
+    heading or bold lead named in `stops` or `Pair notes`, or the end. A
+    section opened by a bold lead ends at any heading. A deeper heading and
+    any other bold lead stay inside it, so a seat that copies a note's label,
+    or gives its own note a subheading, has not opened a section of its own.
+    A quoted line never matches `_HEADING`, since its `>` comes first.
     """
     notes, ends = PAIR_NOTES.lower(), {stop.lower() for stop in stops}
     spans: list[tuple[int, int]] = []
-    start = None
+    start, opened = None, 0
     for i, line in enumerate(lines):
         head = _HEADING.match(line.strip())
         if not head:
             continue
         name = head["name"].strip().lower()
-        if start is not None and (line.strip().startswith("#") or name in ends | {notes}):
+        level = len(line.strip()) - len(line.strip().lstrip("#"))
+        ends_here = name in ends | {notes} or (level and (not opened or level <= opened))
+        if start is not None and ends_here:
             spans.append((start, i))
             start = None
         if name == notes:
-            start = i
+            start, opened = i, level
     if start is not None:
         spans.append((start, len(lines)))
     return spans
@@ -309,6 +314,46 @@ def restore_notes(before: str, after: str, stops: Collection[str]) -> str:
     ):
         text = text.rstrip() + before[len(before.rstrip()) :]
     return after if text == after else text
+
+
+# A note's label as `with_note` writes it, such as `**primary, todo turn 2**`.
+_LABEL = re.compile(r"\*\*[^*]+, [\w-]+ turn \d+\*\*")
+
+
+def added_note(before: str, after: str, stops: Collection[str]) -> str:
+    """The note a seat added to `after`'s `Pair notes` since `before`, or "".
+
+    A seat adds a note by writing lines after the last line a section had in
+    `before`, or by opening a section `before` lacks, the n-th section of
+    each file being the same one, as in `restore_notes`. Whatever else the
+    seat changed in a section is an edit, which `restore_notes` puts back and
+    which is no part of the note, and a section whose last line the seat
+    changed gives nothing. The note comes out as it would go in
+    `with_note`: when every line is quoted, one level of `> ` comes off, and
+    any line shaped like a note's label goes, so a seat that copies the look
+    of the loop's notes is not quoted twice or labelled twice.
+    """
+    old, new = before.splitlines(), after.splitlines()
+    kept = [_core(old[a:b]) for a, b in _note_spans(old, stops)]
+    added: list[str] = []
+    for n, (a, b) in enumerate(_note_spans(new, stops)):
+        lines = _core(new[a:b])
+        if n >= len(kept):
+            added += ["", *lines[1:]]
+        else:
+            tag, i1, _, j1, j2 = SequenceMatcher(
+                None, kept[n], lines, autojunk=False
+            ).get_opcodes()[-1]
+            if tag == "insert" and i1 == len(kept[n]):
+                added += ["", *lines[j1:j2]]
+    if all(line.startswith(">") for line in added if line.strip()):
+        added = [re.sub(r"^> ?", "", line) for line in added]
+    out: list[str] = []
+    for line in added:
+        if _LABEL.fullmatch(line.strip()) or not (line.strip() or (out and out[-1])):
+            continue
+        out.append(line.rstrip())
+    return "\n".join(out).strip()
 
 
 def bullets(text: str) -> list[str]:

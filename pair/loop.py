@@ -13,12 +13,14 @@ whether the gate passes) and decides what happens next:
   section, and sits out until the developer answers it.
 - Otherwise the other seat takes the next turn.
 
-After each turn the loop also keeps the seat's closing message in the issue
-file, quoted under `## Pair notes` (`Loop.keep_note`), where the other seat
-reads it in its diff. The note is not the seat's change, so it never makes a
-turn count as one. The section is the loop's: before judging a turn, `settle`
-puts back whatever the seat wrote, edited or deleted there
-(`Loop.restore_notes`), so a seat's own note never counts as a change either.
+After each turn the loop also keeps the turn's note in the issue file, quoted
+under `## Pair notes` (`Loop.keep_note`), where the other seat reads it in its
+diff: the note the seat added there itself, when it added one, and its
+closing message otherwise. The note is not the seat's change, so it never
+makes a turn count as one. The section is the loop's: before judging a turn,
+`settle` puts back whatever the seat wrote, edited or deleted there
+(`Loop.restore_notes`), and `keep_note` then writes back only what the seat
+added, in the loop's own form.
 
 The loop takes the next issue in running order as it stands, a ripe Flight
 first, and starts it by moving its file from `issues/backlog/` to
@@ -957,10 +959,10 @@ class Loop:
                 )
                 if result is None:
                     return "paused"
-                quiet, restored = self.settle(st, role)
-                self.keep_note(st, role, result)
+                quiet, restored, own = self.settle(st, role)
+                note_from = self.keep_note(st, role, result, own)
                 st.in_turn = None
-                self.record(st, role, result, quiet, notes_restored=restored)
+                self.record(st, role, result, quiet, notes=(restored, note_from))
                 outcome = self.decide(st, role, quiet)
                 if outcome:
                     return outcome
@@ -1156,11 +1158,12 @@ class Loop:
         self.save(st)
         return True
 
-    def settle(self, st: State, role: str) -> tuple[bool, bool]:
+    def settle(self, st: State, role: str) -> tuple[bool, bool, str]:
         """Put the issue file back, commit leftovers, and say if the turn was quiet.
 
         The second value says whether the seat's edits to the Pair notes were
-        put back (`restore_notes`).
+        put back, and the third is the note the seat added there, which
+        `keep_note` writes back as the turn's note (`restore_notes`).
         """
         where = board.locations(self.wt, st.slug)
         at = home(st.stage)
@@ -1178,7 +1181,9 @@ class Loop:
             self.say(
                 f"moved {st.slug}.md back to {at}/ after the {role} seat moved it"
             )
-        restored = st.stage != GROOMING and self.restore_notes(st, at)
+        restored, note = (
+            self.restore_notes(st, at) if st.stage != GROOMING else (False, "")
+        )
         if restored:
             self.say(f"put back the {role} seat's edits to the Pair notes")
         head, dirty = board.head_and_dirty(self.wt)
@@ -1201,9 +1206,9 @@ class Loop:
         if not quiet and role not in st.seats_used:
             st.seats_used.append(role)
         st.head = st.seen[role] = head
-        return quiet, restored
+        return quiet, restored, note
 
-    def restore_notes(self, st: State, at: str) -> bool:
+    def restore_notes(self, st: State, at: str) -> tuple[bool, str]:
         """Put the issue file's `Pair notes` back as they stood at `st.head`.
 
         The sections are the loop's (`keep_note`, `keep_gate`), so a seat's
@@ -1211,39 +1216,47 @@ class Loop:
         and never resets the approvals. A file that had no notes at
         `st.head` loses any the seat added. A turn that lost its file
         restores nothing, and `decide` sends it back. Says whether the file
-        changed.
+        changed, and what note the seat added (`board.added_note`), which
+        `keep_note` puts back in the loop's own form.
         """
         rel = f"{board.ISSUES}/{at}/{st.slug}.md"
         path = self.wt / rel
         if not path.exists():
-            return False
+            return False, ""
         shown = git_run(self.wt, "show", f"{st.head}:{rel}")
         before = shown.stdout if shown.returncode == 0 else ""
         after = path.read_text()
         restored = board.restore_notes(before, after, NOTE_STOPS)
         if restored == after:
-            return False
+            return False, ""
         path.write_text(restored)
-        return True
+        return True, board.added_note(before, after, NOTE_STOPS)
 
-    def keep_note(self, st: State, role: str, result: TurnResult) -> None:
-        """Append the turn's closing message to the issue file and commit it.
+    def keep_note(
+        self, st: State, role: str, result: TurnResult, own: str = ""
+    ) -> str | None:
+        """Append the turn's note to the issue file and commit it.
 
-        `settle` has already judged the turn from the seat's own changes, so
-        the note never makes a turn count as a change. Moving `st.head` keeps
-        `absorb_developer` from taking the note's commit for the developer's,
-        and moving `st.seen[role]` past it keeps the seat from being shown its
-        own note, while the other seat sees it in its diff. A grooming pass has
-        no issue file, and a turn that lost its file is sent back by `decide`.
+        The note is `own`, what the seat itself added to the Pair notes this
+        turn, when it added anything, and the turn's closing message
+        otherwise; says which, as "seat" or "message", or None when no note
+        was kept. `settle` has already judged the turn from the seat's own
+        changes, so the note never makes a turn count as a change. Moving
+        `st.head` keeps `absorb_developer` from taking the note's commit for
+        the developer's, and moving `st.seen[role]` past it keeps the seat
+        from being shown its own note, while the other seat sees it in its
+        diff. A grooming pass has no issue file, and a turn that lost its
+        file is sent back by `decide`.
         """
-        if st.stage == GROOMING or not result.text.strip():
-            return
+        note, source = (own, "seat") if own.strip() else (result.text, "message")
+        if st.stage == GROOMING or not note.strip():
+            return None
         issue = board.read(self.wt, st.slug)
         if issue is None:
-            return
+            return None
         path = self.wt / issue.path
         label = f"{role}, {st.stage} turn {st.turn + 1}"
-        path.write_text(board.with_note(path.read_text(), label, result.text))
+        path.write_text(board.with_note(path.read_text(), label, note))
         git(self.wt, "add", "--", issue.path)
         git(
             self.wt,
@@ -1255,6 +1268,7 @@ class Loop:
             "Seat: loop",
         )
         st.head = st.seen[role] = git(self.wt, "rev-parse", "HEAD")
+        return source
 
     def record(
         self,
@@ -1263,8 +1277,14 @@ class Loop:
         result: TurnResult,
         quiet: bool,
         *,
-        notes_restored: bool = False,
+        notes: tuple[bool, str | None] = (False, None),
     ) -> None:
+        """Append the turn's row to `turns.jsonl` and say how the turn went.
+
+        `notes` says whether `settle` put back the seat's edits to the Pair
+        notes and where `keep_note` took the turn's note from.
+        """
+        notes_restored, note_from = notes
         usage = result.usage
         row = {
             "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -1274,6 +1294,7 @@ class Loop:
             "role": role,
             "quiet": quiet,
             "notes_restored": notes_restored,
+            "note_from": note_from,
             "session": result.session_id,
             "seconds": round(result.seconds, 1),
             "input": usage.get("input_tokens"),

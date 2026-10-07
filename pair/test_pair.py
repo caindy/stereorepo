@@ -1646,6 +1646,7 @@ class PairNotesTest(unittest.TestCase):
         rows = turn_rows(b.loop)
         self.assertEqual([row["quiet"] for row in rows], [True, True])
         self.assertEqual([row["notes_restored"] for row in rows], [False, False])
+        self.assertEqual([row["note_from"] for row in rows], ["message", "message"])
         self.assertFalse([line for line in said if "Pair notes" in line])
         self.assertEqual(st.seats_used, [])
 
@@ -1715,7 +1716,8 @@ class PairNotesTest(unittest.TestCase):
         self.assertFalse(any(row["notes_restored"] for row in turn_rows(b.groomer)))
 
     # The Pair notes are the loop's: `settle` puts back whatever a seat
-    # changed in them before it judges the turn (`Loop.restore_notes`).
+    # changed in them before it judges the turn (`Loop.restore_notes`), and
+    # `keep_note` writes back what the seat added as the turn's note.
 
     def notes_after(self, *turns: tuple[str, object]) -> tuple[str, list[dict[str, Any]]]:
         """Run the primary's note "A." and then `turns`; the body and the turn rows."""
@@ -1726,16 +1728,19 @@ class PairNotesTest(unittest.TestCase):
         b.loop.run()
         return b.issue_in_worktree("x").body, turn_rows(b.loop)
 
-    def test_a_seats_own_note_is_put_back_and_its_turn_stays_quiet(self) -> None:
+    def test_a_seats_own_note_is_its_turns_note_and_its_turn_stays_quiet(self) -> None:
         body, rows = self.notes_after(
             ("secondary", Says("B.", append("x", "\nMy own note.\n")))
         )
         self.assertEqual(self.b.state().stage, "todo")
-        self.assertNotIn("My own note.", body)
-        self.assertEqual(body.count("**secondary, backlog turn 2**"), 1)
-        self.assertTrue(body.endswith("> A.\n\n> **secondary, backlog turn 2**\n>\n> B.\n"))
+        self.assertNotIn("> B.", body)
+        self.assertEqual(body.count("My own note."), 1)
+        self.assertTrue(
+            body.endswith("> A.\n\n> **secondary, backlog turn 2**\n>\n> My own note.\n")
+        )
         self.assertEqual([row["quiet"] for row in rows], [True, True])
         self.assertEqual([row["notes_restored"] for row in rows], [False, True])
+        self.assertEqual([row["note_from"] for row in rows], ["message", "seat"])
         self.assertIn("put back the secondary seat's edits to the Pair notes", self.said)
 
     def test_an_earlier_note_a_seat_deleted_comes_back(self) -> None:
@@ -1744,13 +1749,14 @@ class PairNotesTest(unittest.TestCase):
         self.assertIn("> **primary, backlog turn 1**\n>\n> A.\n", body)
         self.assertEqual([row["quiet"] for row in rows], [True, True])
 
-    def test_a_turn_that_changed_code_keeps_it_and_loses_its_own_note(self) -> None:
+    def test_a_turn_that_changed_code_keeps_it_and_its_own_note(self) -> None:
         body, rows = self.notes_after(
             ("secondary", Says("B.", both(write("a.txt", "x\n"), append("x", "\nMine.\n")))),
             ("primary", quiet),
         )
         self.assertEqual((self.b.loop.wt / "a.txt").read_text(), "x\n")
-        self.assertNotIn("Mine.", body)
+        self.assertIn("> **secondary, backlog turn 2**\n>\n> Mine.\n", body)
+        self.assertNotIn("> B.", body)
         self.assertEqual([row["quiet"] for row in rows], [True, False, True])
         self.assertEqual([row["notes_restored"] for row in rows], [False, True, False])
 
@@ -1763,15 +1769,34 @@ class PairNotesTest(unittest.TestCase):
         self.assertIn("What for?", sh(self.b.repo, "show", "main:issues/backlog/x.md"))
         self.assertEqual([row["notes_restored"] for row in rows], [False, False])
 
-    def test_unquoted_lines_after_the_notes_are_dropped_under_a_copied_label_too(
-        self,
-    ) -> None:
+    def test_a_label_a_seat_copied_into_its_note_is_not_kept_twice(self) -> None:
         seat = "\nA paragraph.\n\n**secondary, backlog turn 2**\n\nCopied.\n"
         body, rows = self.notes_after(("secondary", Says("B.", append("x", seat))))
-        self.assertNotIn("A paragraph.", body)
-        self.assertNotIn("Copied.", body)
+        self.assertTrue(
+            body.endswith(
+                "> **secondary, backlog turn 2**\n>\n> A paragraph.\n>\n> Copied.\n"
+            )
+        )
         self.assertEqual(body.count("**secondary, backlog turn 2**"), 1)
         self.assertEqual([row["quiet"] for row in rows], [True, True])
+
+    def test_a_note_a_seat_quoted_like_the_loops_is_not_quoted_twice(self) -> None:
+        seat = "\n> **secondary, backlog turn 2**\n>\n> Quoted.\n"
+        body, _ = self.notes_after(("secondary", Says("B.", append("x", seat))))
+        self.assertTrue(body.endswith("> A.\n\n> **secondary, backlog turn 2**\n>\n> Quoted.\n"))
+        self.assertNotIn("> >", body)
+
+    def test_a_seats_edit_to_an_earlier_note_is_put_back_and_its_own_note_kept(
+        self,
+    ) -> None:
+        def edit(cwd: Path) -> None:
+            issue = cwd / board.ISSUES / "underway" / "x.md"
+            issue.write_text(issue.read_text().replace("turn 1**", "turn 1, edited**") + "\nNew.\n")
+
+        body, rows = self.notes_after(("secondary", Says("B.", edit)))
+        self.assertNotIn("edited", body)
+        self.assertTrue(body.endswith("> A.\n\n> **secondary, backlog turn 2**\n>\n> New.\n"))
+        self.assertEqual([row["note_from"] for row in rows], ["message", "seat"])
 
     def test_a_pair_notes_section_a_seat_added_leaves_only_the_loops(self) -> None:
         b = self.b
@@ -1782,8 +1807,10 @@ class PairNotesTest(unittest.TestCase):
         b.loop.run()
         body = b.issue_in_worktree("x").body
         self.assertEqual(board.sections(body, "Pair notes"), 1)
-        self.assertNotIn("Mine.", body)
-        self.assertIn("Some words.\n\n## Pair notes\n\n> **primary, backlog turn 1**", body)
+        self.assertNotIn("> A.", body)
+        self.assertIn(
+            "Some words.\n\n## Pair notes\n\n> **primary, backlog turn 1**\n>\n> Mine.\n", body
+        )
         self.assertEqual([row["quiet"] for row in turn_rows(b.loop)], [True, True])
 
     def test_two_notes_sections_restore_by_order_and_keep_the_plan_between(
@@ -1798,14 +1825,14 @@ class PairNotesTest(unittest.TestCase):
 
         def edit(cwd: Path) -> None:
             issue = cwd / "issues" / "underway" / "x.md"
-            text = issue.read_text().replace("> One.\n", "> One.\nExtra.\n")
+            text = issue.read_text().replace("> One.\n", "> One, edited.\n")
             issue.write_text(text.replace("Do it.", "Do it well."))
 
         b.script(("primary", edit))
         b.loop.run()
         body = b.issue_in_worktree("x").body
         self.assertIn("> One.\n\n## The plan\n\nDo it well.\n" + later, body)
-        self.assertNotIn("Extra.", body)
+        self.assertNotIn("One, edited.", body)
         rows = turn_rows(b.loop)
         self.assertEqual([(row["quiet"], row["notes_restored"]) for row in rows], [(False, True)])
 
@@ -4251,6 +4278,28 @@ class BoardTest(unittest.TestCase):
         self.assertEqual(
             board.restore_notes(noted, bare + "\nMore body.\n", stops),
             bare + "\nMore body.\n" + noted.removeprefix(bare),
+        )
+
+    def test_added_note_is_what_a_seat_wrote_after_the_notes_and_no_edit(self) -> None:
+        stops = ("Needs elaboration", "The plan")
+        before = board.with_note("# T\n\nBody.\n", "primary, x turn 1", "One.")
+        self.assertEqual(board.added_note(before, before, stops), "")
+        for seat, note in (
+            ("\nMine.\n", "Mine."),
+            ("\n**primary, x turn 2**\n\nCopied.\n", "Copied."),
+            ("\n> **primary, x turn 2**\n>\n> Quoted.\n>\n> Twice.\n", "Quoted.\n\nTwice."),
+            ("\n## Pair notes\n\nAnother.\n", "Another."),
+            ("\nMine.\n\n### Details\n\nMore.\n", "Mine.\n\n### Details\n\nMore."),
+            ("\nMine.\n\n## Next\n\nMore.\n", "Mine."),
+            ("\n\n", ""),
+            ("\n# Needs elaboration\n\nWhy?\n", ""),
+        ):
+            self.assertEqual(board.added_note(before, before + seat, stops), note)
+        edited = before.replace("> **primary", "> Above.\n> **primary")
+        self.assertEqual(board.added_note(before, edited + "\nNew.\n", stops), "New.")
+        self.assertEqual(board.added_note(before, before.replace("> One.", "> Uno."), stops), "")
+        self.assertEqual(
+            board.added_note("# T\n", "# T\n\n## Pair notes\n\nFirst.\n", stops), "First."
         )
 
     def test_section_reads_headings_and_bold_leads(self) -> None:
