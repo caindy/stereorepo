@@ -13,7 +13,8 @@ import pathlib
 import tempfile
 from typing import Any
 
-from checks.citations import slots
+from checks.citations import loaders, slots
+from checks.citations.prose import flat
 from checks.collect import ROOT, CouldNotRun, Found, Index, check
 
 
@@ -360,3 +361,48 @@ def cited_schema_slot_probes() -> list[str]:
         + _probe_product_schemas()
     )
 
+
+@check("pair notes probes", pre=True)
+def pair_notes_probes() -> list[str]:
+    """Verify that the citation steps skip the quoted lines of an Issue's `Pair notes`.
+
+    A seat that fixes a refused citation quotes it when its note explains the
+    fix, and the note must not fail the next turn. `loaders.without_notes`
+    blanks those lines, and a decision id and a `Class.slot` citation left in
+    the body, in an unquoted line under the notes, after a bold lead that ends
+    them, or in a quote outside them are still read. The citations are spelled
+    from variables, because written out they would be citations of this file.
+
+    Returns:
+        list[str]: Findings naming cases whose outcome did not match expectations.
+    """
+    number, slot = 999, "nonsense_xyz"
+    cites = f"DR-{number} and Article.{slot}"
+    indices = slots.SlotIndices(
+        class_slots={"Article": {"statement"}}, all_slots={"statement"}, former_slots={}
+    )
+    notes = f"## Pair notes\n\n> **primary, x turn 1**\n>\n> Fixed {cites}.\n  > Also {cites}.\n"
+    cases = (
+        ("quoted in the notes", f"# T\n\nBody.\n\n{notes}", 0),
+        ("in the body above quoted notes", f"# T\n\nSee {cites}.\n\n{notes}", 1),
+        ("unquoted under the notes", f"# T\n\nBody.\n\n{notes}\nSaid {cites}.\n", 1),
+        ("quoted after a stop", f"# T\n\n{notes}\n**The plan**\n\n> Use {cites}.\n", 1),
+        ("quoted outside the notes", f"# T\n\n> Use {cites}.\n", 1),
+        ("quoted under a subheading of the notes", f"# T\n\n{notes}\n### S\n\n> {cites}.\n", 0),
+        ("quoted after a heading ending the notes", f"# T\n\n{notes}\n## N\n\n> {cites}.\n", 1),
+    )
+    problems: list[str] = []
+    for name, text, expected in cases:
+        read = loaders.without_notes(text)
+        ids = loaders.DR.findall(read)
+        found = slots.check_prose_spans([flat(read)], "issue.md", indices, set())
+        if len(ids) != expected or len(found) != expected:
+            problems.append(f"{name}: expected {expected} of each, got ids {ids!r} "
+                            f"and slot findings {found!r}")
+    issues = ROOT / "issues"
+    for path, expected in ((issues / "todo" / "x.md", True), (issues / "README.md", False),
+                           (issues / "todo" / "x.yaml", False),
+                           (ROOT / "wiki" / "x" / "y.md", False)):
+        if loaders.is_issue(path) is not expected:
+            problems.append(f"is_issue({path.relative_to(ROOT)}) is not {expected}")
+    return problems

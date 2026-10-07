@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml
 
+from checks.citations import loaders
 from checks.collect import META
 
 # A12 asks three things of a citation and `cited decisions` resolves one of them:
@@ -99,7 +100,8 @@ def prose(path: pathlib.Path) -> list[str]:
     """Extract an assertion's leaf scalars or a page flattened to a single span.
 
     For YAML, yields each parsed scalar string as its own span. For Markdown, strips
-    fenced code blocks and flattens the remaining page into a single span. Comments
+    fenced code blocks and flattens the remaining page into a single span; an Issue
+    file is read without the quoted lines of its `Pair notes` (`loaders.read`). Comments
     are not prose here: the YAML parser ignores them and Markdown retains them in the
     flattened page; callers that need comment blocks call `comments()` beside this.
 
@@ -111,7 +113,7 @@ def prose(path: pathlib.Path) -> list[str]:
         flattened page span with fenced code blocks removed (for Markdown).
     """
     try:
-        text = path.read_text()
+        text = loaders.read(path)
     except (UnicodeDecodeError, OSError):
         return []
     if path.suffix in (".yaml", ".yml"):

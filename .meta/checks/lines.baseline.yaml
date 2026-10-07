@@ -22,7 +22,7 @@
 .meta/check.py: 1
 .meta/checks/citations/__init__.py: 1
 .meta/checks/citations/claims.py: 4
-.meta/checks/citations/loaders.py: 1
+.meta/checks/citations/loaders.py: 0
 .meta/checks/citations/prose.py: 1
 .meta/checks/citations/record.py: 7
 .meta/checks/collect.py: 2

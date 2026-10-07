@@ -35,7 +35,7 @@ def cited_decisions(index: dict[str, Any]) -> list[str]:
     for path in loaders.durable(copied):
         seeded = TEMPLATE in path.parents
         try:
-            text = FENCED.sub("", path.read_text())
+            text = FENCED.sub("", loaders.read(path))
         except (UnicodeDecodeError, OSError):
             continue
         rel = path.relative_to(ROOT)
@@ -96,7 +96,7 @@ def enacting_citations(index: dict[str, Any]) -> list[str]:
         if rel not in named:
             continue
         try:
-            text = FENCED.sub("", path.read_text())
+            text = FENCED.sub("", loaders.read(path))
         except (UnicodeDecodeError, OSError):
             continue
         foreign = {num for m in loaders.FOREIGN.finditer(text) for num in loaders.DR.findall(m.group())}

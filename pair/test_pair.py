@@ -6,6 +6,7 @@ Run across worker processes: uv run --script pair/gate.py
 
 from __future__ import annotations
 
+import ast
 import collections
 import contextlib
 import dataclasses
@@ -31,6 +32,7 @@ import board
 import gate
 import touched
 from loop import (
+    NOTE_STOPS,
     GateFailure,
     GateUnrunnable,
     Loop,
@@ -4231,6 +4233,22 @@ class BoardTest(unittest.TestCase):
         self.assertIsNone(
             re.search(r"`[^`\s:]*[./][^`\s:]*:\d+`", out),
         )
+
+    def test_the_citation_steps_copy_where_a_note_section_ends(self) -> None:
+        # The steps skip quoted notes, and `.meta/` cannot import `pair/`.
+        # Parsed, not imported: `loaders` needs `linkml_runtime`, which these
+        # tests do not carry.
+        source = Path(__file__).parent.parent / ".meta/checks/citations/loaders.py"
+        found = {
+            node.targets[0].id: node.value
+            for node in ast.parse(source.read_text()).body
+            if isinstance(node, ast.Assign) and isinstance(node.targets[0], ast.Name)
+        }
+        self.assertEqual(ast.literal_eval(found["NOTES"]), board.PAIR_NOTES)
+        self.assertEqual(ast.literal_eval(found["NOTE_STOPS"]), NOTE_STOPS)
+        heading = found["HEADING"]
+        assert isinstance(heading, ast.Call)
+        self.assertEqual(ast.literal_eval(heading.args[0]), board._HEADING.pattern)
 
     def test_notes_share_a_trailing_section_and_never_join_a_later_one(self) -> None:
         once = board.with_note("# T\n", "primary, x turn 1", "One.")
