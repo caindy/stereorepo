@@ -1,5 +1,22 @@
 # stereorepo
 
+`<human>`
+
+👋 Hi! I built this to teach my other repos how to work. Everything--issues,
+vocabulary, roadmap, etc.--is written to the working repo. For now it assumes
+one human directing one set of agents' pairing loop. It's not meant to
+tmux/herdr a bunch of WezTerm panes. Nor is this trying to be a
+[meta-harness](./wiki/stereorepo/meta-harness.md), though I do use it with
+Codex, Claude, agy, and Copilot. There are much better options out there if you
+want to work that way: [firstmate](https://github.com/kunchenguid/firstmate) [swarmforge](https://github.com/unclebob/swarm-forge) [openrig](https://github.com/mvschwarz/openrig).
+
+No, this is serialized and incremental, almost ponderous. I got tired of a huge
+merge queue and backing out major missteps. You can add issues asynchronously,
+but all delivery runs through a pair of agents collaborating on one issue at a
+time.
+
+`</human>`
+
 **Stereo** for the pairing: two seats work each issue, like two channels
 carrying one signal. And for the **stereotype**, a printing plate cast from a
 mould to stamp out copies, which is what this repository is: a template you
