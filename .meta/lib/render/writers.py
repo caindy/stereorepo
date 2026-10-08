@@ -52,6 +52,11 @@ CONDITIONAL_RECIPES: tuple[ConditionalRecipe, ...] = (
         "pair-watch *args:",
         "    uv run --quiet --script pair/pair.py watch {{args}}",
     )),
+    ConditionalRecipe(PAIR, "pair-replay", (
+        "# run a landed Issue again in a scratch clone: SLUG --mode single|pair (--force)",
+        "pair-replay *args:",
+        "    uv run --quiet --script pair/pair.py replay {{args}}",
+    )),
     ConditionalRecipe("work:artifact/meta-test-specialization", "test-specialization", (
         "# Specialization, end to end, in a scratch repository (stereorepo's DR-347, DR-244)",
         "test-specialization *args:",

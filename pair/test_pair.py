@@ -29,9 +29,11 @@ from unittest import mock
 
 import board
 import gate
+import replay
 import touched
 from loop import (
     NOTE_STOPS,
+    ROLES,
     GateFailure,
     GateUnrunnable,
     Loop,
@@ -45,6 +47,7 @@ from loop import (
     status,
     status_json,
     status_view,
+    supervise,
     unwritable_pages,
 )
 from seats import (
@@ -2190,6 +2193,218 @@ class SingleSeatTest(unittest.TestCase):
                 arguments().parse_args([name, "--single-seat"])
 
 
+SINGLE_RUN = (
+    ("primary", quiet),
+    ("primary", append("x", PLAN)),
+    ("primary", quiet),
+    ("primary", write("a.txt", "again\n")),
+    ("primary", quiet),
+)
+"""The turns that carry an `easy` Issue `x` to `main` with the primary seat alone."""
+
+PAIR_RUN = (
+    ("primary", quiet),
+    ("secondary", quiet),
+    ("primary", append("x", PLAN)),
+    ("secondary", quiet),
+    ("primary", write("a.txt", "again\n")),
+    ("secondary", quiet),
+)
+"""The turns that carry an `easy` Issue `x` to `main`, or a `developer` one to its desk check."""
+
+
+class ReplayTest(unittest.TestCase):
+    """`replay`: a landed Issue run again from its start commit in a scratch clone."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+
+    def landed(self, slug: str = "x", difficulty: str = "easy") -> str:
+        """Commit a history in which `slug` started and landed; return the commit it started from.
+
+        At the start, `issues/backlog/` also holds `other`, which `ORDER` names,
+        `todo/` holds `doing`, and `done/` holds `old`.
+        """
+        b = self.b
+        b.issue("done", "old", "Old")
+        b.issue("todo", "doing", "Doing")
+        b.issue("backlog", "other", "Other", difficulty="easy")
+        b.issue("backlog", slug, slug.upper(), difficulty=difficulty)
+        write(board.ORDER, f"other\n{slug}\n")(b.repo)
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "order")
+        start = sh(b.repo, "rev-parse", "HEAD")
+        sh(b.repo, "mv", f"issues/backlog/{slug}.md", f"issues/underway/{slug}.md")
+        sh(b.repo, "commit", "-q", "-m", f"Start {slug}")
+        sh(b.repo, "mv", f"issues/underway/{slug}.md", f"issues/done/{slug}.md")
+        write("a.txt", "first\n")(b.repo)
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", slug.upper())
+        sh(b.repo, "commit", "-q", "--allow-empty", "-m", f"Start {slug}-and-more")
+        return start
+
+    def make_loop(self, clone: Path, mode: str) -> Loop:
+        """A loop on the clone whose seats play the bench's script, and whose gate passes."""
+        b = self.b
+
+        def seat(role: str, cwd: Path, resume: str | None, _model: str | None) -> FakeSeat:
+            b.opened.append((role, resume))
+            return FakeSeat(role, cwd, resume, b, loop)
+
+        loop = Loop(
+            clone,
+            seat,
+            lambda _tree, _targets, _env: (True, ""),
+            b.notes.append,
+            prompts=PROMPTS,
+            say=lambda _m: None,
+            mode=mode,
+        )
+        return loop
+
+    def replay(self, slug: str = "x", mode: str = "pair", *, force: bool = False) -> dict[str, Any]:
+        return replay.replay(self.b.repo, slug, mode, self.make_loop, force=force)
+
+    def test_a_replay_in_each_mode_keeps_its_logs_diff_and_outcome(self) -> None:
+        start = self.landed()
+        for mode, turns in (("single", SINGLE_RUN), ("pair", PAIR_RUN)):
+            with self.subTest(mode=mode):
+                self.b.script(*turns)
+                done = self.replay(mode=mode)
+                home = replay.replay_dir(self.b.repo, "x", mode)
+                self.assertEqual(
+                    {p.name for p in home.iterdir()},
+                    {
+                        f"replay-x-{mode}",
+                        "turns.jsonl",
+                        "events.jsonl",
+                        "landed.diff",
+                        "outcome.json",
+                    },
+                )
+                kept = json.loads((home / "outcome.json").read_text())
+                self.assertEqual(kept, done)
+                self.assertEqual(
+                    (kept["outcome"], kept["mode"], kept["start"]), ("landed", mode, start)
+                )
+                rows = [
+                    json.loads(line)
+                    for line in (home / "turns.jsonl").read_text().splitlines()
+                ]
+                roles = {row["role"] for row in rows}
+                self.assertEqual(roles, {"primary"} if mode == "single" else set(ROLES))
+                self.assertEqual({row["mode"] for row in rows}, {mode})
+                diff = (home / "landed.diff").read_text()
+                self.assertIn("+again", diff)
+                self.assertIn("issues/done/x.md", diff)
+                self.assertNotIn("doing.md", diff)
+                self.assertFalse((self.b.pairs / f"replay-x-{mode}.json").exists())
+
+    def test_the_source_is_left_as_it_was_and_the_clone_has_no_remote(self) -> None:
+        b = self.b
+        self.landed()
+        sh(b.repo, "remote", "add", "origin", "https://example.com/r.git")
+        before = [sh(b.repo, *args) for args in SOURCE_STATE]
+        b.script(*PAIR_RUN)
+        self.replay()
+        self.assertEqual([sh(b.repo, *args) for args in SOURCE_STATE], before)
+        clone = replay.replay_dir(b.repo, "x", "pair") / "replay-x-pair"
+        self.assertEqual(sh(clone, "remote"), "")
+
+    def test_the_clone_starts_with_only_the_replayed_issue_in_its_backlog(self) -> None:
+        b = self.b
+        start = self.landed()
+        b.script(*PAIR_RUN)
+        self.replay()
+        clone = replay.replay_dir(b.repo, "x", "pair") / "replay-x-pair"
+        base = sh(clone, "rev-list", "-1", "--grep=^Replay x$", "main")
+        self.assertEqual(sh(clone, "rev-parse", f"{base}^"), start)
+
+        def listed(stage: str) -> list[str]:
+            return sh(clone, "ls-tree", "--name-only", f"{base}:issues/{stage}").split()
+
+        self.assertEqual(listed("backlog"), ["ORDER", "README.md", "x.md"])
+        self.assertEqual(listed("todo"), ["README.md"])
+        self.assertEqual(listed("done"), ["README.md", "old.md"])
+        self.assertEqual(sh(clone, "show", f"{base}:{board.ORDER}"), "x")
+
+    def test_a_developer_issue_lands_through_its_accepted_desk_check(self) -> None:
+        self.landed(difficulty="developer")
+        self.b.script(*PAIR_RUN)
+        done = self.replay()
+        self.assertEqual((done["outcome"], done["answer"]), ("landed", "landed"))
+        events = replay.replay_dir(self.b.repo, "x", "pair") / "events.jsonl"
+        kinds = [json.loads(line)["kind"] for line in events.read_text().splitlines()]
+        self.assertIn("desk-check", kinds)
+        self.assertEqual(kinds[-1], "ended")
+
+    def test_an_issue_sent_back_for_elaboration_is_recorded_as_sent_back(self) -> None:
+        self.landed()
+        self.b.script(("primary", append("x", "\n# Needs elaboration\n\nWhich x?\n")))
+        self.assertEqual(self.replay()["outcome"], "sent-back")
+        home = replay.replay_dir(self.b.repo, "x", "pair")
+        diff = (home / "landed.diff").read_text()
+        self.assertEqual(
+            [line for line in diff.splitlines() if line.startswith("diff --git")],
+            ["diff --git a/issues/backlog/x.md b/issues/backlog/x.md"],
+        )
+        self.assertIn("+# Needs elaboration", diff)
+
+    def test_a_slug_that_never_started_is_refused(self) -> None:
+        self.landed()
+        with self.assertRaisesRegex(replay.RefusalError, "nowhere"):
+            self.replay("nowhere")
+        with self.assertRaisesRegex(replay.RefusalError, "x-and"):
+            self.replay("x-and")
+
+    def test_a_flight_split_after_its_start_is_refused(self) -> None:
+        b = self.b
+        self.landed("f")
+        b.issue("backlog", "part", "Part", parent="f")
+        with self.assertRaisesRegex(replay.RefusalError, "f is a Flight"):
+            self.replay("f")
+
+    def test_a_second_replay_needs_force_and_force_replaces_the_first(self) -> None:
+        b = self.b
+        self.landed()
+        b.script(("primary", append("x", "\n# Needs elaboration\n\nWhich x?\n")))
+        self.replay()
+        with self.assertRaisesRegex(replay.RefusalError, "--force"):
+            self.replay()
+        b.issue("backlog", "part", "Part", parent="x")
+        with self.assertRaisesRegex(replay.RefusalError, "x is a Flight"):
+            self.replay(force=True)
+        self.assertEqual(
+            json.loads(
+                (replay.replay_dir(b.repo, "x", "pair") / "outcome.json").read_text()
+            )["outcome"],
+            "sent-back",
+        )
+        sh(b.repo, "rm", "-q", "issues/backlog/part.md")
+        sh(b.repo, "commit", "-q", "-m", "no part")
+        b.script(*PAIR_RUN)
+        self.assertEqual(self.replay(force=True)["outcome"], "landed")
+
+    def test_an_issue_off_the_board_at_its_start_is_refused_and_leaves_no_clone(self) -> None:
+        b = self.b
+        self.landed()
+        sh(b.repo, "commit", "-q", "--allow-empty", "-m", "Start ghost")
+        for _ in range(2):
+            with self.assertRaisesRegex(replay.RefusalError, "ghost: not on the board"):
+                self.replay("ghost")
+            self.assertFalse(replay.replay_dir(b.repo, "ghost", "pair").exists())
+
+
+SOURCE_STATE = (
+    ("rev-parse", "main"),
+    ("status", "--porcelain"),
+    ("remote", "-v"),
+    ("worktree", "list", "--porcelain"),
+)
+"""The git commands whose output a replay leaves as it was in its source."""
+
+
 class GateSelectionTest(unittest.TestCase):
     """The loop gates the Projects a change touches and the Products built from them (DR-303)."""
 
@@ -3935,8 +4150,6 @@ class EventLogTest(unittest.TestCase):
         )
 
     def test_a_supervisor_logs_its_end_and_its_crash(self) -> None:
-        from pair import supervise
-
         repo = self.b.repo
         self.assertEqual(supervise(repo, "pair", lambda: "landed"), "landed")
 

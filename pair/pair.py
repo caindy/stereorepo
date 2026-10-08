@@ -14,6 +14,8 @@ stays wherever this file is, outside that repository's tree (see README.md):
     uv run --script <stereorepo>/pair/pair.py accept [SLUG] [--model M] [--STAGE-model M]
     uv run --script <stereorepo>/pair/pair.py resume [SLUG] [--model M] [--STAGE-model M]
     uv run --script <stereorepo>/pair/pair.py watch --until landed|developer|flight SLUG
+    uv run --script <stereorepo>/pair/pair.py replay SLUG --mode single|pair [--force]
+        [--model M] [--STAGE-model M] [--round-cap N]
 
 With `--flight`, `run` works only that Flight and the Issues below it, and
 stops when the Flight reaches its desk check.
@@ -38,6 +40,10 @@ runs alongside `run`.
 `watch` prints the events both log to `.pair/events.jsonl` until its
 condition is met, and exits non-zero if the loops it watches end first.
 
+`replay` runs a landed Issue again from the commit it started from, in a
+scratch clone under `.pair/replays/<slug>-<mode>/` with no remote, and keeps
+its logs, its landed diff and its outcome there (`replay.py`).
+
 `run`, `groom`, `accept` and `resume` print their outcome as `pair: <outcome>`
 and exit with the code `EXIT` gives it, 0 when nothing more is needed.
 
@@ -57,9 +63,10 @@ import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
-from typing import IO
+from typing import IO, Any
 
-from loop import FLIGHT_CHECK, Loop, append_event, status, status_json
+from loop import FLIGHT_CHECK, Loop, status, status_json, supervise
+from replay import RefusalError, replay, replay_dir
 from seats import ClaudeSeat
 from watch import CONDITIONS, watch
 
@@ -343,7 +350,66 @@ def arguments() -> argparse.ArgumentParser:
         metavar="CONDITION",
         help="landed, developer (a desk check, a pause or a send-back), or flight SLUG",
     )
+    again = sub.add_parser(
+        "replay",
+        parents=[seats, stages],
+        help="run a landed Issue again from its start commit, in a scratch clone",
+    )
+    again.add_argument("slug", help="the landed Issue to replay")
+    again.add_argument(
+        "--mode", choices=("single", "pair"), required=True, help="the seats that run it"
+    )
+    again.add_argument(
+        "--force", action="store_true", help="delete an earlier replay of it in this mode"
+    )
     return parser
+
+
+def build_loop(repo: Path, args: argparse.Namespace, **settings: Any) -> Loop:
+    """The loop the command line asks for, on `repo`, with Claude Code seats.
+
+    `settings` are the `Loop` keywords that differ between commands.
+    """
+    system = {
+        role: (PROMPTS / f"{role}.md").read_text() for role in ("primary", "secondary")
+    }
+    loop = Loop(
+        repo,
+        lambda role, cwd, resume, model: ClaudeSeat(
+            role, cwd, system[role], loop.dir, resume=resume, model=model
+        ),
+        gate,
+        notify,
+        prompts=PROMPTS,
+        provision=provision,
+        deliver=deliver,
+        say=lambda message: print(message, flush=True),
+        round_cap=args.round_cap,
+        model=args.model,
+        stage_models={
+            stage: getattr(args, f"{stage.replace('-', '_')}_model", None)
+            for stage in STAGE_MODELS
+        },
+        **settings,
+    )
+    return loop
+
+
+def run_replay(repo: Path, args: argparse.Namespace) -> int:
+    """`replay`: exit 0 whatever the replay's outcome, which is its finding."""
+
+    def make_loop(clone: Path, mode: str) -> Loop:
+        loop = build_loop(clone, args, mode=mode)
+        signal.signal(signal.SIGINT, stopper(loop))
+        return loop
+
+    try:
+        done = replay(repo, args.slug, args.mode, make_loop, force=args.force)
+    except RefusalError as refused:
+        print(refused)
+        return EXIT["refused"]
+    print(f"pair: {done['outcome']} (kept in {replay_dir(repo, args.slug, args.mode)})")
+    return 0
 
 
 def main() -> int:
@@ -360,31 +426,16 @@ def main() -> int:
         return 0
     if args.command == "watch":
         return watch(repo, args.until, out=lambda line: print(line, flush=True))
+    if args.command == "replay":
+        return run_replay(repo, args)
 
     started = code_fingerprint(HERE)
     kind = "groom" if args.command == "groom" else "pair"
-    system = {
-        role: (PROMPTS / f"{role}.md").read_text() for role in ("primary", "secondary")
-    }
-    loop = Loop(
+    loop = build_loop(
         repo,
-        lambda role, cwd, resume, model: ClaudeSeat(
-            role, cwd, system[role], loop.dir, resume=resume, model=model
-        ),
-        gate,
-        notify,
-        prompts=PROMPTS,
+        args,
         push=getattr(args, "push", False),
-        provision=provision,
-        deliver=deliver,
-        say=lambda message: print(message, flush=True),
-        round_cap=args.round_cap,
         kind=kind,
-        model=args.model,
-        stage_models={
-            stage: getattr(args, f"{stage.replace('-', '_')}_model", None)
-            for stage in STAGE_MODELS
-        },
         code_changed=lambda: code_fingerprint(HERE) != started,
         restart=reexec if args.command == "run" else None,
         mode="single" if getattr(args, "single_seat", False) else "pair",
@@ -413,24 +464,6 @@ def main() -> int:
     outcome = supervise(repo, kind, work)
     print(f"pair: {outcome}")
     return EXIT[outcome]
-
-
-def supervise(repo: Path, kind: str, work: Callable[[], str]) -> str:
-    """Run a supervisor's `work` and log its end, which a watcher waits for.
-
-    The `ended` event carries the outcome `work` answers, `abandoned` on a
-    second Ctrl-C, and `crashed` on any other exception, which is raised
-    again.
-    """
-    outcome = "crashed"
-    try:
-        outcome = work()
-    except KeyboardInterrupt:
-        outcome = "abandoned"
-        raise
-    finally:
-        append_event(repo, kind, "ended", outcome=outcome)
-    return outcome
 
 
 if __name__ == "__main__":

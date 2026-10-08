@@ -207,6 +207,24 @@ def append_event(  # noqa: PLR0913  # reason: the keyword-only main and report a
         report(failed)
 
 
+def supervise(repo: Path, kind: str, work: Callable[[], str]) -> str:
+    """Run a supervisor's `work` and log its end, which a watcher waits for.
+
+    The `ended` event carries the outcome `work` answers, `abandoned` on a
+    second Ctrl-C, and `crashed` on any other exception, which is raised
+    again.
+    """
+    outcome = "crashed"
+    try:
+        outcome = work()
+    except KeyboardInterrupt:
+        outcome = "abandoned"
+        raise
+    finally:
+        append_event(repo, kind, "ended", outcome=outcome)
+    return outcome
+
+
 def groom_targets(repo: Path) -> frozenset[str]:
     """The Issues a grooming pass underway took up, which the loop leaves alone.
 
