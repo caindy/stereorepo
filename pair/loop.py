@@ -998,10 +998,13 @@ class Loop:
                 )
                 if result is None:
                     return "paused"
-                quiet, restored, own = self.settle(st, role)
+                files, restored, own = self.settle(st, role)
+                quiet = not files
                 note_from = self.keep_note(st, role, result, own)
                 st.in_turn = None
-                self.record(st, role, result, quiet, notes=(restored, note_from))
+                self.record(
+                    st, role, result, files=files, notes=(restored, note_from)
+                )
                 outcome = self.decide(st, role, quiet)
                 if outcome:
                     return outcome
@@ -1197,10 +1200,11 @@ class Loop:
         self.save(st)
         return True
 
-    def settle(self, st: State, role: str) -> tuple[bool, bool, str]:
-        """Put the issue file back, commit leftovers, and say if the turn was quiet.
+    def settle(self, st: State, role: str) -> tuple[list[str], bool, str]:
+        """Put the issue file back, commit leftovers, and say what the turn changed.
 
-        The second value says whether the seat's edits to the Pair notes were
+        The first value is the paths the turn changed, sorted; none means the
+        turn was quiet. The second value says whether the seat's edits to the Pair notes were
         put back, and the third is the note the seat added there, which
         `keep_note` writes back as the turn's note (`restore_notes`).
         """
@@ -1239,13 +1243,15 @@ class Loop:
                     f"Seat: {role}",
                 )
                 head = git(self.wt, "rev-parse", "HEAD")
-        quiet = head == st.head or not git(
-            self.wt, "diff", "--name-only", st.head, head
+        files = (
+            []
+            if head == st.head
+            else sorted(git(self.wt, "diff", "--name-only", st.head, head).splitlines())
         )
-        if not quiet and role not in st.seats_used:
+        if files and role not in st.seats_used:
             st.seats_used.append(role)
         st.head = st.seen[role] = head
-        return quiet, restored, note
+        return files, restored, note
 
     def restore_notes(self, st: State, at: str) -> tuple[bool, str]:
         """Put the issue file's `Pair notes` back as they stood at `st.head`.
@@ -1314,16 +1320,18 @@ class Loop:
         st: State,
         role: str,
         result: TurnResult,
-        quiet: bool,
         *,
+        files: Sequence[str] = (),
         notes: tuple[bool, str | None] = (False, None),
     ) -> None:
         """Append the turn's row to `turns.jsonl` and say how the turn went.
 
-        `notes` says whether `settle` put back the seat's edits to the Pair
+        `files` are the paths the turn changed, as `settle` found them; a
+        quiet turn changed none. `notes` says whether `settle` put back the seat's edits to the Pair
         notes and where `keep_note` took the turn's note from.
         """
         notes_restored, note_from = notes
+        quiet = not files
         usage = result.usage
         row = {
             "at": time.strftime("%Y-%m-%dT%H:%M:%S"),
@@ -1333,6 +1341,7 @@ class Loop:
             "role": role,
             "mode": st.mode,
             "quiet": quiet,
+            "files": list(files),
             "notes_restored": notes_restored,
             "note_from": note_from,
             "session": result.session_id,

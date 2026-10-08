@@ -64,6 +64,10 @@ pair-watch *args:
 pair-replay *args:
     uv run --quiet --script pair/pair.py replay {{args}}
 
+# report the replays kept, by mode: (--fixed-by SLUG=FIX ...) (--diff SLUG)
+pair-replay-report *args:
+    uv run --quiet --script pair/pair.py report {{args}}
+
 # Specialization, end to end, in a scratch repository (stereorepo's DR-347, DR-244)
 test-specialization *args:
     uvx --python 3.13 --with pyyaml python .meta/test_specialization.py {{args}}

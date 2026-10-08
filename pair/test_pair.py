@@ -30,6 +30,7 @@ from unittest import mock
 import board
 import gate
 import replay
+import report
 import touched
 from loop import (
     NOTE_STOPS,
@@ -1764,6 +1765,13 @@ class PairNotesTest(unittest.TestCase):
         self.assertEqual([row["quiet"] for row in rows], [True, False, True])
         self.assertEqual([row["notes_restored"] for row in rows], [False, True, False])
 
+    def test_a_turn_row_names_the_files_the_turn_changed(self) -> None:
+        _body, rows = self.notes_after(
+            ("secondary", Says("B.", both(write("b.txt", "y\n"), write("a.txt", "x\n")))),
+            ("primary", quiet),
+        )
+        self.assertEqual([row["files"] for row in rows], [[], ["a.txt", "b.txt"], []])
+
     def test_a_seats_needs_elaboration_after_the_notes_stays_and_sends_it_back(
         self,
     ) -> None:
@@ -2403,6 +2411,237 @@ SOURCE_STATE = (
     ("worktree", "list", "--porcelain"),
 )
 """The git commands whose output a replay leaves as it was in its source."""
+
+
+def repository(path: Path, files: Mapping[str, str]) -> Path:
+    """A git repository at `path` whose `main` holds `files`, in one commit."""
+    path.mkdir(parents=True)
+    sh(path, "init", "-q", "-b", "main")
+    for key, value in (("user.name", "Bench"), ("user.email", "b@x"), ("commit.gpgsign", "false")):
+        sh(path, "config", key, value)
+    for rel, text in files.items():
+        (path / rel).parent.mkdir(parents=True, exist_ok=True)
+        (path / rel).write_text(text)
+    sh(path, "add", "-A")
+    sh(path, "commit", "-q", "--allow-empty", "-m", "start")
+    return path
+
+
+def turn(role: str, stage: str = "todo", **fields: Any) -> dict[str, Any]:
+    """A turn row as `Loop.record` writes it, with `fields` over its defaults."""
+    row = {"slug": "x", "stage": stage, "role": role, "quiet": True, "files": [],
+           "cost_usd": 0.1, "cache_read": 10, "cache_write": 1}
+    return {**row, **fields}
+
+
+def cell(text: str, title: str, label: str) -> list[str]:
+    """The values of the row `label` in the block `title` of a report: single, pair, original."""
+    block = text.split(f"{title}\n", 1)[1].split("\n\n", 1)[0]
+    cells = ([p.strip() for p in line.split("  ") if p.strip()] for line in block.splitlines())
+    return {parts[0]: parts[1:] for parts in cells if parts}[label]
+
+
+class ReplayReportTest(unittest.TestCase):
+    """`report`: the replays kept, by mode, on the four criteria, beside the original run."""
+
+    MODULE = "def value():\n    return 1\n"
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tmp = Path(tmp.name)
+        self.source = repository(self.tmp / "source", {
+            "issues/done/x.md": "---\ndifficulty: easy\n---\n# X\n",
+            "issues/done/y.md": "---\ndifficulty: easy\n---\n# Y\n",
+        })
+
+    def kept(  # noqa: PLR0913  # reason: each keyword is one file of a fixture replay
+        self,
+        slug: str = "x",
+        mode: str = "pair",
+        *,
+        outcome: str = "landed",
+        seconds: float = 60,
+        turns: Sequence[Mapping[str, Any]] = (),
+        events: Sequence[Mapping[str, Any]] = (),
+        diff: str = "",
+        clone: Mapping[str, str] | None = None,
+    ) -> Path:
+        """A replay directory as `replay.replay` keeps it, with a clone holding `clone`'s files."""
+        home = replay.replay_dir(self.source, slug, mode)
+        home.mkdir(parents=True)
+        (home / "outcome.json").write_text(json.dumps(
+            {"slug": slug, "mode": mode, "outcome": outcome, "seconds": seconds}
+        ))
+        (home / "turns.jsonl").write_text("".join(json.dumps(r) + "\n" for r in turns))
+        (home / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in events))
+        (home / "landed.diff").write_text(diff)
+        if clone is not None:
+            repository(home / f"replay-{slug}-{mode}", clone)
+        return home
+
+    def report(self, **fixed_by: list[str]) -> str:
+        text = report.report(self.source, fixed_by, command=[sys.executable])
+        assert text is not None
+        return text
+
+    def test_both_modes_print_every_criterion_and_sum_the_tokens(self) -> None:
+        self.kept(mode="single", turns=[turn("primary"), turn("primary", "in-progress")])
+        self.kept(
+            turns=[
+                turn("primary", cost_usd=None),
+                turn("secondary", quiet=False, files=["a.py"]),
+                turn("secondary", "in-progress"),
+            ],
+            events=[
+                {"kind": "gated", "outcome": "failed"},
+                {"kind": "gated", "outcome": "passed"},
+                {"kind": "paused"},
+                {"kind": "sent-back"},
+            ],
+            clone={"issues/done/x.md": "# X\n\n# Needs elaboration\n\nMore.\n"},
+        )
+        text = self.report()
+        title = "x (easy)"
+        self.assertEqual(cell(text, title, "outcome"), ["landed", "landed", "missing"])
+        self.assertEqual(cell(text, title, "gate runs (not passed)"), ["0 (0)", "2 (1)", "missing"])
+        self.assertEqual(cell(text, title, "defect check"), ["none", "none", "missing"])
+        self.assertEqual(cell(text, title, "secondary turns changed"), ["n/a", "1 of 2", "missing"])
+        self.assertEqual(cell(text, title, "secondary turns' files"), ["n/a", "a.py", "missing"])
+        self.assertEqual(cell(text, title, "pauses"), ["0", "1", "missing"])
+        self.assertEqual(cell(text, title, "send-backs"), ["0", "1", "missing"])
+        self.assertEqual(cell(text, title, "needs elaboration"), ["0", "1", "missing"])
+        self.assertEqual(cell(text, title, "wall-clock seconds"), ["60", "60", "missing"])
+        self.assertEqual(
+            cell(text, title, "turns per stage"),
+            ["in-progress 1, todo 1", "in-progress 1, todo 2", "missing"],
+        )
+        self.assertEqual(
+            cell(text, title, "cost (USD)"), ["0.20", "0.20 (1 rows lacked it)", "missing"]
+        )
+        self.assertEqual(cell(text, title, "cache read tokens"), ["20", "30", "missing"])
+        self.assertEqual(cell(text, title, "cache write tokens"), ["2", "3", "missing"])
+
+    def test_the_slugs_of_one_difficulty_are_summed(self) -> None:
+        self.kept("x", turns=[turn("secondary", quiet=False, files=["a.py"])])
+        self.kept("y", outcome="paused", seconds=30,
+                  turns=[turn("secondary", quiet=False, files=["b.py"])])
+        title = "difficulty easy, 2 slugs summed"
+        text = self.report()
+        self.assertEqual(cell(text, title, "outcome")[1], "landed 1, paused 1")
+        self.assertEqual(cell(text, title, "secondary turns changed")[1], "2 of 2")
+        self.assertEqual(cell(text, title, "secondary turns' files")[1], "a.py, b.py")
+        self.assertEqual(cell(text, title, "wall-clock seconds")[1], "90")
+        self.assertEqual(cell(text, title, "cost (USD)")[1], "0.20")
+
+    def test_a_mode_not_replayed_is_missing_and_a_single_replay_has_no_secondary(self) -> None:
+        self.kept(mode="single", turns=[turn("primary", quiet=False, files=["a.py"])])
+        text = self.report()
+        self.assertEqual(cell(text, "x (easy)", "outcome"), ["landed", "missing", "missing"])
+        self.assertEqual(cell(text, "x (easy)", "secondary turns changed")[0], "n/a")
+
+    def test_with_no_replays_the_report_says_so_and_exits_non_zero(self) -> None:
+        from pair import NO_REPLAYS, arguments, run_report
+
+        self.assertIsNone(report.report(self.source))
+        parser = arguments()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            code = run_report(self.source, parser, parser.parse_args(["report"]))
+        self.assertEqual(code, NO_REPLAYS)
+        self.assertIn("no replays kept", out.getvalue())
+
+    def test_the_original_run_comes_from_the_sources_own_logs(self) -> None:
+        self.kept("x")
+        self.kept("y")
+        logs = self.source / ".pair"
+        logs.mkdir(exist_ok=True)
+        (logs / "turns.jsonl").write_text("".join(json.dumps(r) + "\n" for r in [
+            turn("primary"),
+            turn("secondary", quiet=False),
+            {k: v for k, v in turn("secondary", quiet=False).items() if k != "files"},
+            turn("primary", slug="other"),
+        ]))
+        (logs / "events.jsonl").write_text("".join(json.dumps(e) + "\n" for e in [
+            {"at": "2026-10-01T10:00:00", "kind": "started", "slug": "x"},
+            {"at": "2026-10-01T10:05:00", "kind": "gated", "slug": "x", "outcome": "passed"},
+            {"at": "2026-10-01T10:20:30", "kind": "landed", "slug": "x"},
+        ]))
+        text = self.report()
+        self.assertEqual(cell(text, "x (easy)", "outcome")[2], "landed")
+        self.assertEqual(cell(text, "x (easy)", "gate runs (not passed)")[2], "1 (0)")
+        self.assertEqual(cell(text, "x (easy)", "wall-clock seconds")[2], "1230")
+        self.assertEqual(cell(text, "x (easy)", "secondary turns changed")[2], "2 of 2")
+        self.assertEqual(
+            cell(text, "x (easy)", "secondary turns' files")[2], "- (1 turns' files not logged)"
+        )
+        self.assertEqual(cell(text, "x (easy)", "defect check")[2], "n/a")
+        self.assertEqual(cell(text, "y (easy)", "outcome")[2], "missing")
+        self.assertIn(report.ORIGINAL, text)
+
+    def fix(self, test: str) -> None:
+        """Land Issue `fix` on the source's `main`, adding `test` as `pkg/test_mod.py`."""
+        path = self.source / "pkg" / "test_mod.py"
+        path.parent.mkdir(exist_ok=True)
+        path.write_text(
+            "import unittest\n\n" + test + "\n\nclass ModTest(unittest.TestCase):\n"
+            "    def test_old(self):\n        pass\n"
+        )
+        sh(self.source, "add", "-A")
+        sh(self.source, "commit", "-q", "-m", "Old test")
+        path.write_text(path.read_text() + "\n    def test_value(self):\n        check(self)\n")
+        sh(self.source, "add", "-A")
+        sh(self.source, "commit", "-q", "-m", "Fix it", "-m", "Issue: issues/done/fix.md")
+
+    def defect(self, test: str) -> tuple[str, str]:
+        """The defect check of a replay of `x` whose clone's `value()` returns 1."""
+        home = self.kept(clone={"issues/done/x.md": "# X\n", "pkg/mod.py": self.MODULE})
+        clone = home / "replay-x-pair"
+        before = [sh(clone, *args) for args in SOURCE_STATE[:2] + SOURCE_STATE[3:]]
+        self.fix(test)
+        text = self.report(x=["fix"])
+        self.assertEqual(
+            [sh(clone, *args) for args in SOURCE_STATE[:2] + SOURCE_STATE[3:]], before
+        )
+        return cell(text, "x (easy)", "defect check")[1], text
+
+    def test_a_fix_whose_added_test_fails_against_the_replay_finds_the_defect(self) -> None:
+        result, _ = self.defect(
+            "from mod import value\n\ndef check(case):\n    case.assertEqual(value(), 2)"
+        )
+        self.assertEqual(result, "failed")
+
+    def test_a_fix_whose_added_test_passes_against_the_replay_finds_none(self) -> None:
+        result, _ = self.defect(
+            "from mod import value\n\ndef check(case):\n    case.assertEqual(value(), 1)"
+        )
+        self.assertEqual(result, "passed")
+
+    def test_a_fix_whose_test_imports_a_name_the_replay_lacks_could_not_run(self) -> None:
+        result, text = self.defect("from mod import other\n\ndef check(case):\n    pass")
+        self.assertEqual(result, "could-not-run")
+        self.assertIn("defect: fix: ImportError", text)
+
+    def test_a_replay_that_did_not_land_is_not_checked_against_main(self) -> None:
+        home = self.kept(
+            outcome="paused", clone={"issues/done/x.md": "# X\n", "pkg/mod.py": self.MODULE}
+        )
+        clone = home / "replay-x-pair"
+        before = sh(clone, "worktree", "list", "--porcelain")
+        self.fix("from mod import value\n\ndef check(case):\n    case.assertEqual(value(), 2)")
+        text = self.report(x=["fix"])
+        self.assertEqual(cell(text, "x (easy)", "defect check")[1], "could-not-run")
+        self.assertIn("defect: x pair: paused, so its change is not on main", text)
+        self.assertEqual(sh(clone, "worktree", "list", "--porcelain"), before)
+
+    def test_diff_prints_each_modes_landed_diff_under_its_heading(self) -> None:
+        self.kept(mode="single", diff="single change\n")
+        self.kept(diff="pair change\n")
+        self.assertEqual(
+            report.diffs(self.source, "x"),
+            "=== x, single ===\nsingle change\n\n=== x, pair ===\npair change\n",
+        )
+        self.assertIn("missing: no pair replay of y", report.diffs(self.source, "y"))
 
 
 class GateSelectionTest(unittest.TestCase):
@@ -3987,8 +4226,9 @@ class TurnLogTest(unittest.TestCase):
 
     def test_a_row_records_the_turns_denials(self) -> None:
         st = State(slug="x")
-        self.b.loop.record(st, "primary", TurnResult(True, denied=["x=$(pwd)", "Write"]), False)
-        self.b.loop.record(st, "secondary", TurnResult(True), True)
+        denied = TurnResult(True, denied=["x=$(pwd)", "Write"])
+        self.b.loop.record(st, "primary", denied, files=["a.txt"])
+        self.b.loop.record(st, "secondary", TurnResult(True))
         self.assertEqual(
             [(row["denials"], row["denied"]) for row in self.rows()],
             [(2, ["x=$(pwd)", "Write"]), (0, [])],

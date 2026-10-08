@@ -53,6 +53,20 @@ its `turns.jsonl` and `events.jsonl`, the `landed.diff` and an
 refused, since its work landed in its parts, and so is a second replay of the
 same slug and mode without `--force`. `replay.py` holds the details.
 
+`just pair-replay-report` reads every replay kept there and prints, for each
+slug and then summed by difficulty, a column for each mode and a third,
+`original`, taken from this repository's own `.pair/` logs. The original
+run used older loop code and models. Each column gives the outcome, the gate
+runs, a defect check, the secondary seat's turns that changed something and
+their files, pauses, send-backs, `Needs elaboration` headings, wall-clock,
+turns per stage, cost, and cache reads and writes. The defect check runs the
+unittest tests that a later fixing Issue added against the replay's result.
+The fixing Issue is named by `--fixed-by <slug>=<fix>` or by a `fixed_by:`
+list in the replay's `outcome.json`. `--diff <slug>` prints the two modes'
+`landed.diff` instead. Each `turns.jsonl` row names the files its turn changed
+in `files`; rows written before the field existed show as `files not logged`.
+`report.py` holds the details.
+
 The loop's code lives here, outside every portfolio's tree. It was proven in a
 spike in booktutor, where the seats read the loop's own code when it sat in the
 repository they worked on; a portfolio runs it from a stereorepo checkout so
@@ -319,6 +333,7 @@ path the landing changes pause it at once.
 | run one Flight | `just pair --flight <slug>` |
 | run with one seat | `just pair --single-seat` |
 | replay a landed Issue | `just pair-replay <slug> --mode single`, or `--mode pair`; add `--force` to replace an earlier replay |
+| compare the replays | `just pair-replay-report`, with `--fixed-by <slug>=<fix>` for each later fix to check; `just pair-replay-report --diff <slug>` for the two landed diffs |
 | watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway with its last gate, the running order with each Flight's parts and what holds each item back, and the counts per stage; `just pair-status --json` prints the same state as one JSON object, keyed `waiting`, `underway`, `order`, `to_groom`, `counts`, `sessions` and `turns`, whose fields `status_view` in `loop.py` describes, and which the loop also publishes for a cockpit (see [The published status](#the-published-status)); `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
 | wait for the loop | `just pair-watch --until landed`, `--until developer` (a desk check, a pause or a send-back) or `--until flight <slug>` (that Flight reaches `desk-check/`); see [The event log](#the-event-log) |
 | steer an Issue or a pass underway | edit files in `worktrees/pair`, or `worktrees/groom` for a pass, between turns; the next seat sees the change |
@@ -351,8 +366,10 @@ driving the loop reads the code instead of the line.
 | 11 | | another loop or grooming pass holds the lock |
 | 12 | | `just pair-watch`: every loop it watched ended without meeting its condition |
 | 13 | | `just pair-watch`: no loop or grooming pass is running |
+| 14 | | `just pair-replay-report`: no replay is kept |
 
 `just pair-watch` exits 0, 12 or 13; see [The event log](#the-event-log).
+`just pair-replay-report` exits 0 or 14.
 1 is a crash (an uncaught exception) and 2 a usage error.
 
 Runtime state lives in `.pair/` at the repository root, which is gitignored:

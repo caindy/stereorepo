@@ -57,6 +57,11 @@ CONDITIONAL_RECIPES: tuple[ConditionalRecipe, ...] = (
         "pair-replay *args:",
         "    uv run --quiet --script pair/pair.py replay {{args}}",
     )),
+    ConditionalRecipe(PAIR, "pair-replay-report", (
+        "# report the replays kept, by mode: (--fixed-by SLUG=FIX ...) (--diff SLUG)",
+        "pair-replay-report *args:",
+        "    uv run --quiet --script pair/pair.py report {{args}}",
+    )),
     ConditionalRecipe("work:artifact/meta-test-specialization", "test-specialization", (
         "# Specialization, end to end, in a scratch repository (stereorepo's DR-347, DR-244)",
         "test-specialization *args:",
