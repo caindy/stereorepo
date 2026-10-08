@@ -310,19 +310,35 @@ overlap ones kept: `land-retries-a-passing-race` (the landing chain),
 `seat-sandbox-rust-builds` (the sandbox, as `seat-sandbox-permissions`).
 Other is not in the ten, since no Issue there has a fix.
 
-# Needs elaboration
+## Chosen sample
 
-The `## Proposal` above is complete and checked, but the loop cannot carry
-this Issue to its desk check. The in-progress stage closes only once
-something outside `issues/` has changed on the branch (`requirement` in
-`pair/loop.py`), and this Issue's work is data in its own file: "No code
-changes". Neither seat should invent a change outside `issues/` to get past
-that.
+Chosen by the developer on 8 October 2026: the recommended ten first, in both
+modes. The other eight are a second round, replayed only if the first leaves
+the decision open.
 
-The developer can choose the sample from the proposal as it stands and
-write `## Chosen sample` here, then move this file to `issues/done/` by
-hand. The gap in the loop is filed as
-`issues/backlog/land-an-issue-whose-work-is-its-file.md`.
+First round:
+
+1. `pair-notes`
+2. `seat-sandbox-permissions`
+3. `squash-reverts-commits-on-main`
+4. `fresh-seat-after-refusal`
+5. `notes-rewrite-refused-citations`
+6. `specialized-portfolio-gate`
+7. `release-recipe-is-scaffold-only`
+8. `bootstrap-render-step`
+9. `seed-rendered-gate-lost`
+10. `adoption-discipline`
+
+Second round, if needed: `land-retries-a-passing-race`,
+`pair-notes-belong-to-the-loop`, `claude-seat-test-stalls-under-load`,
+`seat-sandbox-rust-builds`, `release-apm-package`,
+`claim-scope-note-channel-verb`, `rename-discipline-journaling` and
+`template-excludes-retired-say-path`.
+
+The loop could not carry this Issue to its desk check, because its work is
+its own file and the `in-progress` stage closes only on a change outside
+`issues/` (`land-an-issue-whose-work-is-its-file`). The developer completed
+it by hand, moving it to `issues/done/` with this section.
 
 ## Pair notes
 
