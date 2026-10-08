@@ -1,3 +1,7 @@
+---
+difficulty: hard
+---
+
 # Find out whether the pair is worth its second seat
 
 The pair loop runs two seats on every Issue, which roughly doubles what an
@@ -15,6 +19,22 @@ started from a known commit (the parent of its `Start <slug>` commit on
 fixed. Replaying a sample of them in both modes, from the commit each
 started from, compares the same Issue on the same code with only the seat
 count changed. Nothing a replay does reaches `main`.
+
+## Parts
+
+This Issue is a Flight. Its parts land in this order, and the Flight's check
+comes after the last of them:
+
+1. `replay-sample-proposal` (`developer`): the proposed sample, with its
+   cost, for the developer to choose from at its desk check.
+2. `single-seat-mode`: the flag on `just pair` that runs every turn as the
+   primary seat, and the mode in `turns.jsonl` and `started` events.
+3. `replay-landed-issue`: the recipe that replays one landed Issue in either
+   mode in a scratch clone.
+4. `replay-report`: the recipe that prints the four criteria for each mode
+   over the replays kept.
+5. `pair-mode-decision` (`developer`): the replays of the chosen sample, the
+   Decision Record, and `pair/README.md`.
 
 ## Wanted
 
