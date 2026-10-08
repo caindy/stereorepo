@@ -4,6 +4,7 @@ parent: pair-versus-single-seat
 waits_on:
   - replay-sample-proposal
   - replay-report
+  - replay-in-the-era-it-replays
 ---
 
 # Decide which mode the loop runs by default
