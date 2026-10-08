@@ -23,7 +23,7 @@ PAIR = "work:artifact/pair"
 CONDITIONAL_RECIPES: tuple[ConditionalRecipe, ...] = (
     ConditionalRecipe(PAIR, "pair", (
         "# the pair loop: carry issues to main"
-        " (--once, --push, --flight SLUG, --model, --STAGE-model)",
+        " (--once, --push, --flight SLUG, --single-seat, --model, --STAGE-model)",
         "pair *args:",
         "    uv run --quiet --script pair/pair.py run {{args}}",
     )),

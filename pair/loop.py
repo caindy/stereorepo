@@ -13,6 +13,11 @@ whether the gate passes) and decides what happens next:
   section, and sits out until the developer answers it.
 - Otherwise the other seat takes the next turn.
 
+An Issue started in single-seat mode (`State.mode`, `--single-seat` on `run`)
+has the primary seat alone: it takes every turn, and its own quiet turn is
+the acceptance of every seat (`roles`). The Issue keeps the mode it started
+in until it lands or goes back to `issues/backlog/`.
+
 After each turn the loop also keeps the turn's note in the issue file, quoted
 under `## Pair notes` (`Loop.keep_note`), where the other seat reads it in its
 diff: the note the seat added there itself, when it added one, and its
@@ -151,6 +156,8 @@ class State:
     base: str = ""
     targets: list[str] = field(default_factory=list)
     rerank: bool = False
+    mode: str = "pair"
+    """`pair` when the seats alternate, `single` when the primary seat takes every turn."""
 
 
 def runtime_dir(repo: Path, kind: str) -> Path:
@@ -213,6 +220,11 @@ def groom_targets(repo: Path) -> frozenset[str]:
 
 def other(role: str) -> str:
     return ROLES[1 - ROLES.index(role)]
+
+
+def roles(st: State) -> tuple[str, ...]:
+    """The seats that take turns on `st`, all of which must approve to close a stage."""
+    return ("primary",) if st.mode == "single" else ROLES
 
 
 class GateFailure(str):
@@ -419,6 +431,7 @@ class Loop:
         stage_models: Mapping[str, str | None] | None = None,
         code_changed: Callable[[], bool] | None = None,
         restart: Callable[[], None] | None = None,
+        mode: str = "pair",
     ) -> None:
         self.repo = repo
         self.kind = kind
@@ -441,6 +454,8 @@ class Loop:
         """Whether the loop's own code on disk differs from the code this process runs."""
         self.restart = restart
         """Re-execute the process on the code on disk; `run` returns if it does."""
+        self.mode = mode
+        """The mode an Issue this loop starts takes; one already started keeps its own."""
         self.seat_command = "claude"
         self.stop_requested = False
         self.seats: dict[str, Seat] = {}
@@ -538,7 +553,11 @@ class Loop:
                     return "empty"
                 kids = board.children(self.repo, main, slug)
                 st = self.start(
-                    State(slug=slug, stage=FLIGHT_CHECK if kids else "backlog")
+                    State(
+                        slug=slug,
+                        stage=FLIGHT_CHECK if kids else "backlog",
+                        mode=self.mode,
+                    )
                 )
                 if st is None:
                     return "paused"
@@ -590,7 +609,9 @@ class Loop:
             return None
         slug = underway[0]
         kids = board.children(self.repo, main, slug)
-        return State(slug=slug, stage=FLIGHT_CHECK if kids else "backlog")
+        return State(
+            slug=slug, stage=FLIGHT_CHECK if kids else "backlog", mode=self.mode
+        )
 
     def flight_refusal(self, flight: str, st: State | None) -> str | None:
         """Why `run` cannot work `flight` from here, or None when it can."""
@@ -883,7 +904,7 @@ class Loop:
             (self.dir / f"{role}.session").unlink(missing_ok=True)
         st.head = st.base = git(self.wt, "rev-parse", "HEAD")
         self.save(st)
-        self.event("started", st.slug, stage=st.stage)
+        self.event("started", st.slug, stage=st.stage, mode=st.mode)
         self.say(f"started {st.slug}")
         return st
 
@@ -1292,6 +1313,7 @@ class Loop:
             "stage": st.stage,
             "turn": st.turn + 1,
             "role": role,
+            "mode": st.mode,
             "quiet": quiet,
             "notes_restored": notes_restored,
             "note_from": note_from,
@@ -1322,9 +1344,9 @@ class Loop:
             return self.kick_back(st, None)
         st.turn += 1
         st.note = ""
-        st.next_role = other(role)
+        st.next_role = role if st.mode == "single" else other(role)
         st.approvals = sorted(set(st.approvals) | {role}) if quiet else [role]
-        if set(st.approvals) >= set(ROLES):
+        if quiet and set(st.approvals) >= set(roles(st)):
             outcome = self.close_stage(st, issue)
             if outcome:
                 return outcome

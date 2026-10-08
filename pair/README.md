@@ -31,6 +31,17 @@ own cache. A loop restarted without the same stage flags counts its stages
 as running `--model`, and switches seats back to it; one restarted with
 another `--model` starts the seats fresh on it too.
 
+`just pair --single-seat` starts each Issue in single-seat mode, in which the
+primary seat alone takes every turn of every stage, with the same prompts,
+stages, gates and round caps; its own quiet turn closes a stage whose
+requirement holds. It exists to compare one seat with two
+(`pair-versus-single-seat`). The mode is kept in the Issue's state, so a
+restarted loop, `just pair-accept` and `just pair-resume` keep it whatever
+flags they get, and a kicked-back Issue takes the mode of the run that starts
+it again. Each row of `.pair/turns.jsonl` and each `started` event carries
+`mode`, `single` or `pair`; one written before the field existed is `pair`.
+The grooming pass always runs two seats.
+
 The loop's code lives here, outside every portfolio's tree. It was proven in a
 spike in booktutor, where the seats read the loop's own code when it sat in the
 repository they worked on; a portfolio runs it from a stereorepo checkout so
@@ -295,6 +306,7 @@ path the landing changes pause it at once.
 | groom | `just groom`, or `just groom --rerank` to rank the whole backlog again |
 | run | `just pair`, or `just pair --once`; add `--push` to push `main` after each landing |
 | run one Flight | `just pair --flight <slug>` |
+| run with one seat | `just pair --single-seat` |
 | watch | `just pair-status`: what waits on you (a send-back, a desk check or a pause, with its reason), what is underway with its last gate, the running order with each Flight's parts and what holds each item back, and the counts per stage; `just pair-status --json` prints the same state as one JSON object, keyed `waiting`, `underway`, `order`, `to_groom`, `counts`, `sessions` and `turns`, whose fields `status_view` in `loop.py` describes, and which the loop also publishes for a cockpit (see [The published status](#the-published-status)); `tail -f .pair/primary.log .pair/secondary.log`, or `.pair/groom/` for a pass |
 | wait for the loop | `just pair-watch --until landed`, `--until developer` (a desk check, a pause or a send-back) or `--until flight <slug>` (that Flight reaches `desk-check/`); see [The event log](#the-event-log) |
 | steer an Issue or a pass underway | edit files in `worktrees/pair`, or `worktrees/groom` for a pass, between turns; the next seat sees the change |

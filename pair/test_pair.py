@@ -2076,6 +2076,120 @@ class SeatModelTest(unittest.TestCase):
             arguments().parse_args(["groom", "--todo-model", "B"])
 
 
+class SingleSeatTest(unittest.TestCase):
+    """`run --single-seat`: the primary seat alone takes every turn of an Issue."""
+
+    def setUp(self) -> None:
+        self.b = Bench()
+        self.addCleanup(self.b.close)
+        self.b.loop.mode = "single"
+        self.b.issue("backlog", "x", "X", difficulty="easy")
+
+    def again(self, *turns: tuple[str, object]) -> str:
+        """Run the loop until `turns` are spent, as a developer stopping it would."""
+        self.b.stop_when_empty = True
+        self.b.loop.stop_requested = False
+        self.b.script(*turns)
+        return self.b.loop.run()
+
+    def test_single_seat_runs_an_issue_to_main_with_the_primary_alone(self) -> None:
+        """The primary seat alone lands an Issue, and is never shown its own change.
+
+        The turn after a changing one is told that nothing has changed, a risk
+        the Issue's plan records.
+        """
+        b = self.b
+        b.script(
+            ("primary", quiet),
+            ("primary", append("x", PLAN)),
+            ("primary", quiet),
+            ("primary", write("x.txt", "x")),
+            ("primary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertTrue(b.on_main("x.txt"))
+        self.assertEqual(
+            [(row["role"], row["mode"]) for row in turn_rows(b.loop)],
+            [("primary", "single")] * 5,
+        )
+        self.assertEqual([e["mode"] for e in b.events("started")], ["single"])
+        self.assertEqual({role for role, _ in b.opened}, {"primary"})
+        self.assertIn("Nothing has changed since your last turn.", b.sent[-1][1])
+
+    def test_a_changing_turn_does_not_close_the_stage(self) -> None:
+        self.assertEqual(self.again(("primary", write("a.txt", "x"))), "stopped")
+        st = self.b.state()
+        self.assertEqual(
+            (st.stage, st.next_role, st.approvals), ("backlog", "primary", ["primary"])
+        )
+
+    def test_a_quiet_turn_closes_a_stage_whose_requirement_is_met(self) -> None:
+        self.assertEqual(self.again(("primary", quiet)), "stopped")
+        st = self.b.state()
+        self.assertEqual((st.stage, st.next_role), ("todo", "primary"))
+
+    def test_a_failed_gate_keeps_the_stage_and_reaches_the_primary_seat(self) -> None:
+        b = self.b
+        b.gates = [False]
+        b.script(
+            ("primary", quiet),
+            ("primary", append("x", PLAN)),
+            ("primary", quiet),
+            ("primary", write("x.txt", "x")),
+            ("primary", quiet),
+            ("primary", quiet),
+        )
+        self.assertEqual(b.loop.run(once=True), "landed")
+        self.assertEqual(b.gate_runs, 2)
+        self.assertIn("FAILED: test_widget", b.sent[-1][1])
+
+    def test_a_seat_that_never_goes_quiet_is_kicked_back_at_twice_the_cap(
+        self,
+    ) -> None:
+        b = self.b
+        b.loop.round_cap = 1
+        b.script(("primary", write("c.txt", "1")), ("primary", write("c.txt", "2")))
+        self.assertEqual(b.loop.run(once=True), "kicked")
+        self.assertIn("within 2 turns", sh(b.repo, "show", "main:issues/backlog/x.md"))
+
+    def test_without_the_flag_rows_and_the_started_event_say_pair(self) -> None:
+        self.b.loop.mode = "pair"
+        self.again(("primary", quiet), ("secondary", quiet))
+        self.assertEqual({row["mode"] for row in turn_rows(self.b.loop)}, {"pair"})
+        self.assertEqual([e["mode"] for e in self.b.events("started")], ["pair"])
+
+    def test_an_issue_started_alone_stays_alone_when_run_as_a_pair(self) -> None:
+        self.again(("primary", write("a.txt", "x")))
+        self.b.loop.mode = "pair"
+        self.again(("primary", quiet))
+        self.assertEqual([row["mode"] for row in turn_rows(self.b.loop)], ["single"] * 2)
+        self.assertEqual(self.b.state().stage, "todo")
+
+    def test_an_issue_started_as_a_pair_stays_a_pair_when_run_alone(self) -> None:
+        self.b.loop.mode = "pair"
+        self.again(("primary", quiet))
+        self.b.loop.mode = "single"
+        self.again(("secondary", quiet))
+        self.assertEqual([row["mode"] for row in turn_rows(self.b.loop)], ["pair"] * 2)
+        self.assertEqual(self.b.state().stage, "todo")
+
+    def test_a_state_file_without_a_mode_loads_as_a_pair(self) -> None:
+        self.again(("primary", write("a.txt", "x")))
+        saved = json.loads(self.b.loop.state_file.read_text())
+        del saved["mode"]
+        self.b.loop.state_file.write_text(json.dumps(saved))
+        self.assertEqual(self.b.state().mode, "pair")
+
+    def test_only_run_takes_the_flag(self) -> None:
+        from pair import arguments
+
+        self.assertTrue(arguments().parse_args(["run", "--single-seat"]).single_seat)
+        self.assertFalse(arguments().parse_args(["run"]).single_seat)
+        for name in ("groom", "accept", "resume"):
+            with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+                arguments().parse_args([name, "--single-seat"])
+
+
 class GateSelectionTest(unittest.TestCase):
     """The loop gates the Projects a change touches and the Products built from them (DR-303)."""
 

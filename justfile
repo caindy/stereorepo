@@ -36,7 +36,7 @@ bootstrap *args:
 sync *args:
     .meta/bundle.py sync {{args}}
 
-# the pair loop: carry issues to main (--once, --push, --flight SLUG, --model, --STAGE-model)
+# the pair loop: carry issues to main (--once, --push, --flight SLUG, --single-seat, --model, --STAGE-model)
 pair *args:
     uv run --quiet --script pair/pair.py run {{args}}
 

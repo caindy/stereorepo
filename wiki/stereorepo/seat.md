@@ -26,6 +26,11 @@ file it is on, what the stage is for, and what changed since its last turn. It
 is told nothing about the protocol that moves the Issue; the
 [[supervisor]] reads that from the tree (stereorepo's DR-306).
 
+An Issue started with `just pair --single-seat` has one seat instead: the
+primary takes every turn of every stage, with the same prompts, and the
+secondary is never started. The mode exists to compare one seat with two, and
+the Issue keeps it until it lands or goes back to the backlog.
+
 Both seats write code. A seat that finds something wrong in the other's work
 fixes it rather than describing it. A seat that accepts what it finds says so
 by changing nothing, a [[quiet-turn|quiet turn]], and a seat that judges the

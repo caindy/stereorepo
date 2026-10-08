@@ -15,7 +15,9 @@ without asking either of them. It reads agreement from the tree
 (stereorepo's DR-307): a seat that changes something has accepted the state it
 made, and a seat that then changes nothing has seen that state and let it
 stand. When both seats have accepted the same state, the stage advances if its
-requirement holds.
+requirement holds. In single-seat mode the primary seat is the only one, so
+its own quiet turn advances the stage; a turn that changes something never
+does, though that seat is then the only one to have accepted.
 
 A seat that disagrees must say so by changing something, and the turns go on.
 A stage the pair keeps changing runs to its round cap, and the Issue goes back

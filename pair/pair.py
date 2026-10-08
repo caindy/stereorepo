@@ -8,7 +8,7 @@ Run from the root of the repository whose board it works; the loop's own code
 stays wherever this file is, outside that repository's tree (see README.md):
 
     uv run --script <stereorepo>/pair/pair.py run [--once] [--push] [--flight SLUG]
-        [--model M] [--STAGE-model M] [--round-cap N]
+        [--single-seat] [--model M] [--STAGE-model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py groom [--rerank] [--push] [--model M] [--round-cap N]
     uv run --script <stereorepo>/pair/pair.py status [--json]
     uv run --script <stereorepo>/pair/pair.py accept [SLUG] [--model M] [--STAGE-model M]
@@ -17,6 +17,9 @@ stays wherever this file is, outside that repository's tree (see README.md):
 
 With `--flight`, `run` works only that Flight and the Issues below it, and
 stops when the Flight reaches its desk check.
+
+With `--single-seat`, an Issue `run` starts has the primary seat alone take
+every turn; an Issue already underway keeps the mode it started in.
 
 Before `run` takes up its next Issue, it re-executes itself with the same
 arguments if its own code, the `.py` files and `prompts/` beside this file,
@@ -290,6 +293,11 @@ def arguments() -> argparse.ArgumentParser:
         metavar="SLUG",
         help="work only this Flight's Issues, and stop at its desk check",
     )
+    run.add_argument(
+        "--single-seat",
+        action="store_true",
+        help="start each Issue with the primary seat alone taking every turn",
+    )
     groom = sub.add_parser(
         "groom",
         parents=[seats],
@@ -379,6 +387,7 @@ def main() -> int:
         },
         code_changed=lambda: code_fingerprint(HERE) != started,
         restart=reexec if args.command == "run" else None,
+        mode="single" if getattr(args, "single_seat", False) else "pair",
     )
 
     desk = getattr(args, "slug", None)
