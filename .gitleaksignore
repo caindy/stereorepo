@@ -1,0 +1,8 @@
+# The placeholder `API_KEY` in the "Hardcoded Secrets Removal" example of the
+# py-security skill, vendored from l-mb/python-refactoring-skills, is its
+# example of a secret not to commit. `gitleaks git` reports the commit that added it, and `gitleaks dir`
+# the line it now sits on, so a move of that line needs a new entry below.
+018b818b5d47eacc6f67810da249b429afa09b16:bootstraps/python/.apm/skills/py-security/SKILL.md:generic-api-key:97
+018b818b5d47eacc6f67810da249b429afa09b16:bootstraps/python/skills/py-security/SKILL.md:generic-api-key:97
+bootstraps/python/.apm/skills/py-security/SKILL.md:generic-api-key:151
+bootstraps/python/skills/py-security/SKILL.md:generic-api-key:151
