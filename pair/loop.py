@@ -409,7 +409,7 @@ def gate_line(row: Mapping[str, Any]) -> str:
         result = f"{steps} passed"
     else:
         result = f"{steps}; {'; '.join(found) or row['outcome']}"
-    return f"Gated by the supervisor at {row['at'][11:16]}: {what}; {result}."
+    return f"{board.GATED}{row['at'][11:16]}: {what}; {result}."
 
 
 def home(stage: str) -> str:

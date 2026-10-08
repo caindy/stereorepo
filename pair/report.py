@@ -12,6 +12,9 @@ Issue, under older loop code and models. A column measures:
 - Time: wall-clock seconds and turns per stage;
 - Tokens: API-equivalent cost, cache reads and cache writes, apart.
 
+A replay whose outcome is `clashed` failed for its era's code, not for its
+seats (`replay.py`), so the columns leave it out and the report counts it.
+
 The defect check runs the tests an Issue that later fixed the replayed one
 added, against the replay's result, in a temporary worktree of the clone's
 `main`, so the kept clone is never written to. It reads; it never runs a
@@ -36,7 +39,7 @@ from typing import Any
 import board
 from board import git, git_run
 from loop import event_log, runtime_dir
-from replay import replay_dir, replays_dir
+from replay import CLASHED, replay_dir, replays_dir
 
 MODES = ("single", "pair")
 """The modes a replay runs in, in the order the report prints them."""
@@ -448,12 +451,19 @@ def report(
     fixed_by: Mapping[str, Sequence[str]] | None = None,
     command: Sequence[str] = COMMAND,
 ) -> str | None:
-    """The report over every replay `source` keeps, or None when it keeps none."""
+    """The report over every replay `source` keeps, or None when it keeps none.
+
+    A `clashed` replay failed for its era's code and not for its seats
+    (`replay.py`), so it is left out of every column and only counted: on a
+    line after its slug's block, whose mode column reads `missing`, and on a
+    line before the last that totals each mode.
+    """
     kept = replays(source)
     if not kept:
         return None
-    by_slug: dict[str, dict[str, Measures]] = collections.defaultdict(dict)
-    for (slug, mode), home in kept.items():
+    measured, clashed = apart(kept)
+    by_slug: dict[str, dict[str, Measures]] = {slug: {} for slug, _ in kept}
+    for (slug, mode), home in measured.items():
         by_slug[slug][mode] = column(home, source, fixed_by or {}, command)
     for slug, columns in by_slug.items():
         first = original(source, slug)
@@ -463,15 +473,44 @@ def report(
     blocks = []
     for slug in sorted(by_slug):
         level = difficulty(source, slug)
-        blocks.append(block(f"{slug} ({level})", by_slug[slug]))
+        text = block(f"{slug} ({level})", by_slug[slug])
+        if clashed[slug]:
+            text += f"\n  {clash_line(clashed[slug])}"
+        blocks.append(text)
         summed = by_difficulty[level]
         for name, m in by_slug[slug].items():
             summed[name] = summed[name].add(m) if name in summed else m
     for level in sorted(by_difficulty, key=lambda d: (*board.DIFFICULTIES, "unknown").index(d)):
         columns = by_difficulty[level]
+        if not columns:
+            continue
         runs = max(m.runs for m in columns.values())
         blocks.append(block(f"difficulty {level}, {runs} slugs summed", columns))
+    total: collections.Counter[str] = collections.Counter()
+    for counts in clashed.values():
+        total.update(counts)
+    if total:
+        blocks.append(f"{clash_line(total)}, left out of the measures")
     return "\n\n".join([*blocks, ORIGINAL]) + "\n"
+
+
+def apart(
+    kept: Mapping[tuple[str, str], Path],
+) -> tuple[dict[tuple[str, str], Path], dict[str, collections.Counter[str]]]:
+    """`kept`'s replays to measure, and the count of `clashed` ones by slug and mode."""
+    measured = {}
+    clashed: dict[str, collections.Counter[str]] = collections.defaultdict(collections.Counter)
+    for (slug, mode), home in kept.items():
+        if json.loads((home / "outcome.json").read_text())["outcome"] == CLASHED:
+            clashed[slug][mode] += 1
+        else:
+            measured[slug, mode] = home
+    return measured, clashed
+
+
+def clash_line(counts: collections.Counter[str]) -> str:
+    """How many replays clashed in each mode, such as `clashed: single 1, pair 0`."""
+    return "clashed: " + ", ".join(f"{mode} {counts[mode]}" for mode in MODES)
 
 
 def diffs(source: Path, slug: str) -> str:

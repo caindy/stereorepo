@@ -8,26 +8,66 @@ under `.pair/replays/<slug>-<mode>/`:
 - `replay-<slug>-<mode>/`, the clone itself, kept for inspection;
 - `turns.jsonl` and `events.jsonl`, the clone's loop logs;
 - `landed.diff`, what the replay landed on the clone's `main`;
-- `outcome.json`, the outcome (`landed`, `sent-back` or `paused`), the mode,
-  the start commit and the seconds the loop ran.
+- `outcome.json`, the outcome (`landed`, `sent-back`, `paused` or
+  `clashed`), the mode, the start commit and the seconds the loop ran;
+- `clash.txt`, for a `clashed` replay only: the output of the gate that the
+  `Replay <slug>` commit failed with no seat's work.
 
 The loop that runs the replay is the current one, from this checkout, run
 in-process against the clone. For an Issue that changes `pair/`, the seats
 edit the clone's own old `pair/`, not the loop that runs them.
+
+Today's loop writes into the clone's tree and calls the clone's recipes,
+whose code and checks are those of the replayed Issue's era. Each place it
+does so is kept out of the old code's way, or cannot reach it:
+
+- The runtime state, `.pair/`, and the loop's worktrees, `worktrees/`, are
+  excluded from git in the clone (`IGNORED`), since a start commit's
+  `.gitignore` may predate them. No code of the clone's era reads `.pair/`
+  once the gate is called one target at a time: an older `gate` recipe took
+  one target and ran the rest as recipes, so `just gate meta pair` ran the
+  clone's own `pair` recipe, its old loop, which read today's
+  `.pair/state.json` and crashed.
+- The gate is called once per target (`era_gate`), a form every era's
+  `gate` recipe accepts, or once with no target for the whole gate. The
+  failure the seats are handed still names `just gate` with every target
+  (`gate_fails` in `loop.py`), which a seat rerunning it in an old era would
+  clash on; the output's headings name each single-target command to rerun
+  instead.
+- The notes (`Loop.keep_note`, `Loop.restore_notes`) and the supervisor's
+  gate lines (`Loop.keep_gate`) stay in the Issue file, where the seats read
+  and write them as they do outside a replay, so the comparison measures
+  the same seats. While the gate runs, `era_gate` takes them out of the
+  Issue file (`board.without_notes`) and afterwards writes the file back
+  byte for byte, so the clone's checks see the file as its era wrote it,
+  whatever a note quotes. This is done in place, not in a copy of the
+  worktree, because a copy would lack what `just setup` built there, and
+  the supervisor gates only between turns, when no seat is writing.
+- `just setup` is the clone's own era provisioning its own worktree, and
+  `just --summary` only lists recipes, so both are left as they are. `just
+  deliver` is never run: a replay's loop has no delivery, so no recipe of
+  any era delivers from a scratch clone.
+
+A replay that ends other than `landed`, after a last gate that failed or
+could not run, gates its `Replay <slug>` commit on the same targets with no
+seat's work (`clash`). If that fails too, the failure is the era's and not
+the seats', and the outcome is `clashed`.
 """
 
 from __future__ import annotations
 
 import json
 import shutil
+import subprocess
+import tempfile
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
 import board
 from board import git
-from loop import Loop, pairs_dir, supervise
+from loop import NOTE_STOPS, Gate, Loop, event_log, gate_unrunnable, pairs_dir, supervise
 
 KEPT = ("done", "roadmap")
 """The stage directories whose Issues a replay's clone keeps: the history it starts from."""
@@ -37,6 +77,9 @@ IDENTITY = ("user.name", "user.email", "commit.gpgsign")
 
 IGNORED = ("/.pair/", "/worktrees/")
 """What the loop writes in a checkout, which a start commit's `.gitignore` may not yet ignore."""
+
+CLASHED = "clashed"
+"""The outcome of a replay whose `Replay <slug>` commit fails the gate its seats' work failed."""
 
 LOGS = ("turns.jsonl", "events.jsonl")
 """The clone's loop logs, from its `.pair/`, that a replay keeps."""
@@ -149,6 +192,87 @@ def outcome_of(answer: str) -> str:
     return {"landed": "landed", "kicked": "sent-back"}.get(answer, "paused")
 
 
+def era_gate(gate: Gate, slug: str) -> Gate:
+    """`gate`, called in a form any era's `gate` recipe accepts, past the loop's notes.
+
+    Each target is gated by a call of its own, so a `gate` recipe that takes
+    one target never runs a second as a recipe; with no targets, the whole
+    gate is one call, as before. The result passes only if every call
+    passed. Each call's output comes under a heading naming its command
+    (`=== just gate <target> ===`), and a failed call's output comes after
+    every passed one's, because the seats are handed only the tail of the
+    output (`gate_fails` in `loop.py`), which a long passing target would
+    otherwise fill.
+
+    During the calls, `slug`'s Issue file in the tree is without its `Pair
+    notes` and gate lines (`board.without_notes`); afterwards it is written
+    back exactly as it was.
+    """
+
+    def gated(
+        tree: Path, targets: Sequence[str] | None, env: Mapping[str, str]
+    ) -> tuple[bool, str]:
+        issue = board.read(tree, slug)
+        path = None if issue is None else tree / issue.path
+        kept = None if path is None else path.read_bytes()
+        try:
+            if path is not None and kept is not None:
+                text = kept.decode()
+                stripped = board.without_notes(text, NOTE_STOPS)
+                if stripped != text:
+                    path.write_text(stripped)
+            if targets is None:
+                return gate(tree, None, env)
+            passed: list[str] = []
+            failed: list[str] = []
+            for target in targets:
+                ok, out = gate(tree, [target], env)
+                (passed if ok else failed).append(f"=== just gate {target} ===\n{out}")
+            return not failed, "\n".join(passed + failed)
+        finally:
+            if path is not None and kept is not None:
+                path.write_bytes(kept)
+
+    return gated
+
+
+def last_gate(events: Path, slug: str) -> dict[str, Any] | None:
+    """The last `gated` event for `slug` in the event log `events`, or None."""
+    found = None
+    lines = events.read_text().splitlines() if events.is_file() else []
+    for line in lines:
+        event = json.loads(line) if line.strip() else {}
+        if event.get("kind") == "gated" and event.get("slug") == slug:
+            found = event
+    return found
+
+
+def clash(loop: Loop, clone: Path, base: str, targets: Sequence[str] | None) -> str | None:
+    """The output of the gate that `base` fails on `targets` with no seat's work, or None.
+
+    `base` is checked out in a detached worktree outside the clone, so the
+    kept clone stays as the seats left it, provisioned as the loop's own
+    worktree is (`loop.provision`), and gated through the loop's gate. A
+    provisioning that fails is the era failing, and its error is the output.
+    A gate that passes with a step that could not run counts as failed, as
+    it does for the loop.
+    """
+    with tempfile.TemporaryDirectory(prefix="replay-base-") as tmp:
+        tree = Path(tmp) / "base"
+        git(clone, "worktree", "add", "-q", "--detach", str(tree), base)
+        try:
+            if loop.provision:
+                try:
+                    loop.provision(tree)
+                except subprocess.CalledProcessError as failed:
+                    return f"provisioning the Replay commit failed: {failed}\n"
+            ok, out = loop.gate(tree, targets, loop.gate_env())
+            return None if ok and gate_unrunnable(out) is None else out
+        finally:
+            git(clone, "worktree", "remove", "--force", str(tree), check=False)
+            git(clone, "worktree", "prune", check=False)
+
+
 def replay(
     source: Path,
     slug: str,
@@ -165,6 +289,10 @@ def replay(
     `force`, which deletes it, but only once the slug is known to replay. A
     clone that `prepare` refuses or fails to finish is deleted, so it does
     not stand in the way of the next replay as an earlier one.
+
+    The loop's gate is wrapped in `era_gate` and its delivery taken away, and
+    a replay that did not land on a failed gate is checked for a clash
+    (`clash`), as the module docstring says.
 
     `publish` names a loop's status after its checkout, so the clone's status
     would show the replay as a portfolio in a cockpit. It is removed however
@@ -184,6 +312,8 @@ def replay(
             shutil.rmtree(home, ignore_errors=True)
             raise
         loop = make_loop(clone, mode)
+        loop.gate = era_gate(loop.gate, slug)
+        loop.deliver = None
 
         def work() -> str:
             answer = loop.run(once=True)
@@ -200,10 +330,17 @@ def replay(
             shutil.copyfile(log, home / name)
     diff = git(clone, "diff", base, "main")
     (home / "landed.diff").write_text(f"{diff}\n" if diff else "")
+    outcome = outcome_of(answer)
+    last = last_gate(event_log(clone), slug)
+    if outcome != "landed" and last and last.get("outcome") in ("failed", "could-not-run"):
+        out = clash(loop, clone, base, last.get("targets"))
+        if out is not None:
+            outcome = CLASHED
+            (home / "clash.txt").write_text(out)
     result = {
         "slug": slug,
         "mode": mode,
-        "outcome": outcome_of(answer),
+        "outcome": outcome,
         "answer": answer,
         "start": start,
         "seconds": round(seconds, 1),

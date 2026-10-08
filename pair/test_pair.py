@@ -35,6 +35,7 @@ import touched
 from loop import (
     NOTE_STOPS,
     ROLES,
+    Gate,
     GateFailure,
     GateUnrunnable,
     Loop,
@@ -2227,6 +2228,8 @@ class ReplayTest(unittest.TestCase):
     def setUp(self) -> None:
         self.b = Bench()
         self.addCleanup(self.b.close)
+        self.gate: Gate = lambda _tree, _targets, _env: (True, "")
+        """The gate the replay's loop is given, which a test may replace before it replays."""
 
     def landed(self, slug: str = "x", difficulty: str = "easy") -> str:
         """Commit a history in which `slug` started and landed; return the commit it started from.
@@ -2253,7 +2256,7 @@ class ReplayTest(unittest.TestCase):
         return start
 
     def make_loop(self, clone: Path, mode: str) -> Loop:
-        """A loop on the clone whose seats play the bench's script, and whose gate passes."""
+        """A loop on the clone whose seats play the bench's script and whose gate is `self.gate`."""
         b = self.b
 
         def seat(role: str, cwd: Path, resume: str | None, _model: str | None) -> FakeSeat:
@@ -2263,7 +2266,7 @@ class ReplayTest(unittest.TestCase):
         loop = Loop(
             clone,
             seat,
-            lambda _tree, _targets, _env: (True, ""),
+            lambda tree, targets, env: self.gate(tree, targets, env),
             b.notes.append,
             prompts=PROMPTS,
             say=lambda _m: None,
@@ -2403,6 +2406,184 @@ class ReplayTest(unittest.TestCase):
                 self.replay("ghost")
             self.assertFalse(replay.replay_dir(b.repo, "ghost", "pair").exists())
 
+    def clone(self, mode: str = "pair") -> Path:
+        return replay.replay_dir(self.b.repo, "x", mode) / f"replay-x-{mode}"
+
+    def test_each_target_is_gated_by_a_call_of_its_own(self) -> None:
+        b = self.b
+        b.structure()
+        self.landed()
+        calls: list[list[str] | None] = []
+
+        def gate(
+            _tree: Path, targets: Sequence[str] | None, _env: Mapping[str, str]
+        ) -> tuple[bool, str]:
+            calls.append(None if targets is None else list(targets))
+            return True, ""
+
+        self.gate = gate
+        b.script(*PAIR_RUN[:4], ("primary", write("pair/a.txt", "again\n")), PAIR_RUN[5])
+        self.assertEqual(self.replay()["outcome"], "landed")
+        self.assertIn(["meta"], calls)
+        self.assertIn(["pair"], calls)
+        self.assertTrue(all(c is None or len(c) == 1 for c in calls))
+
+    @unittest.skipUnless(shutil.which("just"), "needs just")
+    def test_a_single_target_gate_recipe_never_runs_a_second_target_as_a_recipe(self) -> None:
+        from pair import gate as just_gate
+
+        b = self.b
+        b.structure()
+        write("justfile", JUSTFILE_OF_AN_OLDER_ERA)(b.repo)
+        sh(b.repo, "add", "-A")
+        sh(b.repo, "commit", "-q", "-m", "an older gate")
+        self.landed()
+        self.gate = just_gate
+        b.script(*PAIR_RUN[:4], ("primary", write("pair/a.txt", "again\n")), PAIR_RUN[5])
+        self.assertEqual(self.replay()["outcome"], "landed")
+        last = replay.last_gate(event_log(self.clone()), "x")
+        self.assertEqual(sorted((last or {}).get("targets") or []), ["meta", "pair"])
+        self.assertFalse((self.clone() / "worktrees" / "pair" / "pair-ran").exists())
+        self.assertFalse((self.clone() / "pair-ran").exists())
+
+    def test_the_gate_never_sees_a_note_and_the_landed_file_keeps_it(self) -> None:
+        b = self.b
+        self.landed()
+        seen: list[str] = []
+
+        def gate(
+            tree: Path, _targets: Sequence[str] | None, _env: Mapping[str, str]
+        ) -> tuple[bool, str]:
+            issue = board.read(tree, "x")
+            text = "" if issue is None else (tree / issue.path).read_text()
+            seen.append(text)
+            ok = "REFUSED" not in text and board.GATED not in text
+            return ok, "" if ok else "x  meta/citations (1)\n"
+
+        self.gate = gate
+        b.script(
+            ("primary", Says("I quote REFUSED here.")),
+            *PAIR_RUN[1:],
+        )
+        self.assertEqual(self.replay()["outcome"], "landed")
+        self.assertTrue(seen)
+        landed = sh(self.clone(), "show", "main:issues/done/x.md")
+        self.assertIn("REFUSED", landed)
+        self.assertIn("Pair notes", landed)
+
+    def test_a_gate_the_replay_commit_also_fails_is_a_clash(self) -> None:
+        self.landed()
+        unrunnable = "?  meta/docker: no daemon\n"
+        self.gate = lambda _tree, _targets, _env: (True, unrunnable)
+        self.b.script(*PAIR_RUN)
+        done = self.replay()
+        home = replay.replay_dir(self.b.repo, "x", "pair")
+        self.assertEqual(done["outcome"], "clashed")
+        self.assertEqual(json.loads((home / "outcome.json").read_text())["outcome"], "clashed")
+        self.assertEqual((home / "clash.txt").read_text(), unrunnable)
+        self.assert_no_stray_worktree()
+
+    def test_a_gate_only_the_seats_work_fails_is_not_a_clash(self) -> None:
+        self.landed()
+
+        def gate(
+            tree: Path, _targets: Sequence[str] | None, _env: Mapping[str, str]
+        ) -> tuple[bool, str]:
+            ours = (tree / "a.txt").is_file() and (tree / "a.txt").read_text() == "again\n"
+            return True, "?  meta/docker: no daemon\n" if ours else ""
+
+        self.gate = gate
+        self.b.script(*PAIR_RUN)
+        done = self.replay()
+        self.assertEqual(done["outcome"], "paused")
+        self.assertFalse((replay.replay_dir(self.b.repo, "x", "pair") / "clash.txt").exists())
+        self.assert_no_stray_worktree()
+
+    def assert_no_stray_worktree(self) -> None:
+        clone = self.clone().resolve()
+        trees = [
+            Path(line.removeprefix("worktree ")).resolve()
+            for line in sh(clone, "worktree", "list", "--porcelain").splitlines()
+            if line.startswith("worktree ")
+        ]
+        self.assertTrue(trees)
+        self.assertTrue(all(tree.is_relative_to(clone) for tree in trees), trees)
+
+
+JUSTFILE_OF_AN_OLDER_ERA = """\
+gate target="":
+    @echo gated {{target}}
+
+pair:
+    touch pair-ran
+    exit 1
+"""
+"""A `justfile` from before the `gate` recipe took several targets, whose `pair`
+recipe stands for the old loop: it leaves a mark and fails if it ever runs."""
+
+
+class WithoutNotesTest(unittest.TestCase):
+    """`board.without_notes`: an Issue file as it stood before the loop wrote into it."""
+
+    def test_notes_and_gate_lines_go_and_what_follows_them_stays(self) -> None:
+        era = "# X\n\nWords.\n"
+        loops = board.with_note(era, "primary, todo turn 1", "Quoting `A.b`.")
+        loops += f"\n{board.GATED}09:01: the whole gate; 1 step passed.\n"
+        loops += "\n## The plan\n\nDo it.\n"
+        self.assertEqual(board.without_notes(loops, NOTE_STOPS), era + "\n## The plan\n\nDo it.\n")
+
+    def test_a_gate_line_with_no_notes_goes_with_its_blank_line(self) -> None:
+        era = "# X\n\nWords.\n"
+        line = f"{board.GATED}09:01: `meta`; 1 step passed."
+        self.assertEqual(board.without_notes(f"{era}\n{line}\n", NOTE_STOPS), era)
+
+    def test_a_file_with_nothing_of_the_loops_is_unchanged(self) -> None:
+        era = "# X\n\nWords.\n\n\n"
+        self.assertIs(board.without_notes(era, NOTE_STOPS), era)
+
+
+class EraGateTest(unittest.TestCase):
+    """`replay.era_gate`: one call per target, with the Issue file's notes out of the way."""
+
+    def setUp(self) -> None:
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        self.tree = Path(tmp.name)
+        self.path = self.tree / "issues" / "in-progress" / "x.md"
+        self.path.parent.mkdir(parents=True)
+        self.text = "# X\n\nWords.\n\n## Pair notes\n\n> **primary, todo turn 1**\n>\n> Hi.\n"
+        self.path.write_text(self.text)
+
+    def test_a_failed_target_comes_last_under_its_heading_and_its_steps_are_read(self) -> None:
+        outs = {"meta": (False, "x  meta/citations (1)\n"), "pair": (True, "ok\n" * 50)}
+        gated = replay.era_gate(lambda _t, targets, _e: outs[targets[0]], "x")
+        ok, out = gated(self.tree, ["meta", "pair"], {})
+        self.assertFalse(ok)
+        self.assertTrue(out.index("=== just gate pair ===") < out.index("=== just gate meta ==="))
+        self.assertTrue(out.rstrip().endswith("x  meta/citations (1)"))
+        self.assertEqual(gate_record(out, "failed", ["meta", "pair"])["failed"], ["meta/citations"])
+        self.assertIsNone(gate_unrunnable(out))
+
+    def test_the_whole_gate_is_one_call(self) -> None:
+        calls: list[Sequence[str] | None] = []
+        gated = replay.era_gate(lambda _t, targets, _e: (calls.append(targets), (True, ""))[1], "x")
+        self.assertEqual(gated(self.tree, None, {}), (True, ""))
+        self.assertEqual(calls, [None])
+
+    def test_the_issue_file_is_put_back_byte_for_byte_even_when_the_gate_raises(self) -> None:
+        seen: list[str] = []
+
+        def gate(
+            _t: Path, _targets: Sequence[str] | None, _e: Mapping[str, str]
+        ) -> tuple[bool, str]:
+            seen.append(self.path.read_text())
+            raise OSError
+
+        with self.assertRaises(OSError):
+            replay.era_gate(gate, "x")(self.tree, None, {})
+        self.assertEqual(seen, ["# X\n\nWords.\n"])
+        self.assertEqual(self.path.read_text(), self.text)
+
 
 SOURCE_STATE = (
     ("rev-parse", "main"),
@@ -2533,6 +2714,19 @@ class ReplayReportTest(unittest.TestCase):
         self.assertEqual(cell(text, title, "secondary turns' files")[1], "a.py, b.py")
         self.assertEqual(cell(text, title, "wall-clock seconds")[1], "90")
         self.assertEqual(cell(text, title, "cost (USD)")[1], "0.20")
+
+    def test_a_clashed_replay_is_counted_and_left_out_of_the_measures(self) -> None:
+        self.kept(mode="single", turns=[turn("primary")])
+        self.kept(outcome="clashed", turns=[turn("primary"), turn("secondary")])
+        self.kept("y", outcome="clashed")
+        text = self.report()
+        self.assertEqual(cell(text, "x (easy)", "outcome"), ["landed", "missing", "missing"])
+        self.assertEqual(cell(text, "y (easy)", "outcome"), ["missing", "missing", "missing"])
+        self.assertIn("x (easy)", text)
+        self.assertEqual(text.count("  clashed: single 0, pair 1"), 2)
+        summed = "difficulty easy, 1 slugs summed"
+        self.assertEqual(cell(text, summed, "outcome"), ["landed", "missing", "missing"])
+        self.assertIn("clashed: single 0, pair 2, left out of the measures", text)
 
     def test_a_mode_not_replayed_is_missing_and_a_single_replay_has_no_secondary(self) -> None:
         self.kept(mode="single", turns=[turn("primary", quiet=False, files=["a.py"])])

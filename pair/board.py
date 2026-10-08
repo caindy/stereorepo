@@ -263,6 +263,35 @@ def _core(lines: list[str]) -> list[str]:
     return lines[:end]
 
 
+GATED = "Gated by the supervisor at "
+"""How each line `gate_line` leaves in an Issue file begins."""
+
+
+def without_notes(text: str, stops: Collection[str]) -> str:
+    """`text`, an Issue file, without what the loop wrote into it.
+
+    Each `Pair notes` section goes (`with_note`), and so does each line that
+    begins `GATED` (`gate_line`), with the blank line before it, so the file
+    reads as it did before the loop wrote anything, as far as its trailing
+    blank lines. A file with nothing of the loop's comes back unchanged.
+    """
+    lines = text.splitlines()
+    spans = _note_spans(lines, stops)
+    dropped = {i for a, b in spans for i in range(a, b)}
+    out: list[str] = []
+    for i, line in enumerate(lines):
+        if i in dropped:
+            continue
+        if line.startswith(GATED):
+            if out and not out[-1].strip():
+                out.pop()
+            continue
+        out.append(line)
+    if not spans and len(out) == len(lines):
+        return text
+    return "\n".join(_core(out)) + "\n"
+
+
 def restore_notes(before: str, after: str, stops: Collection[str]) -> str:
     """`after`, an Issue file, with its `Pair notes` sections as they are in `before`.
 

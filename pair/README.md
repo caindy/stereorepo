@@ -49,9 +49,23 @@ clone's `main` to the parent of the Issue's `Start <slug>` commit, and
 leaves that Issue alone in the clone's backlog. The current loop then runs
 it there once, and accepts a desk check it stops at. The clone is kept, with
 its `turns.jsonl` and `events.jsonl`, the `landed.diff` and an
-`outcome.json` (`landed`, `sent-back` or `paused`) beside it. A Flight is
-refused, since its work landed in its parts, and so is a second replay of the
-same slug and mode without `--force`. `replay.py` holds the details.
+`outcome.json` (`landed`, `sent-back`, `paused` or `clashed`) beside it. A
+Flight is refused, since its work landed in its parts, and so is a second
+replay of the same slug and mode without `--force`.
+
+The clone's code and checks are those of the Issue's era, so the replay
+keeps the current loop's own material out of their way. The loop's runtime
+state, `.pair/`, sits in the clone but is excluded from git, and no code of
+the clone's era reads it. The gate is called once per target, a form any
+era's `gate` recipe accepts. The Pair notes and the supervisor's gate lines
+stay in the Issue file, where the seats read them, but are taken out of it
+while the gate runs and put back afterwards. The clone's `just deliver` is
+never run. A replay that does not land after a failed gate gates its
+`Replay <slug>` commit, with no seat's work, on the same targets. If that
+fails too, the failure is the era's and not the seats': the outcome is
+`clashed`, and that gate's output is kept as `clash.txt`. `just
+pair-replay-report` leaves a `clashed` replay out of its columns and counts
+it. `replay.py` holds the details.
 
 `just pair-replay-report` reads every replay kept there and prints, for each
 slug and then summed by difficulty, a column for each mode and a third,
