@@ -137,7 +137,7 @@ reword it. If it is not already true, write a new backlog Issue for it.
 ## Where the spike lives
 
 The developer's checkout of `caindy/booktutor` holds it at
-`/Users/christopher/tutorly_project/booktutor/docs/PAIR_LOOP_SPIKE.md`, last
+`~/tutorly_project/booktutor/docs/PAIR_LOOP_SPIKE.md`, last
 changed in commit `cdfa78d` (2026-09-29). A seat can read it there. Its
 section "Open questions (WHY_FORK.md, section 8)" answers the questions, and
 the hypothesis runs above it (H1 to H9) hold the evidence. Cite it as
@@ -151,7 +151,7 @@ the hypothesis runs above it (H1 to H9) hold the evidence. Cite it as
 >
 > Before editing, I checked that it can be done as written:
 > - The issue it waited on, `why-fork-board-wiki-pages`, is now in `issues/done/`.
-> - The spike document can be read at `/Users/christopher/tutorly_project/booktutor/docs/PAIR_LOOP_SPIKE.md`. It was last changed in commit `cdfa78d`, which matches the citation in the issue.
+> - The spike document can be read at `~/tutorly_project/booktutor/docs/PAIR_LOOP_SPIKE.md`. It was last changed in commit `cdfa78d`, which matches the citation in the issue.
 > - The document's "Open questions" table answers all six questions listed on the two wiki pages.
 >
 > What I added:

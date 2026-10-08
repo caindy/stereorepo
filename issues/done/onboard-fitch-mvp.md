@@ -9,7 +9,7 @@ repository that already has code, history and conventions of its own, and
 `just adapt plan` only plans that adoption: nothing applies the plan, no
 procedure covers the judgement it leaves, and no existing Product has been
 brought under a gate. This Flight onboards one real repository,
-`/Users/christopher/fitch-mvp`, and fixes each gap the attempt finds in the
+`~/fitch-mvp`, and fixes each gap the attempt finds in the
 tool that caused it, so that the second onboarding has less to find.
 
 fitch-mvp is a Python decision-modelling framework (LinkML schemas, a Neo4j
@@ -166,7 +166,7 @@ procedure.
 `.meta/checks/probes/tools/lockstep.py`, and `CI=1 just test-specialization`.
 
 **Not checked: fitch-mvp itself.** The seats cannot read
-`/Users/christopher/fitch-mvp`, so nothing here confirms any of the three
+`~/fitch-mvp`, so nothing here confirms any of the three
 desk-check points there. To pick up these parts, fitch-mvp needs, at least:
 
 - its bundle synced again, so that it carries the new `pair/touched.py`,

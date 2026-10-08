@@ -95,7 +95,7 @@ What history shows, which the steps rely on:
   `onboard-fitch-mvp`, `trim-kept-decision-records` and
   `write-why-fork-into-records`. `onboard-fitch-mvp`, the Issue's example
   of many starts, is therefore not a candidate.
-- `.pair/turns.jsonl` in `/Users/christopher/code/stereorepo` is readable:
+- `.pair/turns.jsonl` in `~/code/stereorepo` is readable:
   1227 rows for 123 slugs, from 2026-09-30 on, each with `slug`, `stage`,
   `role`, `seconds` and `cost_usd`. Rows whose `stage` is `grooming` are
   `just groom`'s, not an Issue's, and are left out of every sum.
@@ -245,7 +245,7 @@ how every scope note renders, not `claim-scope-note-channel-verb`'s edit).
 
 ### Cost
 
-From `/Users/christopher/code/stereorepo/.pair/turns.jsonl`, leaving out
+From `~/code/stereorepo/.pair/turns.jsonl`, leaving out
 `grooming` rows. Turns is the row count and minutes the summed `seconds`,
 rounded per candidate. Single-seat is the sum of `primary` rows alone, a
 lower bound: in `single-seat-mode` the one seat also takes the turns the

@@ -12,7 +12,7 @@ plan, whether or not the repository tracks it.
 
 ## How to reproduce it
 
-Run `just adapt plan /Users/christopher/fitch-mvp`. The repository tracks 65
+Run `just adapt plan ~/fitch-mvp`. The repository tracks 65
 files. The plan lists 3,094 `RETAIN` entries: 2,723 under `.jj/repo`, 278 under
 a leftover `.claude/worktrees/` checkout, and others under `.pytest_cache/`
 and `schema/generated/`. The one conflict and two integrations are lost among
@@ -139,7 +139,7 @@ ceiling.)
 
 - `git_tracked_files` and its `_git` helper live in `.meta/lib/adapt/tracked.py`;
   `_scan_target_files` in `plan.py` calls it and keeps the walk as the fallback.
-- `just adapt plan /Users/christopher/fitch-mvp` now lists 96 `RETAIN`, 2
+- `just adapt plan ~/fitch-mvp` now lists 96 `RETAIN`, 2
   `INTEGRATE` and 4 `CONFLICT` entries (`.gitignore`, `DR-001.yaml`,
   `domain_vocabulary.yaml`, `structure.yaml`), against 3,094 `RETAIN` before.
   The issue reported one conflict. Conflicts are scaffold paths, which this change
