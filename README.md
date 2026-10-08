@@ -53,3 +53,9 @@ cost to learn.
 
 This file is for **arriving**; [`SPECIALIZE.md`](SPECIALIZE.md) and
 [`ADOPT.md`](ADOPT.md) are for **acting**.
+
+## License
+
+MIT; see [`LICENSE`](LICENSE). The skills vendored under `bootstraps/python/`
+keep their upstream MIT licenses, recorded in
+[`bootstraps/python/PROVENANCE.md`](bootstraps/python/PROVENANCE.md).
